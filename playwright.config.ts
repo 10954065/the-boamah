@@ -23,5 +23,11 @@ export default defineConfig({
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined
-    : { command: "npx next dev -p 3217", url: baseURL, reuseExistingServer: true, timeout: 180_000 },
+    : {
+        command: "npx next dev -p 3217",
+        url: baseURL,
+        reuseExistingServer: true,
+        timeout: 180_000,
+        env: { BETTER_AUTH_URL: baseURL, NEXT_PUBLIC_SITE_URL: baseURL, PAYMENTS_MOCK: "true" },
+      },
 });
