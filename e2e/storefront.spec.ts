@@ -32,6 +32,32 @@ test.describe("storefront", () => {
     await expect(page.getByRole("button", { name: /^Add to cart$/ })).toBeEnabled();
   });
 
+  test("sitemap index links valid page, category and product sitemaps", async ({ request }) => {
+    const index = await request.get("/sitemap.xml");
+    expect(index.ok()).toBe(true);
+    expect(index.headers()["content-type"]).toContain("xml");
+    const paths = [...(await index.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
+    expect(paths).toEqual(["/sitemaps/pages/sitemap.xml", "/sitemaps/categories/sitemap.xml", "/sitemaps/products/sitemap.xml"]);
+
+    const bodies = await Promise.all(paths.map(async (path) => (await request.get(path)).text()));
+    for (const body of bodies) expect(body).toContain("<urlset");
+    const [pages, categories, products] = bodies as [string, string, string];
+    expect(pages).toMatch(/<loc>[^<]*\/shop<\/loc>/);
+    expect(categories).toMatch(/<loc>[^<]*\/categories\/fruits<\/loc>/);
+    expect(products).toMatch(/<loc>[^<]*\/products\/jasmine-rice<\/loc>/);
+    expect(products).toContain("<image:loc>");
+    expect(products).not.toContain("/admin");
+  });
+
+  test("robots.txt lists every sitemap and keeps crawlers out of private pages", async ({ request }) => {
+    const robots = await (await request.get("/robots.txt")).text();
+    for (const path of ["/sitemap.xml", "/sitemaps/pages/sitemap.xml", "/sitemaps/categories/sitemap.xml", "/sitemaps/products/sitemap.xml"]) {
+      expect(robots).toMatch(new RegExp(`Sitemap: \\S+${path.replace(/\./g, "\\.")}`));
+    }
+    for (const rule of ["Disallow: /admin", "Disallow: /account", "Disallow: /checkout", "Disallow: /*?*sort="]) expect(robots).toContain(rule);
+    expect(robots).not.toMatch(/Disallow: \/products/);
+  });
+
   test("unavailable products cannot be purchased", async ({ page }) => {
     await setStock("croissants", 0);
     await page.goto("/products/croissants");

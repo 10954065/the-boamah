@@ -12,6 +12,7 @@ with a managed PostgreSQL database, Paystack payments and email.
 - [6. Image uploads (Vercel Blob)](#6-image-uploads-vercel-blob)
 - [7. SMS (optional)](#7-sms-optional)
 - [8. First admin and store set-up](#8-first-admin-and-store-set-up)
+- [9. Search engines](#9-search-engines)
 - [Before going live](#before-going-live)
 - [Running the shop](#running-the-shop)
 - [Updates and rollbacks](#updates-and-rollbacks)
@@ -185,6 +186,26 @@ the password under *Account → Settings*. Then:
   admin instead.
 - Other staff register normal accounts. The Super Admin then assigns their roles
   in *Admin → Staff*.
+
+## 9. Search engines
+
+The site publishes these automatically:
+
+| URL | Contents |
+| --- | --- |
+| `/sitemap.xml` | Sitemap index pointing to the three sitemaps below |
+| `/sitemaps/pages/sitemap.xml` | Home, shop, offers, categories list, contact, credits, and each policy once its text is written |
+| `/sitemaps/categories/sitemap.xml` | Every active category, with its image |
+| `/sitemaps/products/sitemap.xml` | Every published product in an active category, with its images |
+| `/robots.txt` | Lists every sitemap, blocks the admin, account, cart, checkout, order and sign-in pages, and blocks search, sort and filter URLs |
+
+Sitemaps are generated at build time and refreshed every hour from the
+database. Their links use `NEXT_PUBLIC_SITE_URL`, so set it to the real domain
+**before** deploying.
+
+After launch, submit `https://your-domain/sitemap.xml` in
+[Google Search Console](https://search.google.com/search-console) and
+[Bing Webmaster Tools](https://www.bing.com/webmasters).
 
 ## Before going live
 

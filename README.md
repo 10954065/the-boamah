@@ -54,8 +54,9 @@ store settings and policies, staff roles, notification log and audit log.
 
 **Also included**: transactional email via Resend (order, payment, status,
 cancellation, password reset, new-order alert to staff), optional SMS via
-Arkesel, SEO metadata with JSON-LD, sitemap and robots, security headers, rate
-limiting and server-side permission checks.
+Arkesel, SEO metadata with JSON-LD, a sitemap index with page, category and
+product sitemaps (including product and category images), robots.txt,
+security headers, rate limiting and server-side permission checks.
 
 ## Tech stack
 
