@@ -42,16 +42,16 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Profile, addresses, order history, order detail + tracking timeline, wishlist, password change — browser-verified (register → wishlist → address)
 
 ## 6. Administration
-- [ ] Dashboard metrics (paid revenue vs pending vs COD outstanding)
-- [ ] Products & variants, images (upload), publish/archive
-- [ ] Categories (order, deactivate, safe delete)
-- [ ] Inventory adjustments + movement history + low stock
-- [ ] Orders (filters, status updates, notes, COD collection, cancellation, history)
-- [ ] Customers (search, history, suspend)
-- [ ] Coupons and promo banners
-- [ ] Delivery zones, store settings, policies
-- [ ] Staff & roles (Super Admin only)
-- [ ] Notifications log, audit log
+- [x] Dashboard metrics (paid revenue vs pending vs COD outstanding) — figures checked against data
+- [~] Products & variants, images (upload), publish/archive
+- [~] Categories (order, deactivate, safe delete)
+- [x] Inventory adjustments + movement history + low stock — browser-verified receipt
+- [x] Orders (filters, status updates, notes, COD collection, cancellation, history) — browser-verified status + cash
+- [~] Customers (search, history, suspend)
+- [~] Coupons and promo banners
+- [~] Delivery zones, store settings, policies
+- [~] Staff & roles (Super Admin only)
+- [x] Notifications log, audit log
 
 ## 7. Notifications & SEO
 - [ ] Email templates (order, payment, status, cancellation, admin alert, password reset)
