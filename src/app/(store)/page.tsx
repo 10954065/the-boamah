@@ -1,4 +1,4 @@
-import { CategoryTiles, Hero, PromoBanners, SectionHeading, TrustSection } from "@/components/store/home-sections";
+import { CategoryMarquee, CategoryTiles, Hero, PromoBanners, SectionHeading, TrustSection } from "@/components/store/home-sections";
 import { ProductGrid } from "@/components/store/product-card";
 import { RecentlyViewed } from "@/components/store/recently-viewed";
 import type { ProductCardView } from "@/lib/catalog-types";
@@ -51,6 +51,7 @@ export default async function HomePage() {
     getWishlistIds(),
   ]);
 
+  const stocked = categories.filter((c) => c.productCount > 0);
   const organization = {
     "@context": "https://schema.org",
     "@type": "GroceryStore",
@@ -65,8 +66,9 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization).replace(/</g, "\\u003c") }} />
-      <Hero banner={heroBanners[0] ?? null} />
-      <CategoryTiles categories={categories.filter((c) => c.productCount > 0)} />
+      <Hero banner={heroBanners[0] ?? null} stats={{ products: stocked.reduce((sum, c) => sum + c.productCount, 0), categories: stocked.length }} />
+      <CategoryMarquee categories={stocked} />
+      <CategoryTiles categories={stocked} />
       <RecentlyViewed title="Pick up where you left off" className="container-page mt-12" />
       <ProductRow
         id="featured-title"

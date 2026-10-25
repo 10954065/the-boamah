@@ -1,6 +1,7 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CreditCard, Headset, ReceiptText, ShoppingCart, Truck } from "lucide-react";
+import { ArrowRight, BadgeCheck, CreditCard, Headset, ReceiptText, ShoppingBasket, ShoppingCart, Truck } from "lucide-react";
 import type { PromoBanner } from "@/generated/prisma/client";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,8 +21,9 @@ export function SectionHeading({
   linkLabel?: string;
 }) {
   return (
-    <div className="mb-5 flex items-end justify-between gap-4">
+    <div className="reveal mb-5 flex items-end justify-between gap-4">
       <div>
+        <span className="mb-2.5 block h-1 w-10 rounded-full bg-gradient-to-r from-gold-400 to-leaf-500" aria-hidden="true" />
         <h2 id={id} className="text-xl font-extrabold sm:text-2xl">
           {title}
         </h2>
@@ -46,7 +48,9 @@ interface HeroContent {
   ctaHref: string;
 }
 
-export function Hero({ banner }: { banner: PromoBanner | null }) {
+const line = (i: number) => ({ "--i": i }) as CSSProperties;
+
+export function Hero({ banner, stats }: { banner: PromoBanner | null; stats?: { products: number; categories: number } }) {
   const content: HeroContent = banner
     ? {
         eyebrow: banner.eyebrow,
@@ -77,34 +81,62 @@ export function Hero({ banner }: { banner: PromoBanner | null }) {
             fill
             priority
             sizes="(min-width: 1024px) 50vw, 100vw"
-            className="object-cover lg:[clip-path:ellipse(94%_100%_at_100%_50%)]"
+            className="ken-burns object-cover lg:[clip-path:ellipse(94%_100%_at_100%_50%)]"
           />
           <div
             className="absolute inset-0 bg-gradient-to-t from-brand-900 via-brand-900/85 to-brand-900/40 lg:hidden"
             aria-hidden="true"
           />
+          {stats && stats.products > 0 ? (
+            <div
+              className="rise absolute bottom-8 right-8 hidden items-center gap-3 rounded-2xl bg-brand-900/65 py-3 pl-3 pr-5 text-white shadow-[var(--shadow-overlay)] ring-1 ring-white/20 backdrop-blur-md lg:flex"
+              style={line(5)}
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-gold-300 to-gold-500 text-brand-900">
+                <ShoppingBasket className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="leading-tight">
+                <strong className="block font-display text-lg">{stats.products} products</strong>
+                <span className="text-xs text-brand-100">across {stats.categories} categories</span>
+              </span>
+            </div>
+          ) : null}
         </div>
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_right,black,transparent_55%)]"
+          aria-hidden="true"
+        />
         <div
           className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-leaf-500/25 blur-3xl"
           aria-hidden="true"
         />
+        <div
+          className="pointer-events-none absolute -bottom-32 left-1/4 h-72 w-72 rounded-full bg-gold-400/15 blur-3xl"
+          aria-hidden="true"
+        />
         <div className="relative flex flex-col justify-end px-6 pb-8 pt-28 sm:px-10 sm:pt-40 lg:justify-center lg:py-16 lg:pl-14">
           {content.eyebrow ? (
-            <p className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-400/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold-300 ring-1 ring-gold-400/30">
-              <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden="true" />
+            <p
+              className="rise mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-400/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold-300 ring-1 ring-gold-400/30"
+              style={line(0)}
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-400" aria-hidden="true" />
               {content.eyebrow}
             </p>
           ) : null}
           <h1
             id="hero-title"
-            className="max-w-xl text-[32px] font-extrabold leading-[1.05] tracking-tight text-white sm:text-[44px] lg:text-[54px]"
+            className="rise max-w-xl text-[32px] font-extrabold leading-[1.05] tracking-tight text-white sm:text-[44px] lg:text-[54px]"
+            style={line(1)}
           >
             {content.title}
           </h1>
           {content.subtitle ? (
-            <p className="mt-4 max-w-md text-[15px] leading-7 text-brand-100 sm:text-base">{content.subtitle}</p>
+            <p className="rise mt-4 max-w-md text-[15px] leading-7 text-brand-100 sm:text-base" style={line(2)}>
+              {content.subtitle}
+            </p>
           ) : null}
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="rise mt-7 flex flex-wrap gap-3" style={line(3)}>
             <Link href={content.ctaHref} className={cn(buttonVariants({ size: "lg", variant: "gold" }), "flex-1 sm:flex-none")}>
               {content.ctaLabel}
               <ArrowRight aria-hidden="true" />
@@ -119,7 +151,7 @@ export function Hero({ banner }: { banner: PromoBanner | null }) {
               View offers
             </Link>
           </div>
-          <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium text-brand-100">
+          <ul className="rise mt-7 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium text-brand-100" style={line(4)}>
             <li className="flex items-center gap-1.5">
               <BadgeCheck className="h-4 w-4 text-leaf-400" aria-hidden="true" /> Secure checkout
             </li>
@@ -130,6 +162,38 @@ export function Hero({ banner }: { banner: PromoBanner | null }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Tilted, endlessly scrolling band of category links. Pauses on hover and focus. */
+export function CategoryMarquee({ categories }: { categories: CategoryView[] }) {
+  if (categories.length === 0) return null;
+  return (
+    <div className="relative mt-10 overflow-hidden py-4">
+      <nav
+        aria-label="Browse by category"
+        className="marquee -mx-[5%] w-[110%] -rotate-1 overflow-hidden bg-brand-900 py-3.5 shadow-[var(--shadow-overlay)] motion-reduce:overflow-x-auto"
+      >
+        <div className="marquee-track flex w-max">
+          {[0, 1].map((copy) => (
+            <ul key={copy} aria-hidden={copy === 1 ? true : undefined} className="flex shrink-0 items-center">
+              {categories.map((category) => (
+                <li key={category.id} className="flex items-center">
+                  <Link
+                    href={`/categories/${category.slug}`}
+                    tabIndex={copy === 1 ? -1 : undefined}
+                    className="px-6 font-display text-lg font-extrabold tracking-tight text-brand-50 transition-colors hover:text-gold-300 sm:text-xl"
+                  >
+                    {category.name}
+                  </Link>
+                  <span className="h-2 w-2 rotate-45 rounded-[2px] bg-gold-400" aria-hidden="true" />
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </nav>
+    </div>
   );
 }
 
@@ -184,9 +248,14 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
   return (
     <section aria-label="Promotions" className="container-page mt-12">
       <ul className={cn("grid gap-4", banners.length > 1 && "md:grid-cols-2", banners.length > 2 && "lg:grid-cols-3")}>
-        {banners.map((banner) => (
-          <li key={banner.id}>
-            <div className={cn("relative flex h-full min-h-[176px] overflow-hidden rounded-lg border border-line", TONES[banner.tone] ?? TONES.cream)}>
+        {banners.map((banner, index) => (
+          <li key={banner.id} className="reveal" style={line(index)}>
+            <div
+              className={cn(
+                "group relative flex h-full min-h-[176px] overflow-hidden rounded-2xl border border-line transition-[box-shadow,transform] duration-300 hover:shadow-[var(--shadow-overlay)] motion-safe:hover:-translate-y-1",
+                TONES[banner.tone] ?? TONES.cream,
+              )}
+            >
               <div className="relative z-10 flex w-[58%] flex-col justify-center p-5 sm:p-6">
                 {banner.eyebrow ? (
                   <p className="text-[11px] font-bold uppercase tracking-wider text-leaf-600">{banner.eyebrow}</p>
@@ -198,7 +267,8 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
                     href={banner.ctaHref}
                     className="mt-4 inline-flex w-fit items-center gap-1 text-sm font-semibold text-brand-700 after:absolute after:inset-0 hover:underline"
                   >
-                    {banner.ctaLabel ?? "Shop now"} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    {banner.ctaLabel ?? "Shop now"}{" "}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
                   </Link>
                 ) : null}
               </div>
@@ -208,7 +278,7 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
                   alt=""
                   fill
                   sizes="(min-width: 1024px) 200px, 45vw"
-                  className="object-cover [clip-path:circle(78%_at_100%_50%)]"
+                  className="object-cover transition-transform duration-700 [clip-path:circle(78%_at_100%_50%)] group-hover:scale-110"
                 />
               </div>
             </div>
@@ -231,18 +301,29 @@ export function TrustSection({ hasSupportContact }: { hasSupportContact: boolean
   ];
   return (
     <section aria-labelledby="why-title" className="container-page mt-16">
-      <div className="rounded-lg bg-brand-800 px-6 py-10 text-brand-50 sm:px-10">
-        <h2 id="why-title" className="text-xl font-extrabold text-white sm:text-2xl">
+      <div className="relative isolate overflow-hidden rounded-2xl bg-brand-900 px-6 py-12 text-brand-50 shadow-[var(--shadow-overlay)] sm:px-10 lg:py-14">
+        <div
+          className="absolute inset-0 -z-10 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:20px_20px] [mask-image:radial-gradient(ellipse_at_top_right,black,transparent_70%)]"
+          aria-hidden="true"
+        />
+        <div className="absolute -right-24 -top-28 -z-10 h-80 w-80 rounded-full bg-leaf-500/25 blur-3xl" aria-hidden="true" />
+        <div className="absolute -bottom-36 left-1/4 -z-10 h-80 w-80 rounded-full bg-gold-400/15 blur-3xl" aria-hidden="true" />
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-300">The Boamah&rsquo;s promise</p>
+        <h2 id="why-title" className="mt-2 text-2xl font-extrabold text-white sm:text-3xl">
           Why shop with The Boamah&rsquo;s?
         </h2>
-        <ul className={cn("mt-7 grid gap-6 sm:grid-cols-2", items.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
-          {items.map(({ Icon, title, body }) => (
-            <li key={title}>
-              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-brand-700 text-leaf-400">
+        <ul className={cn("mt-8 grid gap-4 sm:grid-cols-2", items.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
+          {items.map(({ Icon, title, body }, index) => (
+            <li
+              key={title}
+              className="reveal group rounded-xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur-sm transition-[background-color,box-shadow,transform] duration-300 hover:bg-white/10 hover:ring-gold-400/40 motion-safe:hover:-translate-y-1"
+              style={line(index)}
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-gold-300 to-gold-500 text-brand-900 shadow-lg shadow-gold-500/20 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
-              <h3 className="mt-3 text-[15px] font-bold text-white">{title}</h3>
-              <p className="mt-1 text-sm leading-6 text-brand-200">{body}</p>
+              <h3 className="mt-4 text-base font-bold text-white">{title}</h3>
+              <p className="mt-1.5 text-sm leading-6 text-brand-200">{body}</p>
             </li>
           ))}
         </ul>

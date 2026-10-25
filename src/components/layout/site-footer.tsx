@@ -60,7 +60,10 @@ export async function SiteFooter() {
   ];
 
   return (
-    <footer className="mt-16 bg-brand-900 text-brand-100">
+    <footer className="relative isolate mt-16 overflow-hidden bg-brand-900 text-brand-100">
+      <div className="absolute -left-32 -top-40 -z-10 h-96 w-96 rounded-full bg-leaf-500/15 blur-3xl" aria-hidden="true" />
+      <div className="absolute -bottom-40 right-0 -z-10 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl" aria-hidden="true" />
+      <div className="h-1 bg-gradient-to-r from-leaf-500 via-gold-400 to-leaf-500" aria-hidden="true" />
       <div className="container-page grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,0.8fr)_1.4fr]">
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
@@ -143,7 +146,7 @@ export async function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-brand-800">
-        <div className="container-page flex flex-col gap-2 py-5 text-xs text-brand-300 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-page flex flex-col gap-2 pb-20 pt-5 text-xs text-brand-300 sm:flex-row sm:items-center sm:justify-between sm:pb-5 sm:pr-20">
           <p>
             © {new Date().getFullYear()} {settings.storeName}. All rights reserved.
           </p>
