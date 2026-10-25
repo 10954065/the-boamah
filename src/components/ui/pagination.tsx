@@ -23,15 +23,16 @@ function pageWindow(page: number, total: number): (number | "gap")[] {
 }
 
 const itemClass =
-  "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-2 text-sm font-medium transition-colors";
+  "group inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold tabular-nums transition-[color,background-color,border-color,box-shadow,transform] duration-200 motion-safe:hover:-translate-y-0.5";
+const idleClass = "border-line bg-surface text-ink hover:border-brand-400 hover:bg-brand-50 hover:text-brand-800 hover:shadow-[var(--shadow-raised)]";
 
 export function Pagination({ page, totalPages, hrefFor, className }: PaginationProps) {
   if (totalPages <= 1) return null;
   return (
     <nav aria-label="Pagination" className={cn("flex items-center justify-center gap-1.5", className)}>
       {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={cn(itemClass, "border-line bg-surface hover:border-brand-500")} aria-label="Previous page">
-          <ChevronLeft className="h-4 w-4" />
+        <Link href={hrefFor(page - 1)} className={cn(itemClass, idleClass)} aria-label="Previous page">
+          <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
         </Link>
       ) : null}
       {pageWindow(page, totalPages).map((item, index) =>
@@ -47,8 +48,8 @@ export function Pagination({ page, totalPages, hrefFor, className }: PaginationP
             className={cn(
               itemClass,
               item === page
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-line bg-surface text-ink hover:border-brand-500",
+                ? "pop border-brand-700 bg-brand-700 text-white shadow-[var(--shadow-raised)] hover:translate-y-0"
+                : idleClass,
             )}
           >
             {item}
@@ -56,8 +57,8 @@ export function Pagination({ page, totalPages, hrefFor, className }: PaginationP
         ),
       )}
       {page < totalPages ? (
-        <Link href={hrefFor(page + 1)} className={cn(itemClass, "border-line bg-surface hover:border-brand-500")} aria-label="Next page">
-          <ChevronRight className="h-4 w-4" />
+        <Link href={hrefFor(page + 1)} className={cn(itemClass, idleClass)} aria-label="Next page">
+          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
         </Link>
       ) : null}
     </nav>

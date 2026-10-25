@@ -24,6 +24,22 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const containerRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Press "/" anywhere to jump to search, as on many shopping sites.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable='true']")) return;
+      const input = inputRef.current;
+      // The header has a desktop and a mobile search box; only the visible one responds.
+      if (!input || input.offsetParent === null) return;
+      event.preventDefault();
+      input.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     const term = query.trim();
@@ -90,8 +106,10 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
       <div className="flex h-11 items-center rounded-md border border-line-strong bg-soft/60 transition-colors focus-within:border-brand-500 focus-within:bg-surface focus-within:ring-2 focus-within:ring-brand-500/15">
         <Search className="ml-3 h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true" />
         <input
+          ref={inputRef}
           id={`${listId}-input`}
           type="search"
+          aria-keyshortcuts="/"
           role="combobox"
           aria-expanded={showList}
           aria-controls={listId}
@@ -106,6 +124,14 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
           onKeyDown={onKeyDown}
           className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-sm text-ink placeholder:text-ink-subtle focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
+        {!query ? (
+          <kbd
+            className="mr-2 hidden rounded border border-line-strong bg-surface px-1.5 font-sans text-[11px] font-semibold text-ink-subtle lg:inline-block"
+            title="Press / to search"
+          >
+            /
+          </kbd>
+        ) : null}
         {query ? (
           <button
             type="button"

@@ -116,10 +116,10 @@ export function ProductPurchase({ variants, productName, secondaryAction }: Prod
               <label
                 key={v.id}
                 className={cn(
-                  "cursor-pointer rounded-md border px-3.5 py-2 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500",
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-200 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500",
                   v.id === variant.id
-                    ? "border-brand-700 bg-brand-50 text-brand-800"
-                    : "border-line-strong bg-surface text-ink hover:border-ink-subtle",
+                    ? "border-brand-700 bg-brand-50 text-brand-800 shadow-[inset_0_0_0_1px_var(--color-brand-700)]"
+                    : "border-line-strong bg-surface text-ink hover:border-brand-400 hover:bg-brand-50/50 motion-safe:hover:-translate-y-0.5",
                   !v.inStock && "text-ink-subtle line-through decoration-1",
                 )}
               >
@@ -131,6 +131,7 @@ export function ProductPurchase({ variants, productName, secondaryAction }: Prod
                   onChange={() => selectVariant(v.id)}
                   className="sr-only"
                 />
+                {v.id === variant.id ? <Check className="pop h-3.5 w-3.5" aria-hidden="true" /> : null}
                 {v.name}
                 {!v.inStock ? <span className="sr-only"> (out of stock)</span> : null}
               </label>

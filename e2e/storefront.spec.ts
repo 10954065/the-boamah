@@ -58,6 +58,40 @@ test.describe("storefront", () => {
     expect(robots).not.toMatch(/Disallow: \/products/);
   });
 
+  test("the menu marks the current page and / jumps to search", async ({ page }) => {
+    await page.goto("/shop");
+    const menu = page.getByRole("navigation", { name: "Main" });
+    await expect(menu.getByRole("link", { name: "Shop", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(menu.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Pagination" }).locator('[aria-current="page"]')).toHaveText("1");
+
+    await page.locator("body").press("/");
+    await expect(page.getByRole("combobox", { name: "Search groceries" }).first()).toBeFocused();
+  });
+
+  test("recently viewed products follow the shopper between pages", async ({ page }) => {
+    await page.goto("/products/jasmine-rice");
+    await page.goto("/products/tomatoes");
+    const recent = page.getByRole("region", { name: "Recently viewed" });
+    await expect(recent.getByRole("link", { name: "Jasmine Rice" })).toBeVisible();
+    await expect(recent.getByRole("link", { name: "Fresh Tomatoes" })).toHaveCount(0);
+
+    await page.goto("/");
+    const home = page.getByRole("region", { name: "Pick up where you left off" });
+    await expect(home.getByRole("link", { name: "Fresh Tomatoes" })).toBeVisible();
+    await expect(home.getByRole("link", { name: "Jasmine Rice" })).toBeVisible();
+  });
+
+  test("back to top appears after scrolling and returns to the top", async ({ page }) => {
+    await page.goto("/shop");
+    const button = page.getByRole("button", { name: "Back to top" });
+    await expect(button).toHaveCount(0);
+    await page.mouse.wheel(0, 2500);
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(50);
+  });
+
   test("unavailable products cannot be purchased", async ({ page }) => {
     await setStock("croissants", 0);
     await page.goto("/products/croissants");

@@ -5,6 +5,7 @@ import { getCartCount } from "@/server/cart";
 import { getActiveCategories } from "@/server/catalog";
 import { getCurrentUser } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
+import { MainNavLinks } from "./main-nav";
 import { MobileNav } from "./mobile-nav";
 import { SearchBox } from "./search-box";
 
@@ -111,11 +112,7 @@ export async function SiteHeader() {
         </div>
         <nav aria-label="Main" className="hidden border-t border-line lg:block">
           <div className="container-page flex h-11 items-center gap-7 text-sm">
-            {PRIMARY_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="font-medium text-ink-muted transition-colors hover:text-brand-700">
-                {link.label}
-              </Link>
-            ))}
+            <MainNavLinks links={PRIMARY_LINKS} />
             <span className="ml-auto flex items-center gap-5 overflow-hidden">
               {categories.slice(0, 4).map((c) => (
                 <Link key={c.id} href={`/categories/${c.slug}`} className="whitespace-nowrap text-[13px] text-ink-subtle hover:text-brand-700">

@@ -8,6 +8,8 @@ import { Breadcrumbs } from "@/components/store/page-header";
 import { Price } from "@/components/store/price";
 import { ProductGrid } from "@/components/store/product-card";
 import { ProductGallery } from "@/components/store/product-gallery";
+import { RecentlyViewed, TrackRecentlyViewed } from "@/components/store/recently-viewed";
+import { ShareButton } from "@/components/store/share-button";
 import { SectionHeading } from "@/components/store/home-sections";
 import { WishlistButton } from "@/components/store/wishlist-button";
 import { minorToDecimalString } from "@/lib/money";
@@ -82,9 +84,12 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
         />
 
         <div>
-          <Link href={`/categories/${product.categorySlug}`} className="text-xs font-bold uppercase tracking-wider text-leaf-600 hover:underline">
-            {product.categoryName}
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href={`/categories/${product.categorySlug}`} className="text-xs font-bold uppercase tracking-wider text-leaf-600 hover:underline">
+              {product.categoryName}
+            </Link>
+            <ShareButton title={product.name} path={`/products/${product.slug}`} />
+          </div>
           <h1 className="mt-2 text-[28px] font-extrabold leading-tight sm:text-[32px]">{product.name}</h1>
           {product.shortDescription ? <p className="mt-3 text-[15px] leading-7 text-ink-muted">{product.shortDescription}</p> : null}
 
@@ -148,6 +153,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           <ProductGrid products={related} savedIds={savedIds} />
         </section>
       ) : null}
+
+      <RecentlyViewed excludeSlug={product.slug} className="mt-14" />
+      <TrackRecentlyViewed slug={product.slug} name={product.name} imageUrl={product.imageUrl} />
     </div>
   );
 }
