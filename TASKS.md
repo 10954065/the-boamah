@@ -54,9 +54,9 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Notifications log, audit log
 
 ## 7. Notifications & SEO
-- [ ] Email templates (order, payment, status, cancellation, admin alert, password reset)
-- [ ] Optional SMS adapter
-- [ ] Metadata, canonical URLs, JSON-LD, sitemap, robots
+- [~] Email templates (order, payment, status, cancellation, admin alert, password reset) — outcomes recorded; delivery needs RESEND_API_KEY
+- [~] Optional SMS adapter (Arkesel) — needs provider credentials
+- [x] Metadata, canonical URLs, JSON-LD, sitemap, robots
 
 ## 8. Quality
 - [ ] Integration tests (orders, inventory, coupons, payments, webhooks, permissions)
