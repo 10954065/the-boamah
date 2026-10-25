@@ -68,7 +68,7 @@ export async function SiteHeader() {
             accountLinks={accountLinks}
           />
           <Logo compact />
-          <SearchBox className="hidden flex-1 md:block lg:max-w-2xl" />
+          <SearchBox className="hidden min-w-0 flex-1 lg:block lg:max-w-2xl" />
           <nav aria-label="Account" className="ml-auto flex items-center gap-1 sm:gap-2">
             {user?.isStaff ? (
               <Link
@@ -106,7 +106,7 @@ export async function SiteHeader() {
             </Link>
           </nav>
         </div>
-        <div className="container-page pb-3 md:hidden">
+        <div className="container-page pb-3 lg:hidden">
           <SearchBox />
         </div>
         <nav aria-label="Main" className="hidden border-t border-line lg:block">
