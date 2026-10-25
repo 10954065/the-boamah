@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ShoppingBasket } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { addToCart } from "@/actions/cart";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export function CardAddButton({ variant, productName, className }: CardAddButton
   const { pending, add } = useAddToCart();
   if (!variant.inStock) {
     return (
-      <Button variant="outline" size="sm" disabled className={cn("w-full", className)}>
+      <Button variant="outline" size="sm" disabled className={cn("h-9 w-full rounded-lg", className)}>
         Out of stock
       </Button>
     );
@@ -53,9 +53,8 @@ export function CardAddButton({ variant, productName, className }: CardAddButton
   const label = variant.minQtyMilli === 1000 ? "Add to cart" : `Add ${formatQuantity(variant.minQtyMilli, variant.unit)}`;
   return (
     <Button
-      variant="secondary"
       size="sm"
-      className={cn("w-full", className)}
+      className={cn("h-9 w-full rounded-lg bg-brand-50 text-brand-800 shadow-none hover:bg-brand-700 hover:text-white", className)}
       disabled={pending}
       onClick={() => add(variant.id, variant.minQtyMilli, productName)}
       aria-label={`${label}: ${productName}`}
@@ -69,10 +68,12 @@ export function CardAddButton({ variant, productName, className }: CardAddButton
 interface ProductPurchaseProps {
   variants: VariantView[];
   productName: string;
+  /** Shown beside the add button, e.g. the wishlist toggle. */
+  secondaryAction?: ReactNode;
 }
 
 /** Variant picker + quantity stepper + add button for the product page. */
-export function ProductPurchase({ variants, productName }: ProductPurchaseProps) {
+export function ProductPurchase({ variants, productName, secondaryAction }: ProductPurchaseProps) {
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const variant = variants.find((v) => v.id === variantId) ?? variants[0];
   const [quantity, setQuantity] = useState(variant?.minQtyMilli ?? 1000);
@@ -135,12 +136,16 @@ export function ProductPurchase({ variants, productName }: ProductPurchaseProps)
             {pending ? <Spinner label="Adding" /> : <ShoppingBasket />}
             Add to cart
           </Button>
+          {secondaryAction}
         </div>
       ) : (
-        <div className="rounded-md border border-line bg-soft px-4 py-3 text-sm text-ink-muted" role="status">
-          <strong className="text-ink">Currently unavailable.</strong> This option is out of stock and cannot be purchased
-          right now. Please check back soon{variants.length > 1 ? " or choose another option" : ""}.
-        </div>
+        <>
+          <div className="rounded-md border border-line bg-soft px-4 py-3 text-sm text-ink-muted" role="status">
+            <strong className="text-ink">Currently unavailable.</strong> This option is out of stock and cannot be purchased
+            right now. Please check back soon{variants.length > 1 ? " or choose another option" : ""}.
+          </div>
+          {secondaryAction}
+        </>
       )}
       {variant.inStock && variant.lowStock ? (
         <p className="text-sm font-medium text-warning">Only {formatQuantity(variant.availableMilli, variant.unit)} left in stock.</p>

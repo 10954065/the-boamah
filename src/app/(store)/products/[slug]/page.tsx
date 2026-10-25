@@ -114,8 +114,13 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           ) : null}
 
           <div className="mt-6 space-y-4">
-            <ProductPurchase variants={product.variants} productName={product.name} />
-            <WishlistButton variant="full" productId={product.id} productName={product.name} initialSaved={savedIds.has(product.id)} />
+            <ProductPurchase
+              variants={product.variants}
+              productName={product.name}
+              secondaryAction={
+                <WishlistButton variant="full" productId={product.id} productName={product.name} initialSaved={savedIds.has(product.id)} />
+              }
+            />
           </div>
 
           <div className="mt-7 flex gap-3 rounded-lg border border-line bg-soft/60 p-4 text-sm text-ink-muted">

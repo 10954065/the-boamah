@@ -21,8 +21,8 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
   const href = `/products/${product.slug}`;
 
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-line bg-surface p-3 transition-[border-color,box-shadow] duration-200 hover:border-brand-200 hover:shadow-[var(--shadow-raised)]">
-      <div className="relative aspect-square overflow-hidden rounded-md bg-soft">
+    <article className="group relative flex h-full flex-col rounded-xl border border-line bg-surface p-2.5 transition-[border-color,box-shadow,transform] duration-200 hover:border-brand-200 hover:shadow-[var(--shadow-raised)] motion-safe:hover:-translate-y-0.5 sm:p-3">
+      <div className="relative aspect-square overflow-hidden rounded-lg bg-soft">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
@@ -30,7 +30,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
             fill
             priority={priority}
             sizes="(min-width: 1280px) 220px, (min-width: 768px) 25vw, 45vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-ink-subtle">
@@ -50,8 +50,8 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
       </div>
 
       <div className="mt-3 flex flex-1 flex-col">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-leaf-600">{product.categoryName}</p>
-        <h3 className="mt-1 line-clamp-2 min-h-[2.6em] text-[14px] font-semibold leading-snug text-ink">
+        <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-leaf-600">{product.categoryName}</p>
+        <h3 className="mt-1 line-clamp-2 min-h-[2.6em] text-[14px] font-semibold leading-snug text-ink transition-colors group-hover:text-brand-700 sm:text-[15px]">
           <Link href={href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
             {product.name}
           </Link>
@@ -61,7 +61,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
             <p className="mt-0.5 text-xs text-ink-muted">{variant.name}</p>
             <Price
               className="mt-2"
-              size="sm"
+              size="md"
               priceMinor={variant.priceMinor}
               effectivePriceMinor={variant.effectivePriceMinor}
               unit={variant.unit}
@@ -71,7 +71,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
                 <Link
                   href={href}
                   className={cn(
-                    "inline-flex h-8 w-full items-center justify-center rounded-md border border-brand-600 text-[13px] font-semibold text-brand-700 transition-colors hover:bg-brand-50",
+                    "inline-flex h-9 w-full items-center justify-center rounded-lg bg-brand-50 text-[13px] font-semibold text-brand-800 transition-colors hover:bg-brand-700 hover:text-white",
                   )}
                 >
                   Choose options ({product.variantCount})

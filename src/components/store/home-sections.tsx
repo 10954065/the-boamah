@@ -67,46 +67,66 @@ export function Hero({ banner }: { banner: PromoBanner | null }) {
       };
 
   return (
-    <section aria-labelledby="hero-title" className="container-page pt-5 sm:pt-7">
-      <div className="relative grid overflow-hidden rounded-lg border border-line bg-soft lg:grid-cols-[1.05fr_1fr]">
-        <div className="relative z-10 flex flex-col justify-center px-6 py-10 sm:px-10 lg:py-16 lg:pl-14">
-          {content.eyebrow ? (
-            <p className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-gold-500" aria-hidden="true" />
-              {content.eyebrow}
-            </p>
-          ) : null}
-          <h1 id="hero-title" className="max-w-xl text-[34px] font-extrabold leading-[1.06] text-brand-900 sm:text-[44px] lg:text-[52px]">
-            {content.title}
-          </h1>
-          {content.subtitle ? <p className="mt-4 max-w-md text-base leading-7 text-ink-muted">{content.subtitle}</p> : null}
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href={content.ctaHref} className={buttonVariants({ size: "lg" })}>
-              {content.ctaLabel}
-              <ArrowRight aria-hidden="true" />
-            </Link>
-            <Link href="/offers" className={buttonVariants({ size: "lg", variant: "outline" })}>
-              View offers
-            </Link>
-          </div>
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium text-ink-muted">
-            <li className="flex items-center gap-1.5">
-              <BadgeCheck className="h-4 w-4 text-leaf-600" aria-hidden="true" /> Secure checkout
-            </li>
-            <li className="flex items-center gap-1.5">
-              <Truck className="h-4 w-4 text-leaf-600" aria-hidden="true" /> Delivery &amp; pickup options
-            </li>
-          </ul>
-        </div>
-        <div className="relative min-h-[240px] sm:min-h-[320px] lg:min-h-[460px]">
+    <section aria-labelledby="hero-title" className="container-page pt-4 sm:pt-6">
+      <div className="relative isolate grid overflow-hidden rounded-2xl bg-brand-900 shadow-[var(--shadow-overlay)] lg:grid-cols-[1.05fr_1fr]">
+        {/* Photo: full-bleed behind the text on small screens, its own column from lg up. */}
+        <div className="absolute inset-0 -z-10 lg:relative lg:inset-auto lg:z-0 lg:order-2 lg:min-h-[480px]">
           <Image
             src={content.imageUrl}
             alt=""
             fill
             priority
             sizes="(min-width: 1024px) 50vw, 100vw"
-            className="object-cover lg:[clip-path:ellipse(92%_100%_at_100%_50%)]"
+            className="object-cover lg:[clip-path:ellipse(94%_100%_at_100%_50%)]"
           />
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-brand-900 via-brand-900/85 to-brand-900/40 lg:hidden"
+            aria-hidden="true"
+          />
+        </div>
+        <div
+          className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-leaf-500/25 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative flex flex-col justify-end px-6 pb-8 pt-28 sm:px-10 sm:pt-40 lg:justify-center lg:py-16 lg:pl-14">
+          {content.eyebrow ? (
+            <p className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-400/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold-300 ring-1 ring-gold-400/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden="true" />
+              {content.eyebrow}
+            </p>
+          ) : null}
+          <h1
+            id="hero-title"
+            className="max-w-xl text-[32px] font-extrabold leading-[1.05] tracking-tight text-white sm:text-[44px] lg:text-[54px]"
+          >
+            {content.title}
+          </h1>
+          {content.subtitle ? (
+            <p className="mt-4 max-w-md text-[15px] leading-7 text-brand-100 sm:text-base">{content.subtitle}</p>
+          ) : null}
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href={content.ctaHref} className={cn(buttonVariants({ size: "lg", variant: "gold" }), "flex-1 sm:flex-none")}>
+              {content.ctaLabel}
+              <ArrowRight aria-hidden="true" />
+            </Link>
+            <Link
+              href="/offers"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "flex-1 bg-white/10 text-white ring-1 ring-white/25 hover:bg-white/20 sm:flex-none",
+              )}
+            >
+              View offers
+            </Link>
+          </div>
+          <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium text-brand-100">
+            <li className="flex items-center gap-1.5">
+              <BadgeCheck className="h-4 w-4 text-leaf-400" aria-hidden="true" /> Secure checkout
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Truck className="h-4 w-4 text-leaf-400" aria-hidden="true" /> Delivery &amp; pickup options
+            </li>
+          </ul>
         </div>
       </div>
     </section>
@@ -118,28 +138,32 @@ export function CategoryTiles({ categories }: { categories: CategoryView[] }) {
   return (
     <section aria-labelledby="categories-title" className="container-page mt-12">
       <SectionHeading id="categories-title" title="Shop by category" subtitle="Everything for your kitchen and home." href="/categories" linkLabel="All categories" />
-      <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+      <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:grid-cols-4 lg:grid-cols-6">
         {categories.map((category) => (
-          <li key={category.id} className="w-[132px] shrink-0 snap-start sm:w-auto">
+          <li key={category.id} className="w-[108px] shrink-0 snap-start sm:w-auto">
             <Link
               href={`/categories/${category.slug}`}
-              className="group flex h-full flex-col items-center rounded-lg border border-line bg-surface p-3 text-center transition-[border-color,box-shadow] hover:border-brand-200 hover:shadow-[var(--shadow-raised)]"
+              className="group flex h-full flex-col items-center gap-2 rounded-xl border border-line bg-surface p-2.5 text-center transition-[border-color,box-shadow,transform] duration-200 hover:border-brand-200 hover:shadow-[var(--shadow-raised)] motion-safe:hover:-translate-y-0.5 sm:flex-row sm:gap-3 sm:text-left"
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-md bg-soft">
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-soft sm:h-14 sm:w-14">
                 {category.imageUrl ? (
                   <Image
                     src={category.imageUrl}
                     alt=""
                     fill
-                    sizes="(min-width: 1024px) 180px, (min-width: 640px) 22vw, 132px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="80px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 ) : null}
               </div>
-              <span className="mt-2.5 text-[13.5px] font-semibold leading-tight text-ink">{category.name}</span>
-              <span className="mt-0.5 text-xs text-ink-subtle">
-                {category.productCount} {category.productCount === 1 ? "product" : "products"}
-              </span>
+              <div className="min-w-0">
+                <span className="line-clamp-2 text-[13px] font-semibold leading-tight text-ink group-hover:text-brand-700">
+                  {category.name}
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-subtle">
+                  {category.productCount} {category.productCount === 1 ? "item" : "items"}
+                </span>
+              </div>
             </Link>
           </li>
         ))}
