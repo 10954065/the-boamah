@@ -64,7 +64,7 @@ export function Hero({ banner, stats }: { banner: PromoBanner | null; stats?: { 
         eyebrow: "Everyday essentials, online",
         title: "Fresh Groceries, Delivered to Your Door.",
         subtitle:
-          "Shop your everyday essentials, fresh produce, and family favourites from The Boamah's Online Grocery Shop.",
+          "Rice, cooking oil, breakfast, juices, snacks and household favourites from The Boamah's Online Grocery Shop.",
         imageUrl: "/images/banners/hero.webp",
         ctaLabel: "Shop Groceries",
         ctaHref: "/shop",

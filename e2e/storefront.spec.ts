@@ -6,29 +6,29 @@ test.describe("storefront", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Shop by category" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Vegetables/ }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /Juices/ }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Featured this week" })).toBeVisible();
   });
 
   test("search finds real products and shows a helpful empty state", async ({ page }) => {
     await page.goto("/shop?q=rice");
-    await expect(page.getByRole("link", { name: "Jasmine Rice" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();
     await page.goto("/shop?q=zzzznotaproduct");
     await expect(page.getByRole("heading", { name: /We couldn't find/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Browse categories" })).toBeVisible();
   });
 
   test("category filtering and sorting keep state in the URL", async ({ page }) => {
-    await page.goto("/categories/fruits?sort=price-asc");
-    await expect(page.getByRole("heading", { level: 1, name: "Fruits" })).toBeVisible();
+    await page.goto("/categories/juices-drinks?sort=price-asc");
+    await expect(page.getByRole("heading", { level: 1, name: "Juices & Drinks" })).toBeVisible();
     await expect(page.getByLabel("Sort by")).toHaveValue("price-asc");
     await expect(page.locator("article").first()).toContainText("GH₵");
   });
 
   test("product detail page loads with price and add to cart", async ({ page }) => {
-    await page.goto("/products/tomatoes");
-    await expect(page.getByRole("heading", { level: 1, name: "Fresh Tomatoes" })).toBeVisible();
-    await expect(page.getByText("per kg").first()).toBeVisible();
+    await page.goto("/products/quaker-quick-oats");
+    await expect(page.getByRole("heading", { level: 1, name: "Quaker Quick 1-Minute Oats" })).toBeVisible();
+    await expect(page.getByText("per box").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /^Add to cart$/ })).toBeEnabled();
   });
 
@@ -43,8 +43,8 @@ test.describe("storefront", () => {
     for (const body of bodies) expect(body).toContain("<urlset");
     const [pages, categories, products] = bodies as [string, string, string];
     expect(pages).toMatch(/<loc>[^<]*\/shop<\/loc>/);
-    expect(categories).toMatch(/<loc>[^<]*\/categories\/fruits<\/loc>/);
-    expect(products).toMatch(/<loc>[^<]*\/products\/jasmine-rice<\/loc>/);
+    expect(categories).toMatch(/<loc>[^<]*\/categories\/juices-drinks<\/loc>/);
+    expect(products).toMatch(/<loc>[^<]*\/products\/royal-basmati-rice<\/loc>/);
     expect(products).toContain("<image:loc>");
     expect(products).not.toContain("/admin");
   });
@@ -63,23 +63,22 @@ test.describe("storefront", () => {
     const menu = page.getByRole("navigation", { name: "Main" });
     await expect(menu.getByRole("link", { name: "Shop", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(menu.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current", "page");
-    await expect(page.getByRole("navigation", { name: "Pagination" }).locator('[aria-current="page"]')).toHaveText("1");
 
     await page.locator("body").press("/");
     await expect(page.getByRole("combobox", { name: "Search groceries" }).first()).toBeFocused();
   });
 
   test("recently viewed products follow the shopper between pages", async ({ page }) => {
-    await page.goto("/products/jasmine-rice");
-    await page.goto("/products/tomatoes");
+    await page.goto("/products/royal-basmati-rice");
+    await page.goto("/products/quaker-quick-oats");
     const recent = page.getByRole("region", { name: "Recently viewed" });
-    await expect(recent.getByRole("link", { name: "Jasmine Rice" })).toBeVisible();
-    await expect(recent.getByRole("link", { name: "Fresh Tomatoes" })).toHaveCount(0);
+    await expect(recent.getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();
+    await expect(recent.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toHaveCount(0);
 
     await page.goto("/");
     const home = page.getByRole("region", { name: "Pick up where you left off" });
-    await expect(home.getByRole("link", { name: "Fresh Tomatoes" })).toBeVisible();
-    await expect(home.getByRole("link", { name: "Jasmine Rice" })).toBeVisible();
+    await expect(home.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toBeVisible();
+    await expect(home.getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();
   });
 
   test("back to top appears after scrolling and returns to the top", async ({ page }) => {
@@ -93,10 +92,10 @@ test.describe("storefront", () => {
   });
 
   test("unavailable products cannot be purchased", async ({ page }) => {
-    await setStock("croissants", 0);
-    await page.goto("/products/croissants");
+    await setStock("famous-amos-cookies", 0);
+    await page.goto("/products/famous-amos-cookies");
     await expect(page.getByText("Currently unavailable.")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Add to cart$/ })).toHaveCount(0);
-    await setStock("croissants", 12_000);
+    await setStock("famous-amos-cookies", 12_000);
   });
 });

@@ -28,7 +28,7 @@ export default async function CartPage() {
             <EmptyState
               icon={<ShoppingBasket />}
               title="Your cart is empty"
-              description="Browse fresh produce, pantry staples and household essentials, then add them to your cart."
+              description="Browse rice, cooking oil, juices, snacks and household essentials, then add them to your cart."
               action={
                 <Link href="/shop" className={buttonVariants({ size: "lg" })}>
                   Continue shopping <ArrowRight aria-hidden="true" />

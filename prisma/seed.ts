@@ -72,7 +72,7 @@ async function seedCatalogue() {
         variants: {
           create: product.variants.map((variant, vIndex) => ({
             name: variant.name,
-            sku: `BMH-${product.slug.toUpperCase().replace(/-/g, "").slice(0, 10)}-${vIndex + 1}`,
+            sku: `BMH-${product.slug.toUpperCase().replace(/-/g, "").slice(0, 16)}-${vIndex + 1}`,
             unit: variant.unit,
             priceMinor: variant.price,
             salePriceMinor: variant.sale ?? null,
@@ -106,15 +106,15 @@ async function seedStore() {
           placement: "HERO",
           eyebrow: "Everyday essentials, online",
           title: "Fresh Groceries, Delivered to Your Door.",
-          subtitle: "Shop your everyday essentials, fresh produce, and family favourites from The Boamah's Online Grocery Shop.",
+          subtitle: "Rice, cooking oil, breakfast, juices, snacks and household favourites from The Boamah's Online Grocery Shop.",
           imageUrl: "/images/banners/hero.webp",
           ctaLabel: "Shop Groceries",
           ctaHref: "/shop",
           sortOrder: 0,
         },
-        { placement: "HOME_PROMO", eyebrow: "This week", title: "Fresh produce for every meal", subtitle: "Tomatoes, peppers, garden eggs and more.", imageUrl: "/images/banners/produce.webp", ctaLabel: "Shop vegetables", ctaHref: "/categories/vegetables", tone: "leaf", sortOrder: 1 },
-        { placement: "HOME_PROMO", eyebrow: "Home care", title: "Stock up on household essentials", subtitle: "Detergent, soap and tissue for the whole family.", imageUrl: "/images/banners/household.webp", ctaLabel: "Shop household", ctaHref: "/categories/household-essentials", tone: "gold", sortOrder: 2 },
-        { placement: "HOME_PROMO", eyebrow: "Refreshments", title: "Drinks for the whole family", subtitle: "Water, juice and soft drinks.", imageUrl: "/images/banners/drinks.webp", ctaLabel: "Shop drinks", ctaHref: "/categories/drinks-beverages", tone: "cream", sortOrder: 3 },
+        { placement: "HOME_PROMO", eyebrow: "By the pack", title: "Juices for the whole family", subtitle: "Ocean Spray, Welch's, Martinelli's and Apple & Eve.", imageUrl: "/images/banners/juices.webp", ctaLabel: "Shop juices", ctaHref: "/categories/juices-drinks", tone: "leaf", sortOrder: 1 },
+        { placement: "HOME_PROMO", eyebrow: "Breakfast", title: "Start the day right", subtitle: "Quaker Oats, Kellogg's Corn Flakes and Coffee-mate.", imageUrl: "/images/banners/breakfast.webp", ctaLabel: "Shop breakfast", ctaHref: "/categories/breakfast", tone: "gold", sortOrder: 2 },
+        { placement: "HOME_PROMO", eyebrow: "Personal care", title: "Soap in value packs", subtitle: "Dove and Irish Spring bar soap.", imageUrl: "/images/banners/personal-care.webp", ctaLabel: "Shop personal care", ctaHref: "/categories/personal-care", tone: "cream", sortOrder: 3 },
       ],
     });
   }
@@ -139,7 +139,7 @@ async function seedStore() {
     update: {},
     create: {
       id: "default",
-      tagline: "Everyday groceries, fresh produce and household essentials, ordered online.",
+      tagline: "Rice, cooking oil, breakfast, juices, snacks and household essentials, ordered online.",
       announcementEnabled: true,
       announcementText: "Demo store: products, prices and delivery fees shown are sample data.",
       codEnabled: true,
@@ -154,9 +154,9 @@ async function seedSampleOrders() {
   if ((await prisma.order.count()) > 0) return;
   const zone = await prisma.deliveryZone.findFirst({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
   const samples = [
-    { daysAgo: 6, status: "DELIVERED" as const, method: "CASH_ON_DELIVERY" as const, paid: true, items: [["jasmine-rice", 0, 1000], ["vegetable-oil", 0, 2000], ["tomatoes", 0, 1500]] as const },
-    { daysAgo: 2, status: "PROCESSING" as const, method: "PAYSTACK" as const, paid: true, items: [["eggs", 0, 1000], ["sugar-bread", 0, 2000], ["fresh-milk", 0, 2000]] as const },
-    { daysAgo: 0, status: "CONFIRMED" as const, method: "CASH_ON_DELIVERY" as const, paid: false, items: [["plantain", 0, 1000], ["tilapia", 0, 1500], ["onions", 0, 1000]] as const },
+    { daysAgo: 6, status: "DELIVERED" as const, method: "CASH_ON_DELIVERY" as const, paid: true, items: [["royal-basmati-rice", 0, 1000], ["members-mark-vegetable-oil", 0, 2000], ["kelloggs-corn-flakes", 0, 1000]] as const },
+    { daysAgo: 2, status: "PROCESSING" as const, method: "PAYSTACK" as const, paid: true, items: [["ensure-original", 0, 1000], ["welchs-fruit-snacks", 0, 1000], ["coffee-mate-original", 0, 2000]] as const },
+    { daysAgo: 0, status: "CONFIRMED" as const, method: "CASH_ON_DELIVERY" as const, paid: false, items: [["ocean-spray-cran-grape", 0, 2000], ["dove-cool-moisture-bar-soap", 0, 1000], ["purina-dog-chow", 0, 1000]] as const },
   ];
 
   for (const sample of samples) {

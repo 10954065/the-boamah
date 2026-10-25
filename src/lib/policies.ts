@@ -106,7 +106,7 @@ These terms apply when you use the website of The Boamah's Online Grocery Shop (
 
 ## Products and prices
 - Prices are shown in Ghana cedis (GH₵). Before you place an order, checkout shows the full amount you will pay, including any delivery fee and discount.
-- Photos are for illustration. Fresh produce varies naturally in size, shape and colour.
+- Photos are for illustration. Manufacturers sometimes change packaging, so a product may look slightly different from its photo.
 - Prices and availability can change at any time. The price that applies is the one shown when you place your order.
 - If a product is listed at an obviously wrong price, we may cancel that item and refund anything you paid for it.
 

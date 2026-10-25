@@ -7,7 +7,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/shop">): Pr
   const params = parseListingParams(await searchParams);
   return {
     title: params.q ? `Search results for “${params.q}”` : "Shop all groceries",
-    description: "Browse fresh produce, pantry staples, drinks, bakery and household essentials.",
+    description: "Browse rice, cooking oil, breakfast, juices, snacks and household essentials, by the pack and in bulk.",
     alternates: { canonical: "/shop" },
     // Filtered and search result pages are not indexed separately.
     robots: hasActiveFilters(params) || params.category ? { index: false, follow: true } : undefined,
@@ -20,7 +20,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
     <>
       <PageHeader
         title={params.q ? `Results for “${params.q}”` : "Shop all groceries"}
-        description="Fresh produce, pantry staples, drinks, bakery and household essentials."
+        description="Rice, cooking oil, breakfast, juices, snacks and household essentials, by the pack and in bulk."
         crumbs={[{ href: "/", label: "Home" }, { label: "Shop" }]}
       />
       <div className="container-page">

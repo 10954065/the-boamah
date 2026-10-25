@@ -14,7 +14,7 @@ const manrope = Manrope({
 
 const STORE_NAME = "The Boamah's Online Grocery Shop";
 const DESCRIPTION =
-  "Shop fresh produce, pantry essentials, drinks and household groceries online from The Boamah's Online Grocery Shop in Ghana.";
+  "Shop rice, cooking oil, breakfast cereals, juices, snacks and household essentials online from The Boamah's Online Grocery Shop in Ghana.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

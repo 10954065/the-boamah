@@ -116,7 +116,7 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
           aria-autocomplete="list"
           aria-activedescendant={active >= 0 ? `${listId}-opt-${active}` : undefined}
           autoComplete="off"
-          placeholder="Search for rice, tomatoes, cooking oil…"
+          placeholder="Search for rice, oil, juice, soap…"
           value={query}
           maxLength={100}
           onChange={(event) => setQuery(event.target.value)}

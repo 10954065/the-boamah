@@ -8,18 +8,18 @@ async function addProduct(page: Page, slug: string) {
 
 test.describe("cart and checkout", () => {
   test("cart quantities, removal and totals", async ({ page }) => {
-    await addProduct(page, "jasmine-rice");
+    await addProduct(page, "royal-basmati-rice");
     await page.goto("/cart");
-    await expect(page.getByText("Jasmine Rice")).toBeVisible();
+    await expect(page.getByText("Royal Basmati Rice")).toBeVisible();
     await page.getByRole("button", { name: "Increase quantity" }).first().click();
-    await expect(page.getByText("GH₵220.00").first()).toBeVisible(); // 2 × GH₵110 sale price
-    await page.getByRole("button", { name: /Remove Jasmine Rice from cart/ }).click();
+    await expect(page.getByText("GH₵900.00").first()).toBeVisible(); // 2 × GH₵450 sale price
+    await page.getByRole("button", { name: /Remove Royal Basmati Rice from cart/ }).click();
     await expect(page.getByRole("heading", { name: "Your cart is empty" })).toBeVisible();
   });
 
   test("invalid checkout details are rejected with clear messages", async ({ page }) => {
-    await addProduct(page, "vegetable-oil");
-    await addProduct(page, "jasmine-rice");
+    await addProduct(page, "members-mark-vegetable-oil");
+    await addProduct(page, "royal-basmati-rice");
     await page.goto("/checkout");
     await page.locator("#zoneId").selectOption({ index: 1 });
     await page.getByLabel("Phone number").fill("12345");
@@ -31,8 +31,8 @@ test.describe("cart and checkout", () => {
   });
 
   test("guest can place a cash-on-delivery order with server-calculated totals", async ({ page }) => {
-    await addProduct(page, "vegetable-oil");
-    await addProduct(page, "jasmine-rice");
+    await addProduct(page, "members-mark-vegetable-oil");
+    await addProduct(page, "royal-basmati-rice");
     await page.goto("/checkout");
     await page.getByLabel("Full name").fill("E2E Shopper");
     await page.getByRole("textbox", { name: "Email address", exact: true }).fill("e2e@example.com");
@@ -50,8 +50,8 @@ test.describe("cart and checkout", () => {
   });
 
   test("online payment is only confirmed after server-side verification", async ({ page }) => {
-    await addProduct(page, "vegetable-oil");
-    await addProduct(page, "eggs");
+    await addProduct(page, "members-mark-vegetable-oil");
+    await addProduct(page, "quaker-quick-oats");
     await page.goto("/checkout");
     await page.getByLabel("Full name").fill("E2E Payer");
     await page.getByRole("textbox", { name: "Email address", exact: true }).fill("payer@example.com");
