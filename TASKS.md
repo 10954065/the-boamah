@@ -18,25 +18,25 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [~] Security headers (CSP, HSTS in production, frame/sniff/referrer policies)
 
 ## 2. Storefront
-- [ ] Store layout: announcement bar, header (search, account, cart), category nav, mobile menu, footer
-- [ ] Homepage: hero, categories, featured/best sellers/new arrivals, promo banners, trust section, newsletter
-- [ ] Shop page: search, category/price/availability filters, sorting, pagination, URL state
-- [ ] Product detail: gallery, variants, quantity rules, stock state, related products
-- [ ] Wishlist (authenticated, persisted)
-- [ ] Policy, contact and image-credit pages
+- [x] Store layout: announcement bar, header (search, account, cart), category nav, mobile menu, footer — browser-checked desktop + mobile
+- [x] Homepage: hero, categories, featured/best sellers/new arrivals, promo banners, trust section, newsletter — no overflow at 390px/1440px
+- [x] Shop page: search, category/price/availability filters, sorting, pagination, URL state
+- [x] Product detail: gallery, variants, quantity rules, stock state, related products
+- [~] Wishlist (authenticated, persisted)
+- [x] Policy, contact and image-credit pages
 
 ## 3. Cart
-- [ ] DB-backed cart for guests (httpOnly cookie token) and customers
-- [ ] Guest cart merge on sign-in
-- [ ] Revalidation against live prices/stock with price-change notices
+- [x] DB-backed cart for guests (httpOnly cookie token) and customers — browser flow verified
+- [~] Guest cart merge on sign-in
+- [~] Revalidation against live prices/stock with price-change notices
 
 ## 4. Checkout, orders & payments
-- [ ] Checkout form (delivery zones / pickup), coupon, server-side totals
-- [ ] Transactional order creation, stock reservation, idempotency
-- [ ] Paystack initialise / verify / webhook (signature, dedupe, amount+currency checks)
-- [ ] Cash on delivery (admin-controlled)
-- [ ] Expiry of unpaid online orders (cron) with stock release
-- [ ] Confirmation page + guest order access link
+- [x] Checkout form (delivery zones / pickup), coupon, server-side totals — min-order block verified
+- [~] Transactional order creation, stock reservation, idempotency
+- [~] Paystack initialise / verify / webhook (signature, dedupe, amount+currency checks) — needs merchant test keys for a live check; flow verified with the dev mock gateway
+- [x] Cash on delivery (admin-controlled) — browser flow verified
+- [~] Expiry of unpaid online orders (cron) with stock release
+- [x] Confirmation page + guest order access (private token cookie / link) and public tracking
 
 ## 5. Customer account
 - [ ] Profile, addresses, order history, order detail + tracking timeline, wishlist, password change

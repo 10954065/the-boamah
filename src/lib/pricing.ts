@@ -11,7 +11,7 @@
  * - Shelf prices are tax-inclusive; taxMinor is reported separately as 0
  *   until the business configures otherwise.
  */
-import { percentageOf } from "./money";
+import { formatMoney, percentageOf } from "./money";
 import { lineTotalMinor } from "./quantity";
 
 export interface PriceSource {
@@ -159,7 +159,10 @@ export function computeDeliveryFee(zone: DeliveryZoneRule, goodsTotalMinor: numb
     return { ok: false, message: `We are not currently delivering to ${zone.name}.` };
   }
   if (goodsTotalMinor < zone.minOrderMinor) {
-    return { ok: false, message: `The minimum order for delivery to ${zone.name} has not been reached.` };
+    return {
+      ok: false,
+      message: `Delivery to ${zone.name} needs a minimum order of ${formatMoney(zone.minOrderMinor)} (after discounts). Add a few more items or choose pickup.`,
+    };
   }
   if (zone.freeDeliveryThresholdMinor !== null && goodsTotalMinor >= zone.freeDeliveryThresholdMinor) {
     return { ok: true, feeMinor: 0, freeDeliveryApplied: true };
