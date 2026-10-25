@@ -14,8 +14,8 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Pricing engine: sale prices, coupons, delivery fees, totals — unit tested
 - [x] Order status state machine — unit tested
 - [x] Role → permission map, enforced server-side — unit tested
-- [~] Better Auth (email/password, password reset, DB sessions, rate limiting, suspension)
-- [~] Security headers (CSP, HSTS in production, frame/sniff/referrer policies)
+- [~] Better Auth (email/password, password reset, DB sessions, rate limiting, suspension) — registration, sign-in and access guards verified in E2E; reset emails need RESEND_API_KEY to check delivery
+- [x] Security headers (CSP, HSTS in production, frame/sniff/referrer/permissions policies) — checked on a production build
 
 ## 2. Storefront
 - [x] Store layout: announcement bar, header (search, account, cart), category nav, mobile menu, footer — browser-checked desktop + mobile
@@ -32,10 +32,11 @@ A feature is only ticked when its behaviour is implemented **and** verified
 
 ## 4. Checkout, orders & payments
 - [x] Checkout form (delivery zones / pickup), coupon, server-side totals — min-order block verified
-- [~] Transactional order creation, stock reservation, idempotency
-- [~] Paystack initialise / verify / webhook (signature, dedupe, amount+currency checks) — needs merchant test keys for a live check; flow verified with the dev mock gateway
+- [x] Transactional order creation, stock reservation, idempotency — integration-tested, incl. concurrent purchase of the last item
+- [x] Payment verification and webhook rules (signature, dedupe, amount+currency checks, late payments) — integration-tested with the Paystack API stubbed; checkout flow E2E-tested with the mock gateway
+- [ ] Live check against Paystack test mode — needs the merchant's sk_test_ key (see docs/DEPLOYMENT.md)
 - [x] Cash on delivery (admin-controlled) — browser flow verified
-- [~] Expiry of unpaid online orders (cron) with stock release
+- [x] Expiry of unpaid online orders (cron) with stock release — integration-tested; cron endpoint rejects unauthenticated calls
 - [x] Confirmation page + guest order access (private token cookie / link) and public tracking
 
 ## 5. Customer account
@@ -59,7 +60,14 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Metadata, canonical URLs, JSON-LD, sitemap, robots
 
 ## 8. Quality
-- [ ] Integration tests (orders, inventory, coupons, payments, webhooks, permissions)
-- [ ] Playwright E2E (storefront, cart, checkout, admin guard, responsive)
-- [ ] Lint, typecheck, production build
-- [ ] Deployment & operations documentation
+- [x] Unit tests — 57 passing (money, quantities, pricing, coupons, order states, permissions, security helpers)
+- [x] Integration tests — 17 passing against Postgres (orders, inventory, coupons, cash, expiry, payments, webhooks)
+- [x] Playwright E2E — 34 passing (storefront, search, cart, checkout, payments, access control, 320–1440 px layout); storefront/access/responsive specs also pass against a production build
+- [x] Lint, typecheck, production build; npm audit clean (Next.js, Zod and Prisma security patches applied)
+- [x] Deployment & operations documentation — README.md, docs/DEPLOYMENT.md
+
+## Open items
+- [ ] Business content before launch: real prices and stock, delivery zones and fees, pickup details, contact details, policy texts, tax treatment (checklist in docs/DEPLOYMENT.md)
+- [ ] "Refunded" order status: paid orders cannot be cancelled in the admin; refunds are made in Paystack and noted on the order
+- [ ] Confirm the Vercel plan allows the 15-minute cron, or use an external scheduler
+- [ ] Email and SMS delivery checks once Resend / Arkesel credentials exist

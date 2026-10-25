@@ -7,7 +7,9 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
+  // The CLI (migrate, db execute) needs a direct connection; the app itself
+  // uses DATABASE_URL, which may be a pooled connection string.
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DIRECT_DATABASE_URL || env("DATABASE_URL"),
   },
 });
