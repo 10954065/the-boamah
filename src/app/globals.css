@@ -185,8 +185,23 @@
   .prose-policy {
     @apply text-[15px] leading-7 text-ink-muted;
   }
-  .prose-policy p + p {
+  .prose-policy > * + * {
     @apply mt-4;
+  }
+  .prose-policy .policy-updated {
+    @apply text-sm font-medium text-ink-subtle;
+  }
+  .prose-policy h2 {
+    @apply mt-9 text-lg font-extrabold text-ink sm:text-xl;
+  }
+  .prose-policy h2 + * {
+    @apply mt-3;
+  }
+  .prose-policy ul {
+    @apply list-disc space-y-2 pl-5 marker:text-leaf-500;
+  }
+  .prose-policy a {
+    @apply font-semibold text-brand-700 underline decoration-brand-200 underline-offset-2 transition-colors hover:decoration-brand-700;
   }
 }
 

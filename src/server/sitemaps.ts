@@ -2,6 +2,7 @@ import "server-only";
 import type { MetadataRoute } from "next";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { POLICY_PAGES, policyText, type PolicySlug } from "@/lib/policies";
 import { siteUrl } from "@/lib/utils";
 import { getStoreSettings } from "@/server/settings";
 
@@ -21,18 +22,13 @@ const LISTED_PRODUCT = {
   variants: { some: { isActive: true } },
 } satisfies Prisma.ProductWhereInput;
 
-const POLICIES = [
-  ["delivery", "deliveryPolicy"],
-  ["returns", "returnsPolicy"],
-  ["privacy", "privacyPolicy"],
-  ["terms", "termsPolicy"],
-] as const;
 
 const absolute = (url: string) => (/^https?:\/\//.test(url) ? url : siteUrl(url));
 
 export async function pagesSitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getStoreSettings();
-  const policies = POLICIES.filter(([, field]) => Boolean(settings[field])).map(([slug]) => ({
+  const slugs = Object.keys(POLICY_PAGES) as PolicySlug[];
+  const policies = slugs.filter((slug) => Boolean(policyText(settings, slug))).map((slug) => ({
     url: siteUrl(`/policies/${slug}`),
     lastModified: settings.updatedAt,
     changeFrequency: "monthly" as const,

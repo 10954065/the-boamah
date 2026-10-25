@@ -3,30 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Alert } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/store/page-header";
+import { PolicyText } from "@/components/store/policy-text";
 import { formatMoney } from "@/lib/money";
+import { isPolicySlug, POLICY_PAGES, policyText } from "@/lib/policies";
 import { getActiveZones } from "@/server/delivery";
 import { getStoreSettings } from "@/server/settings";
-
-const POLICIES = {
-  delivery: { title: "Delivery information", field: "deliveryPolicy" },
-  returns: { title: "Returns & refunds", field: "returnsPolicy" },
-  privacy: { title: "Privacy policy", field: "privacyPolicy" },
-  terms: { title: "Terms & conditions", field: "termsPolicy" },
-} as const;
-
-type PolicySlug = keyof typeof POLICIES;
-
-function isPolicySlug(slug: string): slug is PolicySlug {
-  return slug in POLICIES;
-}
 
 export async function generateMetadata({ params }: PageProps<"/policies/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   if (!isPolicySlug(slug)) return { title: "Not found" };
   const settings = await getStoreSettings();
-  const published = Boolean(settings[POLICIES[slug].field]);
+  const published = Boolean(policyText(settings, slug));
   return {
-    title: POLICIES[slug].title,
+    title: POLICY_PAGES[slug].title,
     alternates: { canonical: `/policies/${slug}` },
     robots: published ? undefined : { index: false, follow: true },
   };
@@ -35,16 +24,18 @@ export async function generateMetadata({ params }: PageProps<"/policies/[slug]">
 export default async function PolicyPage({ params }: PageProps<"/policies/[slug]">) {
   const { slug } = await params;
   if (!isPolicySlug(slug)) notFound();
-  const policy = POLICIES[slug];
+  const policy = POLICY_PAGES[slug];
   const [settings, zones] = await Promise.all([getStoreSettings(), slug === "delivery" ? getActiveZones() : Promise.resolve([])]);
-  const body = settings[policy.field];
+  const body = policyText(settings, slug);
 
   return (
     <>
       <PageHeader title={policy.title} crumbs={[{ href: "/", label: "Home" }, { label: policy.title }]} />
       <div className="container-page max-w-3xl space-y-8">
         {body ? (
-          <article className="prose-policy whitespace-pre-line rounded-lg border border-line bg-surface p-6 sm:p-8">{body}</article>
+          <article className="prose-policy rounded-2xl border border-line bg-surface p-6 sm:p-10">
+            <PolicyText text={body} />
+          </article>
         ) : (
           <Alert tone="info" title="This page is being prepared">
             Our {policy.title.toLowerCase()} will be published here shortly. If you have a question in the meantime, please{" "}

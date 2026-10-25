@@ -146,12 +146,24 @@ export async function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-brand-800">
-        <div className="container-page flex flex-col gap-2 pb-20 pt-5 text-xs text-brand-300 sm:flex-row sm:items-center sm:justify-between sm:pb-5 sm:pr-20">
+        <div className="container-page flex flex-col gap-2 pt-5 text-xs text-brand-300 sm:flex-row sm:items-center sm:justify-between sm:pr-20">
           <p>
             © {new Date().getFullYear()} {settings.storeName}. All rights reserved.
           </p>
           {paymentMethods.length > 0 ? <p>We accept: {paymentMethods.join(" · ")}</p> : null}
         </div>
+        <p className="container-page pb-20 pt-4 text-center text-xs text-brand-300 sm:pb-6">
+          Created by{" "}
+          <a
+            href="https://www.sunleonrouterenterprise.com/"
+            target="_blank"
+            rel="noopener"
+            className="font-semibold text-gold-300 underline decoration-gold-300/40 underline-offset-2 transition-colors hover:text-gold-400 hover:decoration-gold-400"
+          >
+            Sunleon Router Enterprise
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </p>
       </div>
     </footer>
   );
