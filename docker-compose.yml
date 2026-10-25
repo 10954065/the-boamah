@@ -1,0 +1,23 @@
+# Local PostgreSQL for development and integration tests.
+# Usage: npm run db:up
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: boamah
+      POSTGRES_PASSWORD: boamah_local_dev
+      POSTGRES_DB: boamah
+    ports:
+      - "5439:5432"
+    volumes:
+      - boamah_pgdata:/var/lib/postgresql/data
+      - ./scripts/docker-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boamah -d boamah"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  boamah_pgdata:

@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/*
+ * The Boamah's Online Grocery Shop — design tokens
+ * Deep forest green (brand), fresh leaf green (support), warm white ground,
+ * soft golden yellow for offers, charcoal text and quiet neutral borders.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-manrope), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eef6f1;
+  --color-brand-100: #d6eadd;
+  --color-brand-200: #abd3ba;
+  --color-brand-300: #78b591;
+  --color-brand-400: #46936a;
+  --color-brand-500: #26764e;
+  --color-brand-600: #1c5f3e;
+  --color-brand-700: #174d33;
+  --color-brand-800: #133e2a;
+  --color-brand-900: #0f3022;
+
+  --color-leaf-50: #f1f8ea;
+  --color-leaf-100: #ddefcc;
+  --color-leaf-400: #7cbc4b;
+  --color-leaf-500: #5ea33a;
+  --color-leaf-600: #4a852c;
+
+  --color-gold-50: #fdf7e6;
+  --color-gold-100: #fbecc0;
+  --color-gold-300: #f5cf6a;
+  --color-gold-400: #f1bd3d;
+  --color-gold-500: #e2a51c;
+  --color-gold-700: #8a5f0b;
+
+  --color-canvas: #fbfaf6;
+  --color-surface: #ffffff;
+  --color-soft: #f4f2ec;
+  --color-ink: #1d2320;
+  --color-ink-muted: #5b635e;
+  --color-ink-subtle: #858c87;
+  --color-line: #e6e3db;
+  --color-line-strong: #d3cfc4;
+
+  --color-sale: #c2412d;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-success: #1c7c47;
+  --color-success-soft: #e7f5ec;
+  --color-warning: #9a6700;
+  --color-warning-soft: #fff6dd;
+  --color-info: #1f5f99;
+  --color-info-soft: #e8f1fb;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  --shadow-card: 0 1px 2px rgb(29 35 32 / 0.04), 0 1px 3px rgb(29 35 32 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(29 35 32 / 0.08), 0 2px 4px -2px rgb(29 35 32 / 0.06);
+  --shadow-overlay: 0 16px 40px -8px rgb(15 48 34 / 0.25);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-ink;
+    letter-spacing: -0.015em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-brand-100);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .prose-policy {
+    @apply text-[15px] leading-7 text-ink-muted;
+  }
+  .prose-policy p + p {
+    @apply mt-4;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
