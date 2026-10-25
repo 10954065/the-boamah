@@ -22,7 +22,7 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Homepage: hero, categories, featured/best sellers/new arrivals, promo banners, trust section, newsletter — no overflow at 390px/1440px
 - [x] Shop page: search, category/price/availability filters, sorting, pagination, URL state
 - [x] Product detail: gallery, variants, quantity rules, stock state, related products
-- [~] Wishlist (authenticated, persisted)
+- [x] Wishlist (authenticated, persisted) — browser-verified
 - [x] Policy, contact and image-credit pages
 
 ## 3. Cart
@@ -39,7 +39,7 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Confirmation page + guest order access (private token cookie / link) and public tracking
 
 ## 5. Customer account
-- [ ] Profile, addresses, order history, order detail + tracking timeline, wishlist, password change
+- [x] Profile, addresses, order history, order detail + tracking timeline, wishlist, password change — browser-verified (register → wishlist → address)
 
 ## 6. Administration
 - [ ] Dashboard metrics (paid revenue vs pending vs COD outstanding)

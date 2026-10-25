@@ -77,7 +77,7 @@ const publishedWhere = {
   variants: { some: { isActive: true } },
 } satisfies Prisma.ProductWhereInput;
 
-async function cardsByIds(ids: string[]): Promise<ProductCardView[]> {
+export async function cardsByIds(ids: string[]): Promise<ProductCardView[]> {
   if (ids.length === 0) return [];
   const products = await prisma.product.findMany({ where: { id: { in: ids }, ...publishedWhere }, include: cardInclude });
   const byId = new Map(products.map((p) => [p.id, toCardView(p)]));
