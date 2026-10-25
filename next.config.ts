@@ -31,6 +31,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  agentRules: false,
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
