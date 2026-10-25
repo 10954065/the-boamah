@@ -165,38 +165,6 @@ export function Hero({ banner, stats }: { banner: PromoBanner | null; stats?: { 
   );
 }
 
-/** Tilted, endlessly scrolling band of category links. Pauses on hover and focus. */
-export function CategoryMarquee({ categories }: { categories: CategoryView[] }) {
-  if (categories.length === 0) return null;
-  return (
-    <div className="relative mt-10 overflow-hidden py-4">
-      <nav
-        aria-label="Browse by category"
-        className="marquee -mx-[5%] w-[110%] -rotate-1 overflow-hidden bg-brand-900 py-3.5 shadow-[var(--shadow-overlay)] motion-reduce:overflow-x-auto"
-      >
-        <div className="marquee-track flex w-max">
-          {[0, 1].map((copy) => (
-            <ul key={copy} aria-hidden={copy === 1 ? true : undefined} className="flex shrink-0 items-center">
-              {categories.map((category) => (
-                <li key={category.id} className="flex items-center">
-                  <Link
-                    href={`/categories/${category.slug}`}
-                    tabIndex={copy === 1 ? -1 : undefined}
-                    className="px-6 font-display text-lg font-extrabold tracking-tight text-brand-50 transition-colors hover:text-gold-300 sm:text-xl"
-                  >
-                    {category.name}
-                  </Link>
-                  <span className="h-2 w-2 rotate-45 rounded-[2px] bg-gold-400" aria-hidden="true" />
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
-      </nav>
-    </div>
-  );
-}
-
 export function CategoryTiles({ categories }: { categories: CategoryView[] }) {
   if (categories.length === 0) return null;
   return (
