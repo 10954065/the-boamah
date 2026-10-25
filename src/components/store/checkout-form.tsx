@@ -10,6 +10,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { placeOrder, quoteCheckout, type QuoteView } from "@/actions/checkout";
 import { Button } from "@/components/ui/button";
+import { ClientForm } from "@/components/ui/client-form";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, fieldAria } from "@/components/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
@@ -227,7 +228,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
+    <ClientForm onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
       <div className="space-y-6">
         {formError ? <Alert tone="danger">{formError}</Alert> : null}
 
@@ -470,6 +471,6 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
           .
         </p>
       </aside>
-    </form>
+    </ClientForm>
   );
 }

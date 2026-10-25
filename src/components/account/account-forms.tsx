@@ -10,6 +10,7 @@ import { z } from "zod";
 import { deleteAddress, saveAddress, setDefaultAddress, updateProfile, type AddressInput } from "@/actions/profile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ClientForm } from "@/components/ui/client-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Alert, EmptyState, Spinner } from "@/components/ui/feedback";
 import { Field, fieldAria } from "@/components/ui/field";
@@ -23,7 +24,7 @@ export function ProfileForm({ name, phone, email }: { name: string; phone: strin
   const [pending, startTransition] = useTransition();
 
   return (
-    <form
+    <ClientForm
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
@@ -53,7 +54,7 @@ export function ProfileForm({ name, phone, email }: { name: string; phone: strin
           {pending ? <Spinner label="Saving" /> : null} Save changes
         </Button>
       </div>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -91,7 +92,7 @@ export function PasswordForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="max-w-md space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="max-w-md space-y-4">
       {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="currentPassword" label="Current password" error={errors.currentPassword?.message}>
         <Input type="password" autoComplete="current-password" {...fieldAria("currentPassword", errors.currentPassword?.message)} {...form.register("currentPassword")} />
@@ -105,7 +106,7 @@ export function PasswordForm() {
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Saving" /> : null} Change password
       </Button>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -168,7 +169,7 @@ function AddressForm({ zones, initial, onDone }: { zones: ZoneOption[]; initial?
     setValues({ ...values, [key]: event.target.value });
 
   return (
-    <form
+    <ClientForm
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
@@ -223,7 +224,7 @@ function AddressForm({ zones, initial, onDone }: { zones: ZoneOption[]; initial?
           {pending ? <Spinner label="Saving" /> : null} Save address
         </Button>
       </div>
-    </form>
+    </ClientForm>
   );
 }
 

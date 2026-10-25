@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { mergeGuestCartAfterSignIn } from "@/actions/account";
 import { Button } from "@/components/ui/button";
+import { ClientForm } from "@/components/ui/client-form";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, fieldAria } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,7 @@ export function SignInForm({ next }: { next?: string }) {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
       {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="email" label="Email address" error={errors.email?.message}>
         <Input type="email" autoComplete="email" {...fieldAria("email", errors.email?.message)} {...form.register("email")} />
@@ -56,7 +57,7 @@ export function SignInForm({ next }: { next?: string }) {
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Signing in" /> : null} Sign in
       </Button>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -91,7 +92,7 @@ export function RegisterForm({ next }: { next?: string }) {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
       {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="name" label="Full name" required error={errors.name?.message}>
         <Input autoComplete="name" {...fieldAria("name", errors.name?.message)} {...form.register("name")} />
@@ -111,7 +112,7 @@ export function RegisterForm({ next }: { next?: string }) {
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Creating account" /> : null} Create account
       </Button>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -141,7 +142,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
       {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="email" label="Email address" error={errors.email?.message}>
         <Input type="email" autoComplete="email" {...fieldAria("email", errors.email?.message)} {...form.register("email")} />
@@ -149,7 +150,7 @@ export function ForgotPasswordForm() {
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Sending" /> : null} Send reset link
       </Button>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -177,7 +178,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
       {formError ? (
         <Alert tone="danger">
           {formError}{" "}
@@ -195,6 +196,6 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Saving" /> : null} Set new password
       </Button>
-    </form>
+    </ClientForm>
   );
 }

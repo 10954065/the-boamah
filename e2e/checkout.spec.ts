@@ -20,7 +20,7 @@ test.describe("cart and checkout", () => {
   test("invalid checkout details are rejected with clear messages", async ({ page }) => {
     await addProduct(page, "vegetable-oil");
     await addProduct(page, "jasmine-rice");
-    await page.goto("/checkout", { waitUntil: "networkidle" });
+    await page.goto("/checkout");
     await page.locator("#zoneId").selectOption({ index: 1 });
     await page.getByLabel("Phone number").fill("12345");
     await page.getByRole("radio", { name: /Cash on delivery/ }).check();
@@ -33,7 +33,7 @@ test.describe("cart and checkout", () => {
   test("guest can place a cash-on-delivery order with server-calculated totals", async ({ page }) => {
     await addProduct(page, "vegetable-oil");
     await addProduct(page, "jasmine-rice");
-    await page.goto("/checkout", { waitUntil: "networkidle" });
+    await page.goto("/checkout");
     await page.getByLabel("Full name").fill("E2E Shopper");
     await page.getByRole("textbox", { name: "Email address", exact: true }).fill("e2e@example.com");
     await page.getByLabel("Phone number").fill("0241112222");
@@ -52,7 +52,7 @@ test.describe("cart and checkout", () => {
   test("online payment is only confirmed after server-side verification", async ({ page }) => {
     await addProduct(page, "vegetable-oil");
     await addProduct(page, "eggs");
-    await page.goto("/checkout", { waitUntil: "networkidle" });
+    await page.goto("/checkout");
     await page.getByLabel("Full name").fill("E2E Payer");
     await page.getByRole("textbox", { name: "Email address", exact: true }).fill("payer@example.com");
     await page.getByLabel("Phone number").fill("0203334444");
