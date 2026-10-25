@@ -16,7 +16,7 @@ export default async function AdminCategoriesPage() {
     <>
       <AdminHeader
         title="Categories"
-        description="Categories with products cannot be deleted — hide them or move their products first."
+        description="Categories with products cannot be deleted. Hide them or move their products first."
       />
       <CategoryManager
         canEdit={hasPermission(user.role, "catalog:edit")}

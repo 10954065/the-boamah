@@ -118,7 +118,7 @@ export async function applyVerification(reference: string, verification: Verific
       await tx.orderNote.create({
         data: {
           orderId: order.id,
-          body: `Payment ${reference} reported ${verification.amountMinor} ${verification.currency} but ${order.totalMinor} ${order.currency} was expected. Not marked as paid — investigate in the payment dashboard.`,
+          body: `Payment ${reference} reported ${verification.amountMinor} ${verification.currency} but ${order.totalMinor} ${order.currency} was expected. Not marked as paid. Check this payment in the Paystack dashboard.`,
         },
       });
       return { outcome: "AMOUNT_MISMATCH", orderId: order.id, newlyPaid: false };

@@ -54,7 +54,7 @@ export function WishlistButton({ productId, productName, initialSaved, className
       >
         <Heart className={cn("h-4 w-4", saved && "fill-sale text-sale")} aria-hidden="true" />
         {saved ? "Saved" : "Save"}
-        <span className="sr-only"> — {label}</span>
+        <span className="sr-only">, {label}</span>
       </button>
     );
   }

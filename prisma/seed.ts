@@ -25,7 +25,7 @@ interface Credit {
 const credits: Credit[] = JSON.parse(readFileSync(new URL("../src/data/image-credits.json", import.meta.url), "utf8"));
 const creditFor = (file: string): string | null => {
   const credit = credits.find((c) => c.file === file);
-  return credit ? `${credit.author} — ${credit.license}, via Wikimedia Commons` : null;
+  return credit ? `${credit.author}, ${credit.license}, via Wikimedia Commons` : null;
 };
 
 const effective = (price: number, sale?: number) => (sale !== undefined && sale < price ? sale : price);
@@ -139,9 +139,9 @@ async function seedStore() {
     update: {},
     create: {
       id: "default",
-      tagline: "Everyday groceries, fresh produce and household essentials — ordered online.",
+      tagline: "Everyday groceries, fresh produce and household essentials, ordered online.",
       announcementEnabled: true,
-      announcementText: "Demo store — products, prices and delivery fees shown are sample data.",
+      announcementText: "Demo store: products, prices and delivery fees shown are sample data.",
       codEnabled: true,
       pickupEnabled: true,
       onlinePaymentEnabled: true,

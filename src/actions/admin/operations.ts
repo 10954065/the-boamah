@@ -178,7 +178,7 @@ const dateField = z
 const couponSchema = z
   .object({
     id: z.string().max(64).optional(),
-    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,30}$/, "Use 3–30 letters, numbers, dashes or underscores."),
+    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,30}$/, "Use 3 to 30 letters, numbers, hyphens or underscores."),
     description: z.string().trim().max(200).optional(),
     type: z.enum(["PERCENTAGE", "FIXED"]),
     value: z.string().trim(),

@@ -43,9 +43,9 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         <StatCard label="Orders" value={String(m.totalOrders)} hint={`${m.completedOrders} delivered / collected`} href="/admin/orders" />
         <StatCard label="Awaiting processing" value={String(m.awaitingProcessing)} hint="Confirmed, being prepared or ready (all time)" tone={m.awaitingProcessing ? "warning" : "neutral"} href="/admin/orders?status=CONFIRMED" />
         <StatCard label="Customers" value={String(m.customers)} hint="Registered accounts" href="/admin/customers" />
-        <StatCard label="Awaiting online payment" value={formatMoney(m.pendingOnline.amountMinor)} hint={`${m.pendingOnline.count} order(s) — not revenue`} href="/admin/orders?status=PENDING_PAYMENT" />
+        <StatCard label="Awaiting online payment" value={formatMoney(m.pendingOnline.amountMinor)} hint={`${m.pendingOnline.count} order(s), not counted as revenue`} href="/admin/orders?status=PENDING_PAYMENT" />
         <StatCard label="Cash on delivery outstanding" value={formatMoney(m.codOutstanding.amountMinor)} hint={`${m.codOutstanding.count} order(s) to collect`} tone={m.codOutstanding.count ? "warning" : "neutral"} href="/admin/orders?payment=UNPAID" />
-        <StatCard label="Low-stock options" value={String(m.lowStock.length)} hint="At or below their alert level" tone={m.lowStock.length ? "danger" : "neutral"} href="/admin/inventory?low=1" />
+        <StatCard label="Low stock options" value={String(m.lowStock.length)} hint="At or below their alert level" tone={m.lowStock.length ? "danger" : "neutral"} href="/admin/inventory?low=1" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
@@ -129,7 +129,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
 
         <Panel title="Low stock" actions={<Link href="/admin/inventory?low=1" className="text-sm font-semibold text-brand-700 hover:underline">Inventory</Link>}>
           {m.lowStock.length === 0 ? (
-            <p className="text-sm text-ink-muted">All products are above their low-stock levels.</p>
+            <p className="text-sm text-ink-muted">All products are above their low stock levels.</p>
           ) : (
             <ul className="space-y-2.5 text-sm">
               {m.lowStock.map((item) => (

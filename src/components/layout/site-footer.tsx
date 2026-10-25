@@ -71,7 +71,7 @@ export async function SiteFooter() {
             </div>
           </div>
           <p className="max-w-xs text-sm leading-6 text-brand-200">
-            {settings.tagline ?? "Everyday groceries, fresh produce and household essentials — ordered online."}
+            {settings.tagline ?? "Everyday groceries, fresh produce and household essentials, ordered online."}
           </p>
           <ul className="space-y-2 text-sm">
             {settings.address ? (

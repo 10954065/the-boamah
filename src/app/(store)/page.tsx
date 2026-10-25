@@ -69,7 +69,7 @@ export default async function HomePage() {
       <ProductRow
         id="featured-title"
         title="Featured this week"
-        subtitle="Hand-picked favourites from our shelves."
+        subtitle="Our favourites from the shelves this week."
         href="/shop"
         products={featured}
         savedIds={savedIds}

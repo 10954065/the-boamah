@@ -47,7 +47,7 @@ export default async function AdminCustomerPage({ params }: PageProps<"/admin/cu
           <Panel title="Contact">
             <dl className="space-y-2 text-sm">
               <div><dt className="text-xs text-ink-subtle">Email</dt><dd>{customer.email}</dd></div>
-              <div><dt className="text-xs text-ink-subtle">Phone</dt><dd>{customer.phone ?? "—"}</dd></div>
+              <div><dt className="text-xs text-ink-subtle">Phone</dt><dd>{customer.phone ?? "Not given"}</dd></div>
               <div><dt className="text-xs text-ink-subtle">Paid orders total</dt><dd className="font-semibold">{formatMoney(paidTotal)}</dd></div>
             </dl>
             {hasPermission(viewer.role, "customers:suspend") && customer.id !== viewer.id ? (

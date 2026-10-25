@@ -98,7 +98,7 @@ export default async function CartPage() {
                         ) : null}
                       </p>
                       {unavailable ? (
-                        <p className="mt-1 text-sm font-medium text-danger">⚠ No longer available — please remove it.</p>
+                        <p className="mt-1 text-sm font-medium text-danger">⚠ No longer available. Please remove it.</p>
                       ) : stockIssue && stockIssue.kind === "INSUFFICIENT_STOCK" ? (
                         <p className="mt-1 text-sm font-medium text-danger">
                           ⚠ {stockIssue.availableMilli > 0 ? `Only ${formatQuantity(stockIssue.availableMilli, line.unit)} available.` : "Out of stock."}

@@ -78,7 +78,7 @@ async function emailAdmins(order: OrderWithItems, settings: StoreSettings, subje
     settings,
     preheader: subject,
     heading: subject,
-    bodyHtml: `${escapeHtml(intro)}<br><br><strong>Customer:</strong> ${escapeHtml(order.customerName)} · ${escapeHtml(order.phone)}<br><strong>Fulfilment:</strong> ${escapeHtml(order.fulfilmentMethod === "PICKUP" ? "Pickup" : `Delivery — ${order.zoneName ?? ""}`)}<br><strong>Payment:</strong> ${escapeHtml(paymentStatusLabel(order.paymentStatus, order.paymentMethod))}<br><br>${items.html}`,
+    bodyHtml: `${escapeHtml(intro)}<br><br><strong>Customer:</strong> ${escapeHtml(order.customerName)} · ${escapeHtml(order.phone)}<br><strong>Fulfilment:</strong> ${escapeHtml(order.fulfilmentMethod === "PICKUP" ? "Pickup" : order.zoneName ? `Delivery to ${order.zoneName}` : "Delivery")}<br><strong>Payment:</strong> ${escapeHtml(paymentStatusLabel(order.paymentStatus, order.paymentMethod))}<br><br>${items.html}`,
     bodyText: `${intro}\n\nCustomer: ${order.customerName} · ${order.phone}\nPayment: ${paymentStatusLabel(order.paymentStatus, order.paymentMethod)}\n\n${items.text}`,
     cta: { label: "Open in admin", url: siteUrl(`/admin/orders/${order.id}`) },
   });
@@ -94,7 +94,7 @@ export async function notifyOrderPlaced(orderId: string, guestToken: string | nu
   await emailCustomer(order, settings, {
     type: "ORDER_CONFIRMATION",
     subject: `Order ${order.reference} confirmed`,
-    heading: "Thank you — your order is confirmed",
+    heading: "Thank you, your order is confirmed",
     intro: `Hi ${order.customerName}, we've received your order. You'll pay ${order.fulfilmentMethod === "PICKUP" ? "when you collect it" : "on delivery"}.`,
     includeItems: true,
     guestToken,
@@ -110,7 +110,7 @@ export async function notifyPaymentConfirmed(orderId: string): Promise<void> {
   await emailCustomer(order, settings, {
     type: "PAYMENT_CONFIRMED",
     subject: `Payment received for order ${order.reference}`,
-    heading: "Payment received — your order is confirmed",
+    heading: "Payment received, your order is confirmed",
     intro: `Hi ${order.customerName}, we've received your payment of ${formatMoney(order.totalMinor)}. We'll let you know as your order progresses.`,
     includeItems: true,
   });

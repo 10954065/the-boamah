@@ -41,14 +41,14 @@ const variantSchema = z
   .object({
     id: z.string().max(64).optional(),
     name: z.string().trim().min(1, "Enter a size or option name.").max(60),
-    sku: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,40}$/, "SKU: 3–40 letters, numbers or dashes."),
+    sku: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,40}$/, "SKU must be 3 to 40 letters, numbers or hyphens."),
     unit: z.enum(SELLING_UNITS as [SellingUnitCode, ...SellingUnitCode[]]),
     price: money("Price"),
     salePrice: optionalMoney("Sale price"),
     step: quantity("Quantity step"),
     min: quantity("Minimum quantity"),
     max: optionalQuantity("Maximum quantity"),
-    lowStock: quantity("Low-stock level"),
+    lowStock: quantity("Low stock level"),
     openingStock: optionalQuantity("Opening stock"),
     isActive: z.boolean(),
   })

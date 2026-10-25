@@ -149,9 +149,9 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         </Field>
         <Field id="status" label="Status">
           <Select id="status" value={draft.status} onChange={(e) => set("status", e.target.value as ProductDraft["status"])}>
-            <option value="DRAFT">Draft — hidden from customers</option>
-            <option value="PUBLISHED">Published — visible in the store</option>
-            <option value="ARCHIVED">Archived — no longer sold</option>
+            <option value="DRAFT">Draft (hidden from customers)</option>
+            <option value="PUBLISHED">Published (visible in the store)</option>
+            <option value="ARCHIVED">Archived (no longer sold)</option>
           </Select>
         </Field>
         <label className="flex items-center gap-2 self-end pb-2.5 text-sm text-ink">
@@ -210,7 +210,7 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
               <Field id={`${p}.max`} label="Maximum per order" error={err(`${p}.max`)}>
                 <Input {...fieldAria(`${p}.max`, err(`${p}.max`))} inputMode="decimal" placeholder="No limit" value={variant.max} onChange={(e) => setVariant(index, { max: e.target.value })} />
               </Field>
-              <Field id={`${p}.lowStock`} label="Low-stock alert at" error={err(`${p}.lowStock`)}>
+              <Field id={`${p}.lowStock`} label="Low stock alert at" error={err(`${p}.lowStock`)}>
                 <Input {...fieldAria(`${p}.lowStock`, err(`${p}.lowStock`))} inputMode="decimal" value={variant.lowStock} onChange={(e) => setVariant(index, { lowStock: e.target.value })} />
               </Field>
               {variant.id ? (

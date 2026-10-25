@@ -8,7 +8,7 @@ import { getActiveCategories } from "@/server/catalog";
 
 export const metadata: Metadata = {
   title: "All categories",
-  description: "Browse groceries by category — fruits, vegetables, meat, fish, dairy, grains, drinks, bakery and more.",
+  description: "Browse groceries by category: fruits, vegetables, meat, fish, dairy, grains, drinks, bakery and more.",
   alternates: { canonical: "/categories" },
 };
 

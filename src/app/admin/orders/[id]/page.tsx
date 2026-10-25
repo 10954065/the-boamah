@@ -89,7 +89,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                     </p>
                     <p className="text-xs text-ink-muted">
                       {formatDateTime(entry.createdAt)} · {entry.actor?.name ?? "System"}
-                      {entry.note ? ` — ${entry.note}` : ""}
+                      {entry.note ? `: ${entry.note}` : ""}
                     </p>
                   </div>
                 </li>
@@ -141,7 +141,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
               </p>
               <p>{order.phone}</p>
               {order.email ? <p>{order.email}</p> : null}
-              <p className="pt-2 font-medium text-ink">{order.fulfilmentMethod === "PICKUP" ? "Pickup" : `Delivery — ${order.zoneName ?? ""}`}</p>
+              <p className="pt-2 font-medium text-ink">{order.fulfilmentMethod === "PICKUP" ? "Pickup" : order.zoneName ? `Delivery to ${order.zoneName}` : "Delivery"}</p>
               {order.fulfilmentMethod === "DELIVERY" ? (
                 <>
                   <p>{order.addressLine}</p>

@@ -9,7 +9,7 @@ export async function sendPasswordResetEmail(user: { email: string; name: string
     settings,
     preheader: "Reset your password",
     heading: "Reset your password",
-    bodyHtml: `Hello ${escapeHtml(user.name)},<br><br>We received a request to reset the password for your account. This link expires in 1 hour. If you did not request this, you can safely ignore this email — your password will not change.`,
+    bodyHtml: `Hello ${escapeHtml(user.name)},<br><br>We received a request to reset the password for your account. This link expires in 1 hour. If you did not request this, you can safely ignore this email. Your password will not change.`,
     bodyText: `Hello ${user.name},\n\nWe received a request to reset the password for your account. This link expires in 1 hour. If you did not request this, ignore this email.`,
     cta: { label: "Choose a new password", url },
   });

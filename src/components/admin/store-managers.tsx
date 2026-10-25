@@ -55,7 +55,7 @@ function ZoneForm({ initial, onDone }: { initial: ZoneRow; onDone: () => void })
       <Field id="z-region" label="Region" required error={errors.region}>
         <Input {...fieldAria("z-region", errors.region)} value={z.region} onChange={(e) => set("region", e.target.value)} />
       </Field>
-      <Field id="z-areas" label="Areas covered" hint="Separate with commas — shown to customers when choosing a zone." className="sm:col-span-2">
+      <Field id="z-areas" label="Areas covered" hint="Separate with commas. Customers see these when choosing a zone." className="sm:col-span-2">
         <Textarea id="z-areas" rows={2} aria-describedby="z-areas-hint" value={z.areas} onChange={(e) => set("areas", e.target.value)} />
       </Field>
       <Field id="z-fee" label="Delivery fee (GH₵)" required error={errors.fee}>
@@ -67,7 +67,7 @@ function ZoneForm({ initial, onDone }: { initial: ZoneRow; onDone: () => void })
       <Field id="z-free" label="Free delivery from (GH₵)" hint="Blank = never free." error={errors.freeFrom}>
         <Input {...fieldAria("z-free", errors.freeFrom, "hint")} inputMode="decimal" value={z.freeFrom} onChange={(e) => set("freeFrom", e.target.value)} />
       </Field>
-      <Field id="z-eta" label="Delivery estimate shown to customers" hint="Only state times you can keep, e.g. “Usually next working day”.">
+      <Field id="z-eta" label="Delivery estimate shown to customers" hint="For example: Usually next working day.">
         <Input id="z-eta" aria-describedby="z-eta-hint" value={z.estimatedDelivery} onChange={(e) => set("estimatedDelivery", e.target.value)} />
       </Field>
       <Field id="z-order" label="Display order">
@@ -185,7 +185,7 @@ export function SettingsForm({ initial, onlineConfigured }: { initial: SettingsD
             <Input id="st-address" {...text("address")} />
           </Field>
         </div>
-        <p className="text-xs text-ink-subtle">Only details you enter here are shown to customers — nothing is invented.</p>
+        <p className="text-xs text-ink-subtle">Customers only see the details you enter here.</p>
       </section>
 
       <section className={section}>

@@ -18,7 +18,7 @@ const DESCRIPTION =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: `${STORE_NAME} — Fresh groceries delivered`, template: `%s | ${STORE_NAME}` },
+  title: { default: `${STORE_NAME} | Fresh groceries delivered`, template: `%s | ${STORE_NAME}` },
   description: DESCRIPTION,
   applicationName: STORE_NAME,
   openGraph: {

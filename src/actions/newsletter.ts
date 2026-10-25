@@ -19,6 +19,6 @@ export async function subscribeNewsletter(input: { email: string; consent: boole
       update: {},
       create: { email: parsed.data.email.toLowerCase() },
     });
-    return ok(undefined, "Thanks — you're subscribed.");
+    return ok(undefined, "Thanks, you're subscribed.");
   });
 }

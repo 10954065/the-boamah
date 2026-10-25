@@ -38,7 +38,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
           </div>
         )}
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
-          {discount ? <Badge tone="sale">−{discount}%</Badge> : null}
+          {discount ? <Badge tone="sale">{discount}% off</Badge> : null}
           {variant && !variant.inStock ? <Badge tone="neutral" className="bg-surface/95 ring-1 ring-line">Out of stock</Badge> : null}
         </div>
         <WishlistButton

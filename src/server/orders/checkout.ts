@@ -233,7 +233,7 @@ export async function createOrder(
             statusHistory: {
               create: {
                 toStatus: isOnline ? "PENDING_PAYMENT" : "CONFIRMED",
-                note: isOnline ? "Order placed — awaiting online payment." : "Order placed — cash on delivery.",
+                note: isOnline ? "Order placed, awaiting online payment." : "Order placed for cash on delivery.",
                 actorId: ctx.user?.id ?? null,
               },
             },
@@ -281,7 +281,7 @@ export async function createOrder(
     return { orderId: order.id, reference: order.reference, paymentMethod: order.paymentMethod, guestToken: guest?.token ?? null, duplicate: false };
   } catch (error) {
     if (error instanceof InsufficientStockError) {
-      throw new CheckoutError("Sorry — one of your items has just sold out. Please review your cart.", "OUT_OF_STOCK");
+      throw new CheckoutError("Sorry, one of your items has just sold out. Please review your cart.", "OUT_OF_STOCK");
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const duplicate = await prisma.order.findUnique({ where: { idempotencyKey: input.idempotencyKey } });

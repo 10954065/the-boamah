@@ -45,7 +45,7 @@ test.describe("cart and checkout", () => {
     await expect(page.getByText("Total to pay")).toBeVisible();
     await page.getByRole("button", { name: "Place order" }).click();
     await page.waitForURL(/\/orders\/BMH-/);
-    await expect(page.getByText("Thank you — your order has been received")).toBeVisible();
+    await expect(page.getByText("Thank you, your order has been received")).toBeVisible();
     await expect(page.getByText("Pay on delivery").first()).toBeVisible();
   });
 

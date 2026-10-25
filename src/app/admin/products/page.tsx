@@ -121,9 +121,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                       {product.status.charAt(0) + product.status.slice(1).toLowerCase()}
                     </Badge>
                   </td>
-                  <td className={cn(td, "tabular-nums")}>{variant ? formatMoney(effectiveUnitPrice(variant)) : "—"}</td>
+                  <td className={cn(td, "tabular-nums")}>{variant ? formatMoney(effectiveUnitPrice(variant)) : "Not set"}</td>
                   <td className={cn(td, "tabular-nums", low && "font-semibold text-danger")}>
-                    {variant ? formatQuantity(variant.stockMilli, variant.unit as SellingUnitCode) : "—"}
+                    {variant ? formatQuantity(variant.stockMilli, variant.unit as SellingUnitCode) : "Not set"}
                   </td>
                 </tr>
               );

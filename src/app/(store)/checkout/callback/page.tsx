@@ -52,7 +52,7 @@ export default async function PaymentCallbackPage({ searchParams }: PageProps<"/
       <div className="container-page max-w-xl space-y-4">
         <Alert tone="info" title="Your payment is being confirmed">
           We haven&rsquo;t received confirmation from the payment provider yet. This can take a moment for Mobile Money. Your
-          order will update automatically once the payment is confirmed — you will not be charged twice.
+          order will update automatically once the payment is confirmed. You will not be charged twice.
         </Alert>
         <Link href={base} className={buttonVariants()}>
           View your order

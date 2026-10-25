@@ -298,7 +298,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
                   <Select id="savedAddress" defaultValue={defaultAddress?.id ?? ""} onChange={(event) => applyAddress(event.target.value)}>
                     {addresses.map((address) => (
                       <option key={address.id} value={address.id}>
-                        {address.label ? `${address.label} — ` : ""}
+                        {address.label ? `${address.label}: ` : ""}
                         {address.addressLine}, {address.area}
                       </option>
                     ))}
@@ -310,7 +310,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
                   <option value="">Select your area…</option>
                   {zones.map((zone) => (
                     <option key={zone.id} value={zone.id}>
-                      {zone.name} ({zone.region}){zone.areas.length ? ` — ${zone.areas.slice(0, 4).join(", ")}` : ""}
+                      {zone.name} ({zone.region}){zone.areas.length ? `: ${zone.areas.slice(0, 4).join(", ")}` : ""}
                     </option>
                   ))}
                   <option value={NOT_LISTED}>My area isn&rsquo;t listed</option>
@@ -347,7 +347,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
               <Field id="addressLine" label="Street address or landmark" required hint="House number, street name or a nearby landmark." error={errors.addressLine?.message}>
                 <Input autoComplete="street-address" {...fieldAria("addressLine", errors.addressLine?.message, "hint")} {...form.register("addressLine")} />
               </Field>
-              <Field id="addressDetails" label="Additional details" hint="Optional — apartment, gate colour, GhanaPost GPS address." error={errors.addressDetails?.message}>
+              <Field id="addressDetails" label="Additional details" hint="Optional: apartment, gate colour, GhanaPost GPS address." error={errors.addressDetails?.message}>
                 <Input {...fieldAria("addressDetails", errors.addressDetails?.message, "hint")} {...form.register("addressDetails")} />
               </Field>
               {user ? (
@@ -386,8 +386,8 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
                   checked={paymentMethod === "PAYSTACK"}
                   onSelect={() => form.setValue("paymentMethod", "PAYSTACK")}
                   icon={<CreditCard />}
-                  title="Pay online — Mobile Money or card"
-                  description={`You'll be taken to Paystack's secure page to complete payment.${payment.testMode ? " (Test mode — no real money is taken.)" : ""}`}
+                  title="Pay online with Mobile Money or card"
+                  description={`You'll be taken to Paystack's secure page to complete payment.${payment.testMode ? " (Test mode: no real money is taken.)" : ""}`}
                 />
               ) : null}
               {payment.cod ? (

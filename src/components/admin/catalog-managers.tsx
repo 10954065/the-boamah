@@ -174,7 +174,7 @@ export function StockAdjustButton({ variantId, label, unitLabel }: { variantId: 
         Adjust
       </Button>
       {open ? (
-        <DialogContent title={`Adjust stock — ${label}`} description="Every change is recorded with your name, the time and the reason.">
+        <DialogContent title={`Adjust stock: ${label}`} description="Every change is recorded with your name, the time and the reason.">
           <form
             className="space-y-4"
             onSubmit={(event) => {

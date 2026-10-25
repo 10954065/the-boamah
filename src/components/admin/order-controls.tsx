@@ -99,7 +99,7 @@ export function OrderNoteForm({ orderId }: { orderId: string }) {
       <label htmlFor="order-note" className="sr-only">
         Internal note
       </label>
-      <Textarea id="order-note" rows={2} placeholder="Internal note — not visible to the customer" value={body} onChange={(e) => setBody(e.target.value)} />
+      <Textarea id="order-note" rows={2} placeholder="Internal note (not visible to the customer)" value={body} onChange={(e) => setBody(e.target.value)} />
       <Button type="submit" size="sm" variant="outline" disabled={pending || body.trim().length < 2}>
         Add note
       </Button>

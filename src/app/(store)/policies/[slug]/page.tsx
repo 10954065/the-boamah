@@ -83,7 +83,7 @@ export default async function PolicyPage({ params }: PageProps<"/policies/[slug]
                         </td>
                         <td className="py-3 pr-4 tabular-nums">{formatMoney(zone.feeMinor)}</td>
                         <td className="py-3 pr-4 tabular-nums">{zone.minOrderMinor > 0 ? formatMoney(zone.minOrderMinor) : "None"}</td>
-                        <td className="py-3 tabular-nums">{zone.freeDeliveryThresholdMinor !== null ? formatMoney(zone.freeDeliveryThresholdMinor) : "—"}</td>
+                        <td className="py-3 tabular-nums">{zone.freeDeliveryThresholdMinor !== null ? formatMoney(zone.freeDeliveryThresholdMinor) : "Not offered"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -94,7 +94,7 @@ export default async function PolicyPage({ params }: PageProps<"/policies/[slug]
               <div className="mt-6 border-t border-line pt-5 text-sm">
                 <h3 className="font-bold text-ink">Store pickup</h3>
                 <p className="mt-1 whitespace-pre-line text-ink-muted">
-                  {settings.pickupAddress ?? "Pickup is available — the pickup location is confirmed with your order."}
+                  {settings.pickupAddress ?? "Pickup is available. We confirm the pickup location with your order."}
                   {settings.pickupInstructions ? `\n${settings.pickupInstructions}` : ""}
                 </p>
               </div>

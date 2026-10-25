@@ -58,7 +58,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps<"/a
                   <Link href={`/admin/customers/${c.id}`} className="font-semibold text-ink hover:text-brand-700">{c.name}</Link>
                   <p className="text-xs text-ink-subtle">{c.email}</p>
                 </td>
-                <td className={cn(td, "text-ink-muted")}>{c.phone ?? "—"}</td>
+                <td className={cn(td, "text-ink-muted")}>{c.phone ?? "Not given"}</td>
                 <td className={cn(td, "tabular-nums")}>{c._count.orders}</td>
                 <td className={cn(td, "text-ink-muted")}>{formatDate(c.createdAt)}</td>
                 <td className={td}>{c.status === "ACTIVE" ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Suspended</Badge>}</td>

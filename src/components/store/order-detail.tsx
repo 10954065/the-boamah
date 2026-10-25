@@ -68,7 +68,7 @@ function Timeline({ order }: { order: CustomerOrder }) {
             <span className="sm:mt-2">
               <span className={cn("block text-sm font-semibold", current ? "text-brand-800" : done ? "text-ink" : "text-ink-subtle")}>
                 {statusLabel(step, order.fulfilmentMethod)}
-                <span className="sr-only">{done ? " — completed" : " — pending"}</span>
+                <span className="sr-only">{done ? ", completed" : ", pending"}</span>
               </span>
               {at ? <span className="block text-xs text-ink-muted">{formatDateTime(at)}</span> : null}
             </span>
@@ -98,7 +98,7 @@ export function OrderDetail({
   return (
     <div className="space-y-6">
       {placed && order.status !== "PENDING_PAYMENT" ? (
-        <Alert tone="success" title="Thank you — your order has been received">
+        <Alert tone="success" title="Thank you, your order has been received">
           {confirmationEmailed && order.email ? `A confirmation has been sent to ${order.email}. ` : ""}Your order reference is <strong>{order.reference}</strong>.
         </Alert>
       ) : null}

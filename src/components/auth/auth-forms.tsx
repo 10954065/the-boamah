@@ -100,7 +100,7 @@ export function RegisterForm({ next }: { next?: string }) {
       <Field id="email" label="Email address" required error={errors.email?.message}>
         <Input type="email" autoComplete="email" {...fieldAria("email", errors.email?.message)} {...form.register("email")} />
       </Field>
-      <Field id="phone" label="Phone number" hint="Optional — used for delivery updates." error={errors.phone?.message}>
+      <Field id="phone" label="Phone number" hint="Optional. Used for delivery updates." error={errors.phone?.message}>
         <Input type="tel" autoComplete="tel" placeholder="024 123 4567" {...fieldAria("phone", errors.phone?.message, "hint")} {...form.register("phone")} />
       </Field>
       <Field id="password" label="Password" required hint="At least 8 characters." error={errors.password?.message}>

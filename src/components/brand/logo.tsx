@@ -35,7 +35,7 @@ interface LogoProps {
 /** Typographic brand lock-up: mark + "The Boamah's" / "Online Grocery Shop". */
 export function Logo({ href = "/", className, tone = "dark", compact = false }: LogoProps) {
   return (
-    <Link href={href} aria-label="The Boamah's Online Grocery Shop — home" className="rounded-md">
+    <Link href={href} aria-label="The Boamah's Online Grocery Shop home page" className="rounded-md">
       <span className={cn("inline-flex items-center gap-2.5", className)}>
         <LogoMark />
         <span className={cn("flex flex-col leading-none", compact && "max-sm:hidden")}>

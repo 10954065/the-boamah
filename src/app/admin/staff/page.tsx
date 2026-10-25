@@ -63,7 +63,7 @@ export default async function StaffPage() {
                   <td className="px-4 py-2 font-mono">{permission}</td>
                   {STAFF_ROLES.map((role) => (
                     <td key={role} className="px-4 py-2">
-                      {ROLE_PERMISSIONS[role].includes(permission) ? <span aria-label="Allowed">✓</span> : <span className="text-ink-subtle" aria-label="Not allowed">—</span>}
+                      {ROLE_PERMISSIONS[role].includes(permission) ? <span aria-label="Allowed">✓</span> : <span className="text-ink-subtle" aria-label="Not allowed">✕</span>}
                     </td>
                   ))}
                 </tr>

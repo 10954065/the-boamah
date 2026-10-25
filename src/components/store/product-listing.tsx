@@ -58,8 +58,8 @@ function FiltersForm({ basePath, params, fixedCategory, fixedOnSale, categories 
             Minimum price in Ghana cedis
           </label>
           <Input id="filter-min" name="min" inputMode="decimal" placeholder="Min" defaultValue={params.minPrice} className="h-9" />
-          <span className="text-ink-subtle" aria-hidden="true">
-            –
+          <span className="text-sm text-ink-subtle" aria-hidden="true">
+            to
           </span>
           <label className="sr-only" htmlFor="filter-max">
             Maximum price in Ghana cedis
@@ -138,7 +138,7 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
               "No products found"
             ) : (
               <>
-                Showing <strong className="text-ink">{from}–{to}</strong> of <strong className="text-ink">{page.total}</strong>{" "}
+                Showing <strong className="text-ink">{from} to {to}</strong> of <strong className="text-ink">{page.total}</strong>{" "}
                 {page.total === 1 ? "product" : "products"}
                 {params.q ? (
                   <>
