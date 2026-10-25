@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { SearchX, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, SearchX, SlidersHorizontal } from "lucide-react";
 import { Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -7,7 +8,7 @@ import { Checkbox, Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { listingQuery, type ListingParams } from "@/lib/listing-params";
 import { cn } from "@/lib/utils";
-import { getActiveCategories, listProducts, PAGE_SIZE } from "@/server/catalog";
+import { getActiveCategories, listProducts, PAGE_SIZE, type CategoryView } from "@/server/catalog";
 import { getWishlistIds } from "@/server/wishlist";
 import { ProductGrid } from "./product-card";
 import { SortSelect } from "./sort-select";
@@ -21,35 +22,126 @@ interface ProductListingProps {
   fixedOnSale?: boolean;
 }
 
-function FiltersForm({ basePath, params, fixedCategory, fixedOnSale, categories }: ProductListingProps & { categories: { slug: string; name: string; productCount: number }[] }) {
-  const activeCategory = fixedCategory ?? params.category;
+type CategoryNavProps = ProductListingProps & { categories: CategoryView[] };
+
+/** Where a category link goes, keeping the current search, sort and filters. */
+function categoryHref({ basePath, params }: ProductListingProps, slug: string): string {
+  if (basePath === "/offers" || params.q) {
+    return `${basePath === "/offers" ? "/offers" : "/shop"}${listingQuery(params, { category: slug, page: 1 })}`;
+  }
+  const query = listingQuery(params, { category: "", page: 1 });
+  return slug ? `/categories/${slug}${query}` : `/shop${query}`;
+}
+
+function CategoryThumb({ imageUrl, size }: { imageUrl: string | null; size: number }) {
+  return imageUrl ? (
+    <Image src={imageUrl} alt="" fill sizes={`${size}px`} className="object-cover" />
+  ) : (
+    <LayoutGrid className="h-4 w-4 text-brand-700" aria-hidden="true" />
+  );
+}
+
+function categoryItems({ basePath, params, categories }: CategoryNavProps) {
+  // Category totals would mislead on the offers page and in search results.
+  const showCounts = basePath !== "/offers" && !params.q;
+  const total = categories.reduce((sum, category) => sum + category.productCount, 0);
+  return [
+    { slug: "", name: basePath === "/offers" ? "All offers" : "All products", imageUrl: null, count: showCounts ? total : null },
+    ...categories.map((c) => ({ slug: c.slug, name: c.name, imageUrl: c.imageUrl, count: showCounts ? c.productCount : null })),
+  ];
+}
+
+function CategoryNav(props: CategoryNavProps) {
+  const active = props.fixedCategory ?? props.params.category;
+  return (
+    <nav aria-label="Categories">
+      <h2 className="px-2 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-ink-subtle">Categories</h2>
+      <ul className="space-y-0.5">
+        {categoryItems(props).map((item) => {
+          const isActive = item.slug === active;
+          return (
+            <li key={item.slug || "all"}>
+              <Link
+                href={categoryHref(props, item.slug)}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-lg py-1.5 pl-3 pr-2 text-sm transition-colors",
+                  isActive ? "bg-brand-50 font-semibold text-brand-800" : "text-ink-muted hover:bg-soft hover:text-ink",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute inset-y-2 left-0 w-1 rounded-full bg-brand-600 transition-opacity",
+                    isActive ? "opacity-100" : "opacity-0",
+                  )}
+                  aria-hidden="true"
+                />
+                <span
+                  className={cn(
+                    "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-soft ring-1 transition-transform duration-200 group-hover:scale-105",
+                    isActive ? "ring-brand-300" : "ring-line",
+                  )}
+                >
+                  <CategoryThumb imageUrl={item.imageUrl} size={36} />
+                </span>
+                <span className="min-w-0 flex-1 leading-tight">{item.name}</span>
+                {item.count !== null ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums transition-colors",
+                      isActive ? "bg-brand-700 text-white" : "bg-soft text-ink-subtle group-hover:bg-surface",
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                ) : null}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Swipeable category chips for phones and tablets. */
+function CategoryChips(props: CategoryNavProps) {
+  const active = props.fixedCategory ?? props.params.category;
+  return (
+    <nav aria-label="Categories" className="-mx-4 mb-4 lg:hidden">
+      <ul className="flex snap-x gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+        {categoryItems(props).map((item) => {
+          const isActive = item.slug === active;
+          return (
+            <li key={item.slug || "all"} className="shrink-0 snap-start">
+              <Link
+                href={categoryHref(props, item.slug)}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-full border py-1 pl-1 pr-3.5 text-[13px] font-medium transition-colors",
+                  isActive ? "border-brand-700 bg-brand-700 text-white" : "border-line bg-surface text-ink hover:border-brand-200",
+                )}
+              >
+                <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-soft">
+                  <CategoryThumb imageUrl={item.imageUrl} size={28} />
+                </span>
+                {item.name}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function FiltersForm({ basePath, params, fixedCategory, fixedOnSale }: ProductListingProps) {
   return (
     <form action={basePath} method="get" className="space-y-7">
       {params.q ? <input type="hidden" name="q" value={params.q} /> : null}
       {params.sort !== "featured" ? <input type="hidden" name="sort" value={params.sort} /> : null}
 
-      {!fixedCategory ? (
-        <fieldset>
-          <legend className="text-sm font-bold text-ink">Category</legend>
-          <ul className="mt-3 space-y-1">
-            {[{ slug: "", name: "All categories", productCount: -1 }, ...categories].map((category) => (
-              <li key={category.slug || "all"}>
-                <label className="flex cursor-pointer items-center gap-2.5 rounded px-1 py-1 text-sm text-ink-muted hover:text-ink">
-                  <input
-                    type="radio"
-                    name="category"
-                    value={category.slug}
-                    defaultChecked={activeCategory === category.slug}
-                    className="h-4 w-4 accent-brand-700"
-                  />
-                  <span className="flex-1">{category.name}</span>
-                  {category.productCount >= 0 ? <span className="text-xs text-ink-subtle">{category.productCount}</span> : null}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </fieldset>
-      ) : null}
+      {params.category && !fixedCategory ? <input type="hidden" name="category" value={params.category} /> : null}
 
       <fieldset>
         <legend className="text-sm font-bold text-ink">Price (GH₵)</legend>
@@ -110,19 +202,23 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
     getWishlistIds(),
   ]);
 
-  const filterProps = { basePath, params, fixedCategory, fixedOnSale, categories };
+  const filterProps = { basePath, params, fixedCategory, fixedOnSale };
   const from = page.total === 0 ? 0 : (page.page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page.page * PAGE_SIZE, page.total);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
-      <aside aria-label="Filters" className="hidden lg:block">
-        <div className="sticky top-32 rounded-lg border border-line bg-surface p-5">
+    <div className="grid gap-8 lg:grid-cols-[264px_1fr]">
+      <aside aria-label="Categories and filters" className="hidden space-y-4 lg:block">
+        <div className="rounded-xl border border-line bg-surface p-2.5">
+          <CategoryNav {...filterProps} categories={categories} />
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-5">
           <FiltersForm {...filterProps} />
         </div>
       </aside>
 
       <div className="min-w-0">
+        <CategoryChips {...filterProps} categories={categories} />
         <details className="mb-4 rounded-lg border border-line bg-surface lg:hidden">
           <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold">
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Filters

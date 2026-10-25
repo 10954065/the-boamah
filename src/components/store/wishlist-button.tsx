@@ -2,7 +2,7 @@
 
 import { Heart } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { toggleWishlist } from "@/actions/wishlist";
 import { cn } from "@/lib/utils";
@@ -20,10 +20,13 @@ export function WishlistButton({ productId, productName, initialSaved, className
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useOptimistic(initialSaved);
+  // Bumped each time the product is saved, to replay the heart animation.
+  const [popKey, setPopKey] = useState(0);
 
   const onClick = () =>
     startTransition(async () => {
       setSaved(!saved);
+      if (!saved) setPopKey((key) => key + 1);
       const result = await toggleWishlist({ productId });
       if (!result.ok) {
         if (result.error === "SIGN_IN_REQUIRED") {
@@ -52,7 +55,7 @@ export function WishlistButton({ productId, productName, initialSaved, className
           className,
         )}
       >
-        <Heart className={cn("h-4 w-4", saved && "fill-sale text-sale")} aria-hidden="true" />
+        <Heart key={popKey} className={cn("h-4 w-4", saved && "fill-sale text-sale", saved && popKey > 0 && "pop")} aria-hidden="true" />
         {saved ? "Saved" : "Save"}
         <span className="sr-only">, {label}</span>
       </button>
@@ -71,7 +74,7 @@ export function WishlistButton({ productId, productName, initialSaved, className
         className,
       )}
     >
-      <Heart className={cn("h-4 w-4", saved && "fill-sale text-sale")} aria-hidden="true" />
+      <Heart key={popKey} className={cn("h-4 w-4", saved && "fill-sale text-sale", saved && popKey > 0 && "pop")} aria-hidden="true" />
     </button>
   );
 }

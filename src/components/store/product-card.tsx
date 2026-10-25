@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
@@ -40,6 +41,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
           {discount ? <Badge tone="sale">{discount}% off</Badge> : null}
           {variant && !variant.inStock ? <Badge tone="neutral" className="bg-surface/95 ring-1 ring-line">Out of stock</Badge> : null}
+          {variant?.inStock && variant.lowStock ? <Badge tone="gold">Few left</Badge> : null}
         </div>
         <WishlistButton
           productId={product.id}
@@ -98,7 +100,7 @@ export function ProductGrid({ products, savedIds, priorityCount = 0, className }
   return (
     <ul className={cn("grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", className)}>
       {products.map((product, index) => (
-        <li key={product.id}>
+        <li key={product.id} className="reveal" style={{ "--i": index } as CSSProperties}>
           <ProductCard product={product} saved={savedIds.has(product.id)} priority={index < priorityCount} />
         </li>
       ))}

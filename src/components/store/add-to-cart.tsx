@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ShoppingBasket } from "lucide-react";
-import { useState, useTransition, type ReactNode } from "react";
+import { Check, ShoppingBasket } from "lucide-react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { addToCart } from "@/actions/cart";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,11 @@ function maxSelectable(variant: VariantView): number {
 function useAddToCart() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const add = (variantId: string, quantityMilli: number, productName: string) =>
+  const add = (variantId: string, quantityMilli: number, productName: string, onAdded?: () => void) =>
     startTransition(async () => {
       const result = await addToCart({ variantId, quantityMilli });
       if (result.ok) {
+        onAdded?.();
         toast.success(result.message ?? `${productName} added to your cart.`, {
           action: { label: "View cart", onClick: () => router.push("/cart") },
         });
@@ -32,6 +33,17 @@ function useAddToCart() {
       }
     });
   return { pending, add };
+}
+
+/** True for a moment after a successful add, so the button can confirm it. */
+function useAddedFlash() {
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const timer = setTimeout(() => setAdded(false), 1800);
+    return () => clearTimeout(timer);
+  }, [added]);
+  return [added, () => setAdded(true)] as const;
 }
 
 interface CardAddButtonProps {
@@ -43,6 +55,7 @@ interface CardAddButtonProps {
 /** Compact control for product cards: adds the minimum quantity. */
 export function CardAddButton({ variant, productName, className }: CardAddButtonProps) {
   const { pending, add } = useAddToCart();
+  const [added, flash] = useAddedFlash();
   if (!variant.inStock) {
     return (
       <Button variant="outline" size="sm" disabled className={cn("h-9 w-full rounded-lg", className)}>
@@ -54,13 +67,17 @@ export function CardAddButton({ variant, productName, className }: CardAddButton
   return (
     <Button
       size="sm"
-      className={cn("h-9 w-full rounded-lg bg-brand-50 text-brand-800 shadow-none hover:bg-brand-700 hover:text-white", className)}
+      className={cn(
+        "h-9 w-full rounded-lg shadow-none",
+        added ? "bg-brand-700 text-white hover:bg-brand-700" : "bg-brand-50 text-brand-800 hover:bg-brand-700 hover:text-white",
+        className,
+      )}
       disabled={pending}
-      onClick={() => add(variant.id, variant.minQtyMilli, productName)}
-      aria-label={`${label}: ${productName}`}
+      onClick={() => add(variant.id, variant.minQtyMilli, productName, flash)}
+      aria-label={added ? `Added ${productName} to your cart` : `${label}: ${productName}`}
     >
-      {pending ? <Spinner label="Adding" /> : <ShoppingBasket />}
-      {label}
+      {pending ? <Spinner label="Adding" /> : added ? <Check className="pop" /> : <ShoppingBasket />}
+      {added ? "Added" : label}
     </Button>
   );
 }
@@ -78,6 +95,7 @@ export function ProductPurchase({ variants, productName, secondaryAction }: Prod
   const variant = variants.find((v) => v.id === variantId) ?? variants[0];
   const [quantity, setQuantity] = useState(variant?.minQtyMilli ?? 1000);
   const { pending, add } = useAddToCart();
+  const [added, flash] = useAddedFlash();
 
   if (!variant) return null;
 
@@ -132,9 +150,9 @@ export function ProductPurchase({ variants, productName, secondaryAction }: Prod
             unit={variant.unit}
             label={`Quantity of ${productName}`}
           />
-          <Button size="lg" className="min-w-48 flex-1 sm:flex-none" disabled={pending} onClick={() => add(variant.id, quantity, productName)}>
-            {pending ? <Spinner label="Adding" /> : <ShoppingBasket />}
-            Add to cart
+          <Button size="lg" className="min-w-48 flex-1 sm:flex-none" disabled={pending} onClick={() => add(variant.id, quantity, productName, flash)}>
+            {pending ? <Spinner label="Adding" /> : added ? <Check className="pop" /> : <ShoppingBasket />}
+            {added ? "Added to cart" : "Add to cart"}
           </Button>
           {secondaryAction}
         </div>
