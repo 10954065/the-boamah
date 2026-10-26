@@ -107,7 +107,7 @@ async function seedStore() {
           eyebrow: "Everyday essentials, online",
           title: "Fresh Groceries, Delivered to Your Door.",
           subtitle: "Rice, cooking oil, breakfast, juices, snacks and household favourites from The Boamah's Online Grocery Shop.",
-          imageUrl: "/images/banners/hero.webp",
+          imageUrl: "/images/banners/hero-products.webp",
           ctaLabel: "Shop Groceries",
           ctaHref: "/shop",
           sortOrder: 0,

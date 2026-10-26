@@ -29,6 +29,12 @@ export default function CreditsPage() {
         crumbs={[{ href: "/", label: "Home" }, { label: "Image credits" }]}
       />
       <div className="container-page">
+        {items.length === 0 ? (
+          <p className="max-w-2xl text-sm text-ink-muted">
+            All photographs currently on this site belong to The Boamah&rsquo;s Online Grocery Shop. Photos from other sources will
+            be credited here when they are used.
+          </p>
+        ) : null}
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((credit) => (
             <li key={credit.file} className="flex gap-3 rounded-lg border border-line bg-surface p-3 text-xs">
