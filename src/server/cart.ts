@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { effectiveUnitPrice, evaluateCoupon, priceLines, sumLines, type PricedLine } from "@/lib/pricing";
+import { effectiveUnitPrice, evaluateCoupon, priceLines, sumLines, unitPriceForQuantity, type PricedLine } from "@/lib/pricing";
 import { checkQuantity, clampToValidQuantity, lineTotalMinor, type SellingUnitCode } from "@/lib/quantity";
 import { countCustomerRedemptions, loadCoupon } from "@/server/coupons";
 import { getCurrentUser } from "@/server/session";
@@ -15,6 +15,7 @@ const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 export const cartItemInclude = {
   variant: {
     include: {
+      priceTiers: true,
       product: {
         include: {
           category: { select: { id: true, name: true, isActive: true } },
@@ -46,6 +47,8 @@ export interface CartLineView {
   imageAlt: string;
   unitPriceMinor: number;
   regularPriceMinor: number;
+  /** True when a bulk price is lowering the unit price for this quantity. */
+  bulkPriceApplied: boolean;
   quantityMilli: number;
   lineTotalMinor: number;
   stepMilli: number;
@@ -90,7 +93,8 @@ export function buildLineView(item: CartItemRow): CartLineView {
   const variant = item.variant;
   const product = variant.product;
   const unit = variant.unit as SellingUnitCode;
-  const currentPrice = effectiveUnitPrice(variant);
+  const listPrice = effectiveUnitPrice(variant);
+  const currentPrice = unitPriceForQuantity(variant, variant.priceTiers, item.quantityMilli);
   const rules = { stepMilli: variant.stepMilli, minQtyMilli: variant.minQtyMilli, maxQtyMilli: variant.maxQtyMilli };
   const availableMilli = clampToValidQuantity(variant.stockMilli, rules) ?? 0;
   const issues: CartIssue[] = [];
@@ -121,6 +125,7 @@ export function buildLineView(item: CartItemRow): CartLineView {
     imageAlt: image?.alt ?? product.name,
     unitPriceMinor: currentPrice,
     regularPriceMinor: variant.priceMinor,
+    bulkPriceApplied: currentPrice < listPrice,
     quantityMilli: item.quantityMilli,
     lineTotalMinor: lineTotalMinor(currentPrice, item.quantityMilli),
     stepMilli: variant.stepMilli,
@@ -245,7 +250,10 @@ export async function mergeGuestCart(userId: string): Promise<void> {
   const store = await cookies();
   const token = store.get(CART_COOKIE)?.value;
   if (!token) return;
-  const guest = await prisma.cart.findFirst({ where: { token, userId: null }, include: { items: { include: { variant: true } } } });
+  const guest = await prisma.cart.findFirst({
+    where: { token, userId: null },
+    include: { items: { include: { variant: { include: { priceTiers: true } } } } },
+  });
   store.delete(CART_COOKIE);
   if (!guest) return;
 
@@ -262,11 +270,15 @@ export async function mergeGuestCart(userId: string): Promise<void> {
       const desired = (existing?.quantityMilli ?? 0) + item.quantityMilli;
       const capped = clampToValidQuantity(Math.min(desired, Math.max(item.variant.stockMilli, rules.minQtyMilli)), rules);
       if (!capped) continue;
+      // Combining carts can reach a bulk price; only a price increase should be flagged.
+      const price = unitPriceForQuantity(item.variant, item.variant.priceTiers, capped);
+      const seen = Math.min(item.seenUnitPriceMinor, existing?.seenUnitPriceMinor ?? Number.MAX_SAFE_INTEGER);
+      const seenUnitPriceMinor = price <= seen ? price : seen;
       if (existing) {
-        await tx.cartItem.update({ where: { id: existing.id }, data: { quantityMilli: capped } });
+        await tx.cartItem.update({ where: { id: existing.id }, data: { quantityMilli: capped, seenUnitPriceMinor } });
       } else {
         await tx.cartItem.create({
-          data: { cartId: target.id, variantId: item.variantId, quantityMilli: capped, seenUnitPriceMinor: item.seenUnitPriceMinor },
+          data: { cartId: target.id, variantId: item.variantId, quantityMilli: capped, seenUnitPriceMinor },
         });
       }
     }

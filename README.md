@@ -33,6 +33,10 @@ new and discounted products. Search with suggestions. Shop and category pages
 with filters (category, price, in stock, on sale) and sorting, with all state in
 the URL. Product pages with a gallery, variants (for example 1 kg / 5 kg), units
 (piece, pack, kg, g, litre, bunch, crate…), quantity steps and stock status.
+Bulk prices ("5 bags or more: GH₵420 each") shown live as the quantity changes.
+"Tell me when it's back" sign-up on out-of-stock items. Star ratings and reviews
+from verified buyers, published after staff approval. A WhatsApp chat button on
+every page, with the product already named in the message on product pages.
 Policy, contact and image-credit pages.
 
 **Cart and checkout**: database-backed cart for guests and signed-in customers.
@@ -43,12 +47,14 @@ Paystack or cash on delivery. Guests can check out and track orders by
 reference.
 
 **Customer account**: profile, saved addresses, order history with a status
-timeline, retrying an unpaid payment, wishlist, password change and reset.
+timeline, "Buy again" to put a past order back in the cart, retrying an unpaid
+payment, wishlist, password change and reset.
 
 **Admin dashboard** (`/admin`): sales metrics that keep paid revenue, pending
 payments and cash-on-delivery outstanding apart. Products and variants with image
-upload, categories, inventory with an audited movement history and low-stock
-list, orders (filters, status changes, notes, cash collection, cancellation),
+upload and bulk prices, categories, inventory with an audited movement history,
+low-stock list and how many shoppers are waiting for each item, review
+moderation, orders (filters, status changes, notes, cash collection, cancellation),
 customers (history, suspension), coupons, promotional banners, delivery zones,
 store settings and policies, staff roles, notification log and audit log.
 
@@ -195,7 +201,7 @@ button is never the only protection.
 | Role | Can do |
 | --- | --- |
 | Super Admin | Everything, including giving and removing staff roles |
-| Store Manager | Everything except managing staff |
+| Store Manager | Everything except managing staff (including approving reviews) |
 | Order Manager | Dashboard, view catalogue, manage orders (status, cancel, record cash), view customers and notifications |
 | Inventory Manager | Dashboard, view catalogue, adjust stock, view orders |
 | Customer | Storefront and own account only |

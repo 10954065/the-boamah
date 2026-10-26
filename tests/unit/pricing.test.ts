@@ -6,6 +6,8 @@ import {
   effectiveUnitPrice,
   evaluateCoupon,
   priceLines,
+  unitPriceForQuantity,
+  usefulTiers,
   type CouponRule,
   type DeliveryZoneRule,
 } from "@/lib/pricing";
@@ -138,5 +140,45 @@ describe("computeTotals", () => {
   test("clamps the discount so the total can never go negative", () => {
     const totals = computeTotals({ lines, discountMinor: 999_999, deliveryFeeMinor: 0 });
     expect(totals.totalMinor).toBe(0);
+  });
+});
+
+describe("bulk pricing", () => {
+  const rice = { priceMinor: 48_000, salePriceMinor: null };
+  const tiers = [
+    { minQtyMilli: 10_000, unitPriceMinor: 40_000 },
+    { minQtyMilli: 5_000, unitPriceMinor: 42_000 },
+  ];
+
+  test("charges the regular price below the first tier", () => {
+    expect(unitPriceForQuantity(rice, tiers, 4_000)).toBe(48_000);
+  });
+
+  test("applies the best tier the quantity reaches", () => {
+    expect(unitPriceForQuantity(rice, tiers, 5_000)).toBe(42_000);
+    expect(unitPriceForQuantity(rice, tiers, 12_000)).toBe(40_000);
+  });
+
+  test("never charges more than the sale price", () => {
+    const onSale = { priceMinor: 48_000, salePriceMinor: 41_000 };
+    expect(unitPriceForQuantity(onSale, tiers, 5_000)).toBe(41_000);
+    expect(unitPriceForQuantity(onSale, tiers, 10_000)).toBe(40_000);
+  });
+
+  test("lists only tiers that save money, smallest quantity first", () => {
+    const onSale = { priceMinor: 48_000, salePriceMinor: 41_000 };
+    expect(usefulTiers(onSale, tiers)).toEqual([{ minQtyMilli: 10_000, unitPriceMinor: 40_000 }]);
+    expect(usefulTiers(rice, tiers)).toEqual([
+      { minQtyMilli: 5_000, unitPriceMinor: 42_000 },
+      { minQtyMilli: 10_000, unitPriceMinor: 40_000 },
+    ]);
+  });
+
+  test("drops a larger tier that does not lower the price further", () => {
+    const flat = [
+      { minQtyMilli: 5_000, unitPriceMinor: 42_000 },
+      { minQtyMilli: 10_000, unitPriceMinor: 43_000 },
+    ];
+    expect(usefulTiers(rice, flat)).toEqual([{ minQtyMilli: 5_000, unitPriceMinor: 42_000 }]);
   });
 });

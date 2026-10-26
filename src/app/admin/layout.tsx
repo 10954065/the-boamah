@@ -18,6 +18,7 @@ const NAV: (AdminNavItem & { permission: Permission })[] = [
   { href: "/admin/products", label: "Products", group: "Catalogue", permission: "catalog:view" },
   { href: "/admin/categories", label: "Categories", group: "Catalogue", permission: "catalog:view" },
   { href: "/admin/inventory", label: "Inventory", group: "Catalogue", permission: "inventory:adjust" },
+  { href: "/admin/reviews", label: "Reviews", group: "Catalogue", permission: "reviews:manage" },
   { href: "/admin/coupons", label: "Coupons", group: "Marketing", permission: "promotions:manage" },
   { href: "/admin/banners", label: "Banners", group: "Marketing", permission: "promotions:manage" },
   { href: "/admin/delivery", label: "Delivery zones", group: "Store", permission: "delivery:manage" },

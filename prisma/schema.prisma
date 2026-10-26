@@ -55,6 +55,8 @@ model User {
   orderNotes         OrderNote[]
   auditLogs          AuditLog[]
   cashPayments       Payment[]           @relation("PaymentRecordedBy")
+  reviews            Review[]
+  stockAlerts        StockAlert[]
 
   @@index([role])
   @@index([createdAt])
@@ -183,6 +185,7 @@ model Product {
   wishlistItems    WishlistItem[]
   orderItems       OrderItem[]
   coupons          Coupon[]         @relation("CouponProducts")
+  reviews          Review[]
 
   @@index([status, categoryId])
   @@index([status, isFeatured])
@@ -240,9 +243,72 @@ model ProductVariant {
   cartItems      CartItem[]
   orderItems     OrderItem[]
   movements      InventoryMovement[]
+  priceTiers     PriceTier[]
+  stockAlerts    StockAlert[]
 
   @@index([productId, sortOrder])
   @@index([stockMilli])
+}
+
+// Bulk pricing: buying at least minQtyMilli makes every unit cost
+// unitPriceMinor, when that is lower than the regular or sale price.
+model PriceTier {
+  id             String         @id @default(cuid())
+  variantId      String
+  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  minQtyMilli    Int
+  unitPriceMinor Int
+  createdAt      DateTime       @default(now())
+
+  @@unique([variantId, minQtyMilli])
+}
+
+// A shopper asked to be told when an out-of-stock option is back.
+model StockAlert {
+  id         String              @id @default(cuid())
+  variantId  String
+  variant    ProductVariant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  channel    NotificationChannel
+  // Lower-cased email address or normalised phone number.
+  contact    String
+  userId     String?
+  user       User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notifiedAt DateTime?
+  createdAt  DateTime            @default(now())
+
+  @@unique([variantId, contact])
+  @@index([variantId, notifiedAt])
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Only customers with a delivered order containing the product may review it.
+// Reviews are published after a staff member approves them.
+model Review {
+  id          String       @id @default(cuid())
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  rating      Int
+  title       String?
+  body        String
+  // Shown publicly, e.g. "Ama B."
+  authorName  String
+  status      ReviewStatus @default(PENDING)
+  moderatedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([productId, userId])
+  @@index([productId, status, createdAt])
+  @@index([status, createdAt])
 }
 
 enum InventoryMovementType {
@@ -498,6 +564,7 @@ model Order {
   movements            InventoryMovement[]
   redemption           CouponRedemption?
   notifications        Notification[]
+  reviews              Review[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])

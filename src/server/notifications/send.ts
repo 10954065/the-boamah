@@ -9,7 +9,8 @@ export type NotificationType =
   | "PAYMENT_FAILED"
   | "ORDER_STATUS"
   | "ORDER_CANCELLED"
-  | "ADMIN_NEW_ORDER";
+  | "ADMIN_NEW_ORDER"
+  | "BACK_IN_STOCK";
 
 interface EmailNotification {
   type: NotificationType;

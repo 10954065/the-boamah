@@ -31,6 +31,12 @@ describe("role permissions", () => {
     expect(hasPermission("ORDER_MANAGER", "settings:manage")).toBe(false);
   });
 
+  test("store managers moderate reviews; inventory and order managers do not", () => {
+    expect(hasPermission("STORE_MANAGER", "reviews:manage")).toBe(true);
+    expect(hasPermission("INVENTORY_MANAGER", "reviews:manage")).toBe(false);
+    expect(hasPermission("ORDER_MANAGER", "reviews:manage")).toBe(false);
+  });
+
   test("unknown roles are denied", () => {
     expect(hasPermission("ADMIN", "dashboard:view")).toBe(false);
     expect(hasPermission(undefined, "dashboard:view")).toBe(false);

@@ -12,6 +12,13 @@ import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
 import { SELLING_UNITS, UNIT_INFO, type SellingUnitCode } from "@/lib/quantity";
 import { ImageUploader, type UploadedImage } from "./image-uploader";
 
+export interface TierDraft {
+  minQty: string;
+  price: string;
+}
+
+const MAX_TIERS = 4;
+
 export interface VariantDraft {
   id?: string;
   name: string;
@@ -25,6 +32,7 @@ export interface VariantDraft {
   lowStock: string;
   openingStock: string;
   isActive: boolean;
+  tiers: TierDraft[];
   currentStock?: string;
 }
 
@@ -55,6 +63,7 @@ const emptyVariant = (): VariantDraft => ({
   lowStock: "5",
   openingStock: "0",
   isActive: true,
+  tiers: [],
 });
 
 export function ProductForm({ initial, categories, canDelete }: { initial?: ProductDraft; categories: { id: string; name: string }[]; canDelete: boolean }) {
@@ -102,6 +111,7 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         lowStock: v.lowStock,
         openingStock: v.id ? undefined : v.openingStock || undefined,
         isActive: v.isActive,
+        tiers: v.tiers.filter((t) => t.minQty.trim() || t.price.trim()),
       })),
     };
     startTransition(async () => {
@@ -222,6 +232,13 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
                   <Input {...fieldAria(`${p}.openingStock`, err(`${p}.openingStock`))} inputMode="decimal" value={variant.openingStock} onChange={(e) => setVariant(index, { openingStock: e.target.value })} />
                 </Field>
               )}
+              <BulkTiers
+                prefix={p}
+                tiers={variant.tiers}
+                unitLabel={UNIT_INFO[variant.unit].plural}
+                error={err}
+                onChange={(tiers) => setVariant(index, { tiers })}
+              />
               <div className="flex flex-wrap items-center gap-4 sm:col-span-2 lg:col-span-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="radio" name="defaultIndex" checked={draft.defaultIndex === index} onChange={() => set("defaultIndex", index)} className="h-4 w-4 accent-brand-700" />
@@ -290,5 +307,49 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         ) : null}
       </div>
     </form>
+  );
+}
+
+interface BulkTiersProps {
+  prefix: string;
+  tiers: TierDraft[];
+  unitLabel: string;
+  error: (key: string) => string | undefined;
+  onChange: (tiers: TierDraft[]) => void;
+}
+
+/** Up to four "buy at least N, pay X each" prices for one option. */
+function BulkTiers({ prefix, tiers, unitLabel, error, onChange }: BulkTiersProps) {
+  const update = (index: number, patch: Partial<TierDraft>) => onChange(tiers.map((t, i) => (i === index ? { ...t, ...patch } : t)));
+  return (
+    <div className="space-y-2 rounded-md bg-soft/60 p-3 sm:col-span-2 lg:col-span-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold">
+          Bulk prices <span className="font-normal text-ink-muted">(optional: a lower price each when customers buy more)</span>
+        </p>
+        {tiers.length < MAX_TIERS ? (
+          <Button type="button" size="sm" variant="outline" onClick={() => onChange([...tiers, { minQty: "", price: "" }])}>
+            <Plus /> Add bulk price
+          </Button>
+        ) : null}
+      </div>
+      {error(`${prefix}.tiers`) ? <p className="text-xs font-medium text-danger">{error(`${prefix}.tiers`)}</p> : null}
+      {tiers.map((tier, t) => {
+        const q = `${prefix}.tiers.${t}`;
+        return (
+          <div key={t} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <Field id={`${q}.minQty`} label={`Buy at least (${unitLabel})`} error={error(`${q}.minQty`)}>
+              <Input {...fieldAria(`${q}.minQty`, error(`${q}.minQty`))} inputMode="decimal" placeholder="e.g. 5" value={tier.minQty} onChange={(e) => update(t, { minQty: e.target.value })} />
+            </Field>
+            <Field id={`${q}.price`} label="Price each (GH₵)" error={error(`${q}.price`)}>
+              <Input {...fieldAria(`${q}.price`, error(`${q}.price`))} inputMode="decimal" placeholder="e.g. 420.00" value={tier.price} onChange={(e) => update(t, { price: e.target.value })} />
+            </Field>
+            <Button type="button" size="sm" variant="ghost" className="mb-1 text-danger" onClick={() => onChange(tiers.filter((_, i) => i !== t))} aria-label={`Remove bulk price ${t + 1}`}>
+              <Trash2 />
+            </Button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

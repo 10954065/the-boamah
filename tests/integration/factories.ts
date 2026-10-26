@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { DEFAULT_SETTINGS } from "@/server/settings";
 
 const TABLES = [
-  "PaymentEvent", "Notification", "AuditLog", "InventoryMovement", "Payment", "CouponRedemption", "OrderNote",
+  "Review", "StockAlert", "PriceTier", "PaymentEvent", "Notification", "AuditLog", "InventoryMovement", "Payment", "CouponRedemption", "OrderNote",
   "OrderStatusHistory", "OrderItem", "Order", "CartItem", "Cart", "WishlistItem", "Address", "ProductImage",
   "ProductVariant", "_CouponProducts", "_CouponCategories", "Coupon", "Product", "Category", "DeliveryZone",
   "PromoBanner", "StoreSettings", "rate_limit", "session", "account", "verification", "user",

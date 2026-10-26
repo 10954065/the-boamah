@@ -10,6 +10,7 @@ import { parseDecimalToMilli } from "@/lib/quantity";
 import { recordAudit } from "@/server/audit";
 import { adjustStock, InsufficientStockError } from "@/server/inventory";
 import { cancelOrder, OrderActionError, recordCashPayment, updateOrderStatus } from "@/server/orders/lifecycle";
+import { notifyBackInStock } from "@/server/stock-alerts";
 import { authorize, runAction } from "@/server/session";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +42,9 @@ export async function changeStock(input: z.input<typeof stockSchema>): Promise<A
       });
       revalidatePath("/admin/inventory");
       revalidatePath("/", "layout");
-      return ok({ balanceMilli: balance }, "Stock updated.");
+      const told = delta > 0 ? await notifyBackInStock([parsed.data.variantId]) : 0;
+      const message = told > 0 ? `Stock updated. ${told} waiting shopper${told === 1 ? " was" : "s were"} told it is back.` : "Stock updated.";
+      return ok({ balanceMilli: balance }, message);
     } catch (error) {
       if (error instanceof InsufficientStockError) return fail("Stock cannot go below zero.");
       throw error;

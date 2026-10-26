@@ -186,6 +186,8 @@ the password under *Account → Settings*. Then:
   admin instead.
 - Other staff register normal accounts. The Super Admin then assigns their roles
   in *Admin → Staff*.
+- Enter the shop's WhatsApp number in *Admin → Settings* (for example
+  024 123 4567). The chat button appears on every page once it is set.
 
 ## 9. Search engines
 
@@ -257,6 +259,13 @@ are left out.
   cancelled (for example after the payment window ran out), the order gets an
   automatic note and staff are emailed. Refund the customer in Paystack or
   fulfil the order by hand.
+- **Reviews**: *Admin → Reviews* lists new reviews waiting for approval.
+  Nothing a customer writes is shown in the store until it is approved.
+- **Restocking**: adding stock in *Admin → Inventory* emails (or texts, when SMS
+  is on) everyone who asked to be told the item is back, once each. Cancelled
+  orders that return stock do the same.
+- **Bulk prices** are set per option on the product page in the admin. Each
+  must be lower than the shelf price; a sale price lower than a bulk price wins.
 - **Stock** changes only through orders and recorded adjustments (receipts,
   corrections, damage), each kept in the movement history with who made it.
 - **Notifications** shows any failed email or SMS so the customer can be

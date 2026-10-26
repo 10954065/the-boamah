@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Alert } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/store/page-header";
+import { whatsappLink } from "@/lib/whatsapp";
 import { getStoreSettings } from "@/server/settings";
 
 export const metadata: Metadata = {
@@ -13,13 +14,13 @@ export const metadata: Metadata = {
 
 export default async function ContactPage() {
   const settings = await getStoreSettings();
-  const whatsapp = settings.whatsappNumber?.replace(/[^\d]/g, "");
+  const whatsapp = whatsappLink(settings.whatsappNumber);
   const items = [
     settings.contactPhone
       ? { Icon: Phone, label: "Phone", value: settings.contactPhone, href: `tel:${settings.contactPhone.replace(/\s+/g, "")}` }
       : null,
     whatsapp && settings.whatsappNumber
-      ? { Icon: MessageCircle, label: "WhatsApp", value: settings.whatsappNumber, href: `https://wa.me/${whatsapp}` }
+      ? { Icon: MessageCircle, label: "WhatsApp", value: settings.whatsappNumber, href: whatsapp }
       : null,
     settings.contactEmail ? { Icon: Mail, label: "Email", value: settings.contactEmail, href: `mailto:${settings.contactEmail}` } : null,
     settings.address ? { Icon: MapPin, label: "Address", value: settings.address, href: null } : null,

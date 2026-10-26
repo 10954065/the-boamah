@@ -8,6 +8,7 @@ import { paymentTone } from "@/components/store/order-detail";
 import { formatMoney } from "@/lib/money";
 import { paymentStatusLabel, statusLabel } from "@/lib/order-status";
 import { formatDate } from "@/lib/utils";
+import { BuyAgainButton } from "./buy-again-button";
 
 export function OrdersTable({ orders }: { orders: Order[] }) {
   if (orders.length === 0) {
@@ -28,7 +29,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
   }
   return (
     <div className="overflow-x-auto rounded-lg border border-line bg-surface">
-      <table className="w-full min-w-[640px] text-left text-sm">
+      <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="border-b border-line bg-soft/60 text-xs uppercase tracking-wider text-ink-subtle">
           <tr>
             <th scope="col" className="px-4 py-3 font-semibold">Order</th>
@@ -36,6 +37,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
             <th scope="col" className="px-4 py-3 font-semibold">Status</th>
             <th scope="col" className="px-4 py-3 font-semibold">Payment</th>
             <th scope="col" className="px-4 py-3 text-right font-semibold">Total</th>
+            <th scope="col" className="px-4 py-3 font-semibold"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -56,6 +58,9 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                 <Badge tone={paymentTone(order.paymentStatus)}>{paymentStatusLabel(order.paymentStatus, order.paymentMethod)}</Badge>
               </td>
               <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatMoney(order.totalMinor)}</td>
+              <td className="px-4 py-3 text-right">
+                <BuyAgainButton reference={order.reference} size="sm" />
+              </td>
             </tr>
           ))}
         </tbody>

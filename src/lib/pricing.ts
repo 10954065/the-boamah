@@ -33,6 +33,40 @@ export function discountPercent(variant: PriceSource): number | null {
   return Math.round(((variant.priceMinor - effective) * 100) / variant.priceMinor);
 }
 
+// ---------------------------------------------------------------------------
+// Bulk pricing
+// ---------------------------------------------------------------------------
+
+export interface PriceTierRule {
+  minQtyMilli: number;
+  unitPriceMinor: number;
+}
+
+/**
+ * Tiers that actually save money, cheapest-last, sorted by quantity. A tier
+ * that is not below the regular/sale price is ignored.
+ */
+export function usefulTiers(variant: PriceSource, tiers: readonly PriceTierRule[]): PriceTierRule[] {
+  const base = effectiveUnitPrice(variant);
+  const sorted = tiers.filter((t) => t.minQtyMilli > 0 && t.unitPriceMinor > 0 && t.unitPriceMinor < base).toSorted((a, b) => a.minQtyMilli - b.minQtyMilli);
+  // Drop tiers that ask for more but do not cost less than a smaller tier.
+  const result: PriceTierRule[] = [];
+  for (const tier of sorted) {
+    const previous = result.at(-1);
+    if (!previous || tier.unitPriceMinor < previous.unitPriceMinor) result.push(tier);
+  }
+  return result;
+}
+
+/** Unit price for a quantity: the best of the regular/sale price and any tier reached. */
+export function unitPriceForQuantity(variant: PriceSource, tiers: readonly PriceTierRule[], quantityMilli: number): number {
+  let price = effectiveUnitPrice(variant);
+  for (const tier of tiers) {
+    if (quantityMilli >= tier.minQtyMilli && tier.unitPriceMinor > 0 && tier.unitPriceMinor < price) price = tier.unitPriceMinor;
+  }
+  return price;
+}
+
 export interface PricingLine {
   variantId: string;
   productId: string;

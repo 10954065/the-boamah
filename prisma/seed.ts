@@ -83,6 +83,7 @@ async function seedCatalogue() {
             lowStockMilli: variant.unit === "KG" ? 5000 : 5000,
             isDefault: vIndex === 0,
             sortOrder: vIndex,
+            priceTiers: { create: (variant.tiers ?? []).map((tier) => ({ minQtyMilli: tier.min * 1000, unitPriceMinor: tier.price })) },
             movements: {
               create: { type: "INITIAL", deltaMilli: variant.stock, balanceAfterMilli: variant.stock, reason: "Sample opening stock (seed)" },
             },

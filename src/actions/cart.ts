@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
-import { effectiveUnitPrice, evaluateCoupon } from "@/lib/pricing";
-import { checkQuantity, type SellingUnitCode } from "@/lib/quantity";
+import { evaluateCoupon, unitPriceForQuantity } from "@/lib/pricing";
+import { checkQuantity, clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { ensureCart, getCartView, toPricedLines } from "@/server/cart";
 import { countCustomerRedemptions, loadCoupon, normalizeCouponCode } from "@/server/coupons";
-import { getCurrentUser, runAction } from "@/server/session";
+import { authorizeCustomer, getCurrentUser, runAction } from "@/server/session";
 
 const idSchema = z.string().min(1).max(64);
 const quantitySchema = z.number().int().positive().max(1_000_000);
@@ -24,7 +24,7 @@ async function loadSellableVariant(variantId: string) {
       isActive: true,
       product: { status: "PUBLISHED", category: { isActive: true } },
     },
-    include: { product: { select: { name: true } } },
+    include: { product: { select: { name: true } }, priceTiers: true },
   });
 }
 
@@ -47,7 +47,7 @@ export async function addToCart(input: { variantId: string; quantityMilli: numbe
       return fail(existing ? `${check.message} You already have some in your cart.` : check.message);
     }
 
-    const price = effectiveUnitPrice(variant);
+    const price = unitPriceForQuantity(variant, variant.priceTiers, total);
     await prisma.cartItem.upsert({
       where: { cartId_variantId: { cartId, variantId: variant.id } },
       update: { quantityMilli: total, seenUnitPriceMinor: price },
@@ -60,12 +60,80 @@ export async function addToCart(input: { variantId: string; quantityMilli: numbe
   });
 }
 
+export interface BuyAgainSummary {
+  added: number;
+  reduced: number;
+  unavailable: number;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Puts the lines of one of the customer's past orders back in their cart at
+ * today's prices, capped at what is in stock. Lines no longer sold are skipped.
+ */
+export async function buyAgain(input: { reference: string }): Promise<ActionResult<BuyAgainSummary>> {
+  return runAction("cart.buyAgain", async () => {
+    const user = await authorizeCustomer();
+    const reference = z.string().trim().min(3).max(40).safeParse(input.reference);
+    if (!reference.success) return fail("Order not found.");
+    const order = await prisma.order.findFirst({
+      where: { reference: reference.data, userId: user.id },
+      select: { items: { select: { variantId: true, quantityMilli: true } } },
+    });
+    if (!order) return fail("Order not found.");
+
+    const cartId = await ensureCart();
+    const summary: BuyAgainSummary = { added: 0, reduced: 0, unavailable: 0 };
+    for (const item of order.items) {
+      const variant = item.variantId ? await loadSellableVariant(item.variantId) : null;
+      if (!variant) {
+        summary.unavailable += 1;
+        continue;
+      }
+      const existing = await prisma.cartItem.findUnique({ where: { cartId_variantId: { cartId, variantId: variant.id } } });
+      const already = existing?.quantityMilli ?? 0;
+      const wanted = already + item.quantityMilli;
+      const rules = { stepMilli: variant.stepMilli, minQtyMilli: variant.minQtyMilli, maxQtyMilli: variant.maxQtyMilli };
+      const quantity = clampToValidQuantity(Math.min(wanted, variant.stockMilli), rules);
+      if (quantity === null || quantity <= already) {
+        summary.unavailable += 1;
+        continue;
+      }
+      const price = unitPriceForQuantity(variant, variant.priceTiers, quantity);
+      await prisma.cartItem.upsert({
+        where: { cartId_variantId: { cartId, variantId: variant.id } },
+        update: { quantityMilli: quantity, seenUnitPriceMinor: price },
+        create: { cartId, variantId: variant.id, quantityMilli: quantity, seenUnitPriceMinor: price },
+      });
+      summary.added += 1;
+      if (quantity < wanted) summary.reduced += 1;
+    }
+
+    if (summary.added === 0) {
+      return fail("None of the items from this order are available right now.");
+    }
+    await prisma.cart.update({ where: { id: cartId }, data: { updatedAt: new Date() } });
+    refresh();
+    const notes = [
+      summary.reduced ? `${plural(summary.reduced, "item")} reduced to what is in stock.` : "",
+      summary.unavailable ? `${plural(summary.unavailable, "item")} not available right now.` : "",
+    ].filter(Boolean);
+    return ok(summary, [`${plural(summary.added, "item")} added to your cart.`, ...notes].join(" "));
+  });
+}
+
 export async function updateCartItem(input: { itemId: string; quantityMilli: number }): Promise<ActionResult> {
   return runAction("cart.update", async () => {
     const parsed = z.object({ itemId: idSchema, quantityMilli: quantitySchema }).safeParse(input);
     if (!parsed.success) return fail("Please choose a valid quantity.");
     const cartId = await ensureCart();
-    const item = await prisma.cartItem.findFirst({ where: { id: parsed.data.itemId, cartId }, include: { variant: true } });
+    const item = await prisma.cartItem.findFirst({
+      where: { id: parsed.data.itemId, cartId },
+      include: { variant: { include: { priceTiers: true } } },
+    });
     if (!item) return fail("That item is no longer in your cart.");
 
     const { variant } = item;
@@ -73,7 +141,9 @@ export async function updateCartItem(input: { itemId: string; quantityMilli: num
     const check = checkQuantity(parsed.data.quantityMilli, rules, variant.unit as SellingUnitCode, variant.stockMilli);
     if (!check.ok) return fail(check.message);
 
-    await prisma.cartItem.update({ where: { id: item.id }, data: { quantityMilli: parsed.data.quantityMilli } });
+    // The shopper sees the new line price when they change the quantity, including any bulk price.
+    const price = unitPriceForQuantity(variant, variant.priceTiers, parsed.data.quantityMilli);
+    await prisma.cartItem.update({ where: { id: item.id }, data: { quantityMilli: parsed.data.quantityMilli, seenUnitPriceMinor: price } });
     refresh();
     return ok(undefined);
   });
@@ -94,10 +164,13 @@ export async function removeCartItem(input: { itemId: string }): Promise<ActionR
 export async function acceptCartPrices(): Promise<ActionResult> {
   return runAction("cart.acceptPrices", async () => {
     const cartId = await ensureCart();
-    const items = await prisma.cartItem.findMany({ where: { cartId }, include: { variant: true } });
+    const items = await prisma.cartItem.findMany({ where: { cartId }, include: { variant: { include: { priceTiers: true } } } });
     await prisma.$transaction(
       items.map((item) =>
-        prisma.cartItem.update({ where: { id: item.id }, data: { seenUnitPriceMinor: effectiveUnitPrice(item.variant) } }),
+        prisma.cartItem.update({
+          where: { id: item.id },
+          data: { seenUnitPriceMinor: unitPriceForQuantity(item.variant, item.variant.priceTiers, item.quantityMilli) },
+        }),
       ),
     );
     refresh();

@@ -41,7 +41,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/admin/
   const [variants, total, movements] = await Promise.all([
     prisma.productVariant.findMany({
       where,
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true } }, _count: { select: { stockAlerts: { where: { notifiedAt: null } } } } },
       orderBy: [{ product: { name: "asc" } }, { sortOrder: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -95,6 +95,11 @@ export default async function InventoryPage({ searchParams }: PageProps<"/admin/
                   <td className={cn(td, "font-mono text-xs")}>{v.sku}</td>
                   <td className={cn(td, "tabular-nums font-semibold", v.stockMilli === 0 ? "text-danger" : low ? "text-warning" : "")}>
                     {v.stockMilli === 0 ? "Out of stock" : formatQuantity(v.stockMilli, unit)}
+                    {v._count.stockAlerts > 0 ? (
+                      <span className="mt-0.5 block text-xs font-medium text-brand-700">
+                        {v._count.stockAlerts} waiting to hear it is back
+                      </span>
+                    ) : null}
                   </td>
                   <td className={cn(td, "tabular-nums text-ink-muted")}>{formatQuantity(v.lowStockMilli, unit)}</td>
                   <td className={cn(td, "text-right")}>

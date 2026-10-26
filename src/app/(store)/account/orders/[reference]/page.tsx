@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BuyAgainButton } from "@/components/account/buy-again-button";
 import { OrderDetail } from "@/components/store/order-detail";
 import { getAccessibleOrder, wasConfirmationEmailed } from "@/server/orders/access";
 import { requireUser } from "@/server/session";
@@ -20,7 +21,10 @@ export default async function AccountOrderPage({ params, searchParams }: PagePro
         <Link href="/account/orders" className="text-sm font-medium text-brand-700 hover:underline">
           ← All orders
         </Link>
-        <h1 className="mt-2 text-2xl font-extrabold">Order {order.reference}</h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold">Order {order.reference}</h1>
+          <BuyAgainButton reference={order.reference} />
+        </div>
       </div>
       <OrderDetail
         order={order}

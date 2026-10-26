@@ -3,7 +3,7 @@ import { cache } from "react";
 import { Prisma } from "@/generated/prisma/client";
 import type { ProductCardView, ProductDetailView, SortOption, VariantView } from "@/lib/catalog-types";
 import { prisma } from "@/lib/db";
-import { effectiveUnitPrice } from "@/lib/pricing";
+import { effectiveUnitPrice, usefulTiers } from "@/lib/pricing";
 import { clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
 
 export const PAGE_SIZE = 20;
@@ -24,6 +24,7 @@ interface VariantRow {
   maxQtyMilli: number | null;
   stockMilli: number;
   lowStockMilli: number;
+  priceTiers?: { minQtyMilli: number; unitPriceMinor: number }[];
 }
 
 export function toVariantView(variant: VariantRow): VariantView {
@@ -43,13 +44,14 @@ export function toVariantView(variant: VariantRow): VariantView {
     availableMilli: available,
     inStock: available > 0,
     lowStock: available > 0 && variant.stockMilli <= variant.lowStockMilli,
+    tiers: usefulTiers(variant, variant.priceTiers ?? []).map(({ minQtyMilli, unitPriceMinor }) => ({ minQtyMilli, unitPriceMinor })),
   };
 }
 
 const cardInclude = {
   category: { select: { name: true, slug: true } },
   images: { orderBy: { sortOrder: "asc" }, take: 1 },
-  variants: { where: { isActive: true }, orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }] },
+  variants: { where: { isActive: true }, orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }], include: { priceTiers: true } },
 } satisfies Prisma.ProductInclude;
 
 type CardProduct = Prisma.ProductGetPayload<{ include: typeof cardInclude }>;
@@ -272,7 +274,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     include: {
       category: { select: { name: true, slug: true } },
       images: { orderBy: { sortOrder: "asc" } },
-      variants: { where: { isActive: true }, orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }] },
+      variants: { where: { isActive: true }, orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }], include: { priceTiers: true } },
     },
   });
   if (!product) return null;

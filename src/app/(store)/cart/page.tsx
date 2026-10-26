@@ -96,6 +96,9 @@ export default async function CartPage() {
                         {line.unitPriceMinor < line.regularPriceMinor ? (
                           <span className="ml-1.5 text-xs text-ink-subtle line-through">{formatMoney(line.regularPriceMinor)}</span>
                         ) : null}
+                        {line.bulkPriceApplied ? (
+                          <span className="ml-2 rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-bold text-gold-700">Bulk price</span>
+                        ) : null}
                       </p>
                       {unavailable ? (
                         <p className="mt-1 text-sm font-medium text-danger">⚠ No longer available. Please remove it.</p>

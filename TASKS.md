@@ -66,8 +66,17 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] Lint, typecheck, production build; npm audit clean (Next.js, Zod and Prisma security patches applied)
 - [x] Deployment & operations documentation — README.md, docs/DEPLOYMENT.md
 
+## 9. Growth features
+- [x] Bulk prices per option, applied in cart and at checkout from the database
+- [x] "Buy again" on past orders
+- [x] "Tell me when it's back" alerts, sent once on restock or cancellation
+- [x] Verified-buyer reviews with staff approval, star ratings and rating data for search engines
+- [x] WhatsApp chat button on every page
+
 ## Open items
 - [ ] Business content before launch: real prices and stock, delivery zones and fees, pickup details, contact details, policy texts, tax treatment (checklist in docs/DEPLOYMENT.md)
 - [ ] "Refunded" order status: paid orders cannot be cancelled in the admin; refunds are made in Paystack and noted on the order
 - [ ] Confirm the Vercel plan allows the 15-minute cron, or use an external scheduler
 - [ ] Email and SMS delivery checks once Resend / Arkesel credentials exist
+- [ ] Set the shop's WhatsApp number in Admin → Settings
+- [ ] Real bulk prices for each product (the sample rice and oil tiers are placeholders)

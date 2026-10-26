@@ -1,3 +1,4 @@
+import type { PriceTierRule } from "./pricing";
 import type { SellingUnitCode } from "./quantity";
 
 /** Serializable variant data safe to send to client components. */
@@ -16,6 +17,8 @@ export interface VariantView {
   availableMilli: number;
   inStock: boolean;
   lowStock: boolean;
+  /** Bulk prices that beat the regular/sale price, smallest quantity first. */
+  tiers: PriceTierRule[];
 }
 
 export interface ProductCardView {

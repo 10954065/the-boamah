@@ -1,8 +1,13 @@
 import { BackToTop } from "@/components/layout/back-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+import { whatsappLink } from "@/lib/whatsapp";
+import { getStoreSettings } from "@/server/settings";
 
-export default function StoreLayout({ children }: { children: React.ReactNode }) {
+export default async function StoreLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getStoreSettings();
+  const whatsapp = whatsappLink(settings.whatsappNumber, `Hi, I have a question for ${settings.storeName}.`);
   return (
     <>
       <a
@@ -16,7 +21,8 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <SiteFooter />
-      <BackToTop />
+      {whatsapp ? <WhatsAppButton href={whatsapp} /> : null}
+      <BackToTop raised={Boolean(whatsapp)} />
     </>
   );
 }

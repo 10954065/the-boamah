@@ -4,6 +4,7 @@ import { canTransition, type OrderStatusCode } from "@/lib/order-status";
 import { recordAudit } from "@/server/audit";
 import { releaseOrderStock } from "@/server/inventory";
 import { verifyAndApply } from "@/server/payments/service";
+import { notifyBackInStock } from "@/server/stock-alerts";
 import { generatePaymentReference } from "./reference";
 
 export class OrderActionError extends Error {
@@ -45,6 +46,12 @@ async function cancelInTx(tx: Tx, input: { orderId: string; actorId: string | nu
   return true;
 }
 
+/** A cancellation returns stock, which may bring an option back for shoppers waiting on it. */
+async function tellWaitingShoppers(orderId: string): Promise<void> {
+  const items = await prisma.orderItem.findMany({ where: { orderId, variantId: { not: null } }, select: { variantId: true } });
+  await notifyBackInStock(items.flatMap((item) => (item.variantId ? [item.variantId] : [])));
+}
+
 export async function cancelOrder(input: { orderId: string; actorId: string | null; reason: string }): Promise<void> {
   const order = await prisma.order.findUnique({ where: { id: input.orderId } });
   if (!order) throw new OrderActionError("Order not found.");
@@ -57,6 +64,7 @@ export async function cancelOrder(input: { orderId: string; actorId: string | nu
   }
   const { notifyOrderCancelled } = await import("@/server/notifications/order-emails");
   await notifyOrderCancelled(order.id);
+  await tellWaitingShoppers(order.id);
 }
 
 export async function updateOrderStatus(input: { orderId: string; to: OrderStatusCode; actorId: string; note?: string }): Promise<void> {
@@ -161,6 +169,7 @@ export async function expireUnpaidOrders(now = new Date(), limit = 50): Promise<
       expired += 1;
       const { notifyOrderCancelled } = await import("@/server/notifications/order-emails");
       await notifyOrderCancelled(order.id);
+      await tellWaitingShoppers(order.id);
     }
   }
   return { expired, paid, deferred };

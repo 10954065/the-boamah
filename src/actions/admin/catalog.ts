@@ -37,6 +37,13 @@ const optionalQuantity = (label: string) =>
     return parsed;
   });
 
+const MAX_TIERS = 4;
+
+const tierSchema = z.object({
+  minQty: quantity("Bulk quantity"),
+  price: money("Bulk price"),
+});
+
 const variantSchema = z
   .object({
     id: z.string().max(64).optional(),
@@ -51,6 +58,7 @@ const variantSchema = z
     lowStock: quantity("Low stock level"),
     openingStock: optionalQuantity("Opening stock"),
     isActive: z.boolean(),
+    tiers: z.array(tierSchema).max(MAX_TIERS, `Up to ${MAX_TIERS} bulk prices per option.`).default([]),
   })
   .superRefine((v, ctx) => {
     if (v.price <= 0) ctx.addIssue({ code: "custom", path: ["price"], message: "Price must be greater than zero." });
@@ -60,6 +68,21 @@ const variantSchema = z
       ctx.addIssue({ code: "custom", path: ["step"], message: `${UNIT_INFO[v.unit].plural} can only be sold in whole numbers.` });
     }
     if (v.max !== null && v.max < v.min) ctx.addIssue({ code: "custom", path: ["max"], message: "Maximum must be at least the minimum." });
+    const shelfPrice = v.salePrice ?? v.price;
+    const seen = new Set<number>();
+    v.tiers.forEach((tier, i) => {
+      if (tier.minQty <= v.min) {
+        ctx.addIssue({ code: "custom", path: ["tiers", i, "minQty"], message: "Bulk quantity must be more than the minimum." });
+      } else if (!UNIT_INFO[v.unit].divisible && tier.minQty % 1000 !== 0) {
+        ctx.addIssue({ code: "custom", path: ["tiers", i, "minQty"], message: "Use a whole number." });
+      } else if (seen.has(tier.minQty)) {
+        ctx.addIssue({ code: "custom", path: ["tiers", i, "minQty"], message: "Each bulk quantity must be different." });
+      }
+      seen.add(tier.minQty);
+      if (tier.price <= 0 || tier.price >= shelfPrice) {
+        ctx.addIssue({ code: "custom", path: ["tiers", i, "price"], message: "Bulk price must be lower than the shelf price." });
+      }
+    });
   });
 
 const productSchema = z.object({
@@ -140,9 +163,11 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
             sortOrder: index,
           };
           const current = variant.id ? existing?.variants.find((v) => v.id === variant.id) : undefined;
+          let variantId: string;
           if (current) {
             await tx.productVariant.update({ where: { id: current.id }, data: fields });
             keptIds.add(current.id);
+            variantId = current.id;
             if (current.priceMinor !== variant.price || current.salePriceMinor !== variant.salePrice) {
               await recordAudit(
                 {
@@ -159,11 +184,18 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
             const opening = variant.openingStock ?? 0;
             const created = await tx.productVariant.create({ data: { ...fields, productId: product.id, stockMilli: opening } });
             keptIds.add(created.id);
+            variantId = created.id;
             if (opening > 0) {
               await tx.inventoryMovement.create({
                 data: { variantId: created.id, type: "INITIAL", deltaMilli: opening, balanceAfterMilli: opening, reason: "Opening stock", actorId: user.id },
               });
             }
+          }
+          await tx.priceTier.deleteMany({ where: { variantId } });
+          if (variant.tiers.length) {
+            await tx.priceTier.createMany({
+              data: variant.tiers.map((tier) => ({ variantId, minQtyMilli: tier.minQty, unitPriceMinor: tier.price })),
+            });
           }
         }
         // Removed options are deactivated, not deleted, so order history stays intact.

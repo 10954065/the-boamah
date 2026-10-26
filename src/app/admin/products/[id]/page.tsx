@@ -15,7 +15,8 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
   const [product, categories] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
-      include: { images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }] } },
+      include: { images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }], include: { priceTiers: { orderBy: { minQtyMilli: "asc" } } } },
+      },
     }),
     prisma.category.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
   ]);
@@ -67,6 +68,7 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
             lowStock: milliToDecimalString(v.lowStockMilli),
             openingStock: "",
             isActive: v.isActive,
+            tiers: v.priceTiers.map((t) => ({ minQty: milliToDecimalString(t.minQtyMilli), price: minorToDecimalString(t.unitPriceMinor) })),
             currentStock: formatQuantity(v.stockMilli, v.unit as SellingUnitCode),
           })),
         }}

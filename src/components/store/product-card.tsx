@@ -42,6 +42,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
           {discount ? <Badge tone="sale">{discount}% off</Badge> : null}
           {variant && !variant.inStock ? <Badge tone="neutral" className="bg-surface/95 ring-1 ring-line">Out of stock</Badge> : null}
           {variant?.inStock && variant.lowStock ? <Badge tone="gold">Few left</Badge> : null}
+          {variant?.inStock && variant.tiers.length > 0 ? <Badge tone="info">Bulk deal</Badge> : null}
         </div>
         <WishlistButton
           productId={product.id}

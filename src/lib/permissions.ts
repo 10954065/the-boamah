@@ -27,6 +27,7 @@ export const PERMISSIONS = [
   "customers:view",
   "customers:suspend",
   "promotions:manage",
+  "reviews:manage",
   "delivery:manage",
   "settings:manage",
   "staff:manage",
