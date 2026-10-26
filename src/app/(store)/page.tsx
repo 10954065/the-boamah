@@ -4,7 +4,7 @@ import { RecentlyViewed } from "@/components/store/recently-viewed";
 import type { ProductCardView } from "@/lib/catalog-types";
 import { siteUrl } from "@/lib/utils";
 import { getActiveBanners } from "@/server/banners";
-import { getActiveCategories, getBestSellers, getFeaturedProducts, getNewArrivals, getOnSaleProducts } from "@/server/catalog";
+import { getActiveCategories, getBestSellers, getFeaturedProducts, getHeroProducts, getNewArrivals, getOnSaleProducts } from "@/server/catalog";
 import { getStoreSettings } from "@/server/settings";
 import { getWishlistIds } from "@/server/wishlist";
 
@@ -39,7 +39,7 @@ function ProductRow({
 }
 
 export default async function HomePage() {
-  const [settings, heroBanners, promoBanners, categories, featured, bestSellers, newArrivals, offers, savedIds] = await Promise.all([
+  const [settings, heroBanners, promoBanners, categories, featured, bestSellers, newArrivals, offers, savedIds, heroProducts] = await Promise.all([
     getStoreSettings(),
     getActiveBanners("HERO", 1),
     getActiveBanners("HOME_PROMO", 3),
@@ -49,6 +49,7 @@ export default async function HomePage() {
     getNewArrivals(10),
     getOnSaleProducts(5),
     getWishlistIds(),
+    getHeroProducts(),
   ]);
 
   const stocked = categories.filter((c) => c.productCount > 0);
@@ -66,7 +67,11 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization).replace(/</g, "\\u003c") }} />
-      <Hero banner={heroBanners[0] ?? null} stats={{ products: stocked.reduce((sum, c) => sum + c.productCount, 0), categories: stocked.length }} />
+      <Hero
+        banner={heroBanners[0] ?? null}
+        products={heroProducts}
+        stats={{ products: stocked.reduce((sum, c) => sum + c.productCount, 0), categories: stocked.length }}
+      />
       <CategoryTiles categories={stocked} />
       <RecentlyViewed title="Pick up where you left off" className="container-page mt-12" />
       <ProductRow

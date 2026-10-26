@@ -4,8 +4,11 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, CreditCard, Headset, ReceiptText, ShoppingBasket, ShoppingCart, Truck } from "lucide-react";
 import type { PromoBanner } from "@/generated/prisma/client";
 import { buttonVariants } from "@/components/ui/button";
+import type { HeroProduct } from "@/lib/catalog-types";
+import { HERO_TILE_COUNT } from "@/lib/hero-rotation";
 import { cn } from "@/lib/utils";
 import type { CategoryView } from "@/server/catalog";
+import { HeroProductGrid } from "./hero-product-grid";
 
 export function SectionHeading({
   id,
@@ -50,7 +53,15 @@ interface HeroContent {
 
 const line = (i: number) => ({ "--i": i }) as CSSProperties;
 
-export function Hero({ banner, stats }: { banner: PromoBanner | null; stats?: { products: number; categories: number } }) {
+interface HeroProps {
+  banner: PromoBanner | null;
+  stats?: { products: number; categories: number };
+  /** Live catalogue for the rotating grid; the banner photo is used when there are too few. */
+  products?: HeroProduct[];
+}
+
+export function Hero({ banner, stats, products = [] }: HeroProps) {
+  const liveGrid = products.length >= HERO_TILE_COUNT;
   const content: HeroContent = banner
     ? {
         eyebrow: banner.eyebrow,
@@ -81,8 +92,12 @@ export function Hero({ banner, stats }: { banner: PromoBanner | null; stats?: { 
             fill
             priority
             sizes="(min-width: 1024px) 50vw, 100vw"
-            className="ken-burns object-cover lg:[clip-path:ellipse(94%_100%_at_100%_50%)]"
+            className={cn("ken-burns object-cover lg:[clip-path:ellipse(94%_100%_at_100%_50%)]", liveGrid && "lg:[animation:none]")}
           />
+          {liveGrid ? (
+            // Covers the banner photo from lg up; the photo stays behind the text on phones.
+            <HeroProductGrid products={products} className="absolute inset-0 hidden lg:block lg:[clip-path:ellipse(94%_100%_at_100%_50%)]" />
+          ) : null}
           <div
             className="absolute inset-0 bg-gradient-to-t from-brand-900 via-brand-900/85 to-brand-900/40 lg:hidden"
             aria-hidden="true"

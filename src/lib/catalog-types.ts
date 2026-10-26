@@ -44,6 +44,16 @@ export interface ProductDetailView extends ProductCardView {
   updatedAt: string;
 }
 
+/** A product photo tile in the rotating homepage hero. */
+export interface HeroProduct {
+  slug: string;
+  name: string;
+  imageUrl: string;
+  imageAlt: string;
+  /** Published within the last few weeks. */
+  isNew: boolean;
+}
+
 export const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
   { value: "price-asc", label: "Price: low to high" },

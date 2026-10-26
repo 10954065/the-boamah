@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { Prisma } from "@/generated/prisma/client";
-import type { ProductCardView, ProductDetailView, SortOption, VariantView } from "@/lib/catalog-types";
+import type { HeroProduct, ProductCardView, ProductDetailView, SortOption, VariantView } from "@/lib/catalog-types";
 import { prisma } from "@/lib/db";
 import { effectiveUnitPrice, usefulTiers } from "@/lib/pricing";
 import { clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
@@ -239,6 +239,36 @@ export async function getNewArrivals(limit = 10): Promise<ProductCardView[]> {
     take: limit,
   });
   return products.map(toCardView);
+}
+
+const NEW_FOR_DAYS = 21;
+
+/**
+ * Products for the rotating hero grid: published, in stock and with a photo,
+ * newest first. A product added in the admin joins the rotation on the next
+ * page load and starts in the opening grid because it is the newest.
+ */
+export async function getHeroProducts(limit = 24): Promise<HeroProduct[]> {
+  const products = await prisma.product.findMany({
+    where: {
+      status: "PUBLISHED",
+      category: { isActive: true },
+      images: { some: {} },
+      variants: { some: { isActive: true, stockMilli: { gt: 0 } } },
+    },
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    take: limit,
+    select: { slug: true, name: true, publishedAt: true, createdAt: true, images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, alt: true } } },
+  });
+  const newSince = Date.now() - NEW_FOR_DAYS * 86_400_000;
+  const isRecent = (p: (typeof products)[number]) => (p.publishedAt ?? p.createdAt).getTime() >= newSince;
+  // "New" only means something next to older stock; a brand-new shop shows no badges.
+  const showNew = products.some((p) => !isRecent(p));
+  return products.flatMap((p) => {
+    const image = p.images[0];
+    if (!image) return [];
+    return [{ slug: p.slug, name: p.name, imageUrl: image.url, imageAlt: image.alt || p.name, isNew: showNew && isRecent(p) }];
+  });
 }
 
 export async function getOnSaleProducts(limit = 10): Promise<ProductCardView[]> {

@@ -10,6 +10,26 @@ test.describe("storefront", () => {
     await expect(page.getByRole("heading", { name: "Featured this week" })).toBeVisible();
   });
 
+  test("the hero grid shows live products, rotates them and can be paused", async ({ page }) => {
+    await page.goto("/");
+    const grid = page.getByRole("group", { name: "Products in the shop" });
+    const tiles = grid.getByRole("link");
+    await expect(tiles).toHaveCount(6);
+    const shown = () => tiles.evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+    const first = await shown();
+    expect(new Set(first).size).toBe(6);
+
+    await page.mouse.move(0, 0); // keep the pointer off the grid, which pauses it
+    await expect.poll(shown, { timeout: 8000 }).not.toEqual(first);
+
+    await grid.getByRole("button", { name: "Pause the product slideshow" }).click();
+    await page.mouse.move(0, 0);
+    await expect(grid.getByRole("button", { name: "Play the product slideshow" })).toBeVisible();
+    const paused = await shown();
+    await page.waitForTimeout(3500);
+    expect(await shown()).toEqual(paused);
+  });
+
   test("search finds real products and shows a helpful empty state", async ({ page }) => {
     await page.goto("/shop?q=rice");
     await expect(page.getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();

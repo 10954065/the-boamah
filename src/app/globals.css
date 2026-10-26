@@ -125,6 +125,23 @@
   .ken-burns {
     animation: ken-burns 20s ease-out both;
   }
+
+  /* Hero product grid: the incoming product turns into view over the old one. */
+  .tile-in {
+    animation: tile-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
+  }
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: perspective(700px) rotateY(-75deg) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes ken-burns {
