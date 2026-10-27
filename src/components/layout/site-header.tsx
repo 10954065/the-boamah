@@ -6,6 +6,7 @@ import { getCartCount } from "@/server/cart";
 import { getActiveCategories } from "@/server/catalog";
 import { getCurrentUser } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
+import { BottomNav } from "./bottom-nav";
 import { MainNavLinks } from "./main-nav";
 import { MobileNav } from "./mobile-nav";
 import { SearchBox } from "./search-box";
@@ -123,6 +124,7 @@ export async function SiteHeader() {
           </div>
         </nav>
       </header>
+      <BottomNav cartCount={cartCount} accountHref={user ? "/account" : "/login"} />
     </>
   );
 }

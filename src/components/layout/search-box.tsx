@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { FOCUS_SEARCH_EVENT } from "./bottom-nav";
 
 interface Suggestion {
   slug: string;
@@ -37,8 +38,19 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
       event.preventDefault();
       input.focus();
     };
+    // The phone bottom menu's Search button asks the visible box to take focus.
+    const onFocusRequest = () => {
+      const input = inputRef.current;
+      if (!input || input.offsetParent === null) return;
+      window.scrollTo({ top: 0 });
+      input.focus();
+    };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener(FOCUS_SEARCH_EVENT, onFocusRequest);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(FOCUS_SEARCH_EVENT, onFocusRequest);
+    };
   }, []);
 
   useEffect(() => {

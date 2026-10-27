@@ -43,6 +43,22 @@ test.describe("responsive layout", () => {
     await expect(page.getByRole("dialog", { name: "Menu" })).toBeHidden();
   });
 
+  test("the phone bottom menu reaches search, the cart and categories", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto("/products/royal-basmati-rice");
+    const menu = page.getByRole("navigation", { name: "Shortcuts" });
+    await menu.getByRole("button", { name: "Search" }).click();
+    await expect(page.getByRole("combobox", { name: "Search groceries" }).last()).toBeFocused();
+
+    await menu.getByRole("link", { name: /^Cart, / }).click();
+    await expect(page.getByRole("dialog", { name: /Your cart/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await menu.getByRole("link", { name: "Categories" }).click();
+    await expect(page).toHaveURL(/\/categories$/);
+    await expect(menu.getByRole("link", { name: "Categories" })).toHaveAttribute("aria-current", "page");
+  });
+
   test("on phones the add-to-cart bar appears once the main button scrolls away", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto("/products/quaker-quick-oats");

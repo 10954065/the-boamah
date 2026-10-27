@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ShoppingBasket, Tags } from "lucide-react";
-import { useEffect, useRef, useState, useTransition, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode, type RefObject } from "react";
 import { toast } from "sonner";
 import { addToCart } from "@/actions/cart";
 import { Button } from "@/components/ui/button";
@@ -145,19 +145,26 @@ function BulkPricing({ variant, quantity, onChoose }: BulkPricingProps) {
   );
 }
 
-/** True once the element has scrolled up and out of view. */
+function subscribeScroll(onChange: () => void) {
+  window.addEventListener("scroll", onChange, { passive: true });
+  window.addEventListener("resize", onChange);
+  return () => {
+    window.removeEventListener("scroll", onChange);
+    window.removeEventListener("resize", onChange);
+  };
+}
+
+/**
+ * True once the element has scrolled up and out of view. Reads the position
+ * directly, so it is right even when the shopper scrolled before the page
+ * finished loading.
+ */
 function useScrolledPast(ref: RefObject<HTMLElement | null>): boolean {
-  const [past, setPast] = useState(false);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return past;
+  return useSyncExternalStore(
+    subscribeScroll,
+    () => (ref.current ? ref.current.getBoundingClientRect().bottom < 0 : false),
+    () => false,
+  );
 }
 
 interface StickyBuyBarProps {

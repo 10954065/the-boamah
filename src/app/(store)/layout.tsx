@@ -22,6 +22,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         {children}
       </main>
       <SiteFooter />
+      {/* Keeps the end of the footer clear of the phone bottom menu. */}
+      <div aria-hidden="true" className="h-[var(--nav-offset)] bg-brand-900 lg:hidden" />
       {whatsapp ? <WhatsAppButton href={whatsapp} /> : null}
       <BackToTop raised={Boolean(whatsapp)} />
     </CartDrawerProvider>

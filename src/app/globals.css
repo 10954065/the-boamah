@@ -154,6 +154,10 @@
 }
 
 @media (max-width: 1023.98px) {
+  :root:has([data-bottom-nav]) {
+    --nav-offset: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
   html[data-buy-bar] {
     --float-offset: calc(var(--nav-offset) + 4.75rem);
   }
