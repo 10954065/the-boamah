@@ -229,6 +229,8 @@ model ProductVariant {
   unit           SellingUnit         @default(ITEM)
   priceMinor     Int
   salePriceMinor Int?
+  // The sale price stops applying at this moment; null means no end date.
+  saleEndsAt     DateTime?
   // Quantity rules in milli-units (1000 = one unit).
   stepMilli      Int                 @default(1000)
   minQtyMilli    Int                 @default(1000)

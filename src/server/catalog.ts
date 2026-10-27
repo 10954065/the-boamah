@@ -3,7 +3,7 @@ import { cache } from "react";
 import { Prisma } from "@/generated/prisma/client";
 import type { HeroProduct, ProductCardView, ProductDetailView, SortOption, VariantView } from "@/lib/catalog-types";
 import { prisma } from "@/lib/db";
-import { effectiveUnitPrice, usefulTiers } from "@/lib/pricing";
+import { effectiveUnitPrice, isSaleActive, usefulTiers } from "@/lib/pricing";
 import { clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
 
 export const PAGE_SIZE = 20;
@@ -19,6 +19,7 @@ interface VariantRow {
   unit: string;
   priceMinor: number;
   salePriceMinor: number | null;
+  saleEndsAt?: Date | null;
   stepMilli: number;
   minQtyMilli: number;
   maxQtyMilli: number | null;
@@ -30,13 +31,15 @@ interface VariantRow {
 export function toVariantView(variant: VariantRow): VariantView {
   const rules = { stepMilli: variant.stepMilli, minQtyMilli: variant.minQtyMilli, maxQtyMilli: variant.maxQtyMilli };
   const available = clampToValidQuantity(variant.stockMilli, rules) ?? 0;
+  const onSale = isSaleActive(variant);
   return {
     id: variant.id,
     name: variant.name,
     sku: variant.sku,
     unit: variant.unit as SellingUnitCode,
     priceMinor: variant.priceMinor,
-    salePriceMinor: variant.salePriceMinor,
+    salePriceMinor: onSale ? variant.salePriceMinor : null,
+    saleEndsAt: onSale && variant.saleEndsAt ? variant.saleEndsAt.toISOString() : null,
     effectivePriceMinor: effectiveUnitPrice(variant),
     stepMilli: variant.stepMilli,
     minQtyMilli: variant.minQtyMilli,
@@ -209,10 +212,14 @@ export async function listProducts(query: ProductQuery): Promise<ProductPage> {
     FROM "Product" p
     JOIN "Category" c ON c.id = p."categoryId" AND c."isActive"
     JOIN LATERAL (
-      SELECT LEAST(pv."priceMinor", COALESCE(pv."salePriceMinor", pv."priceMinor")) AS effective,
+      SELECT CASE WHEN s.active THEN pv."salePriceMinor" ELSE pv."priceMinor" END AS effective,
              (pv."stockMilli" >= pv."minQtyMilli") AS available,
-             (pv."salePriceMinor" IS NOT NULL AND pv."salePriceMinor" < pv."priceMinor") AS on_sale
+             s.active AS on_sale
       FROM "ProductVariant" pv
+      CROSS JOIN LATERAL (
+        SELECT (pv."salePriceMinor" IS NOT NULL AND pv."salePriceMinor" >= 0 AND pv."salePriceMinor" < pv."priceMinor"
+                AND (pv."saleEndsAt" IS NULL OR pv."saleEndsAt" > now())) AS active
+      ) s
       WHERE pv."productId" = p.id AND pv."isActive"
       ORDER BY pv."isDefault" DESC, pv."sortOrder" ASC
       LIMIT 1

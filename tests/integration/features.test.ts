@@ -32,6 +32,30 @@ describe("bulk pricing at checkout", () => {
   });
 });
 
+describe("sale end dates at checkout", () => {
+  test("an ended sale is charged at the regular price", async () => {
+    const { variant } = await createVariant({ price: 2500, sale: 2000, stock: 20_000 });
+    await prisma.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() - 60_000) } });
+    const cart = await createCart([{ variantId: variant.id, quantityMilli: 2000, seen: 2500 }]);
+
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2500 }), { cartId: cart.id, user: null, settings: settings() });
+
+    const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } });
+    expect(saved.totalMinor).toBe(5000);
+  });
+
+  test("a sale that has not ended yet still applies", async () => {
+    const { variant } = await createVariant({ price: 2500, sale: 2000, stock: 20_000 });
+    await prisma.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() + 86_400_000) } });
+    const cart = await createCart([{ variantId: variant.id, quantityMilli: 2000, seen: 2000 }]);
+
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2000 }), { cartId: cart.id, user: null, settings: settings() });
+
+    const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } });
+    expect(saved.totalMinor).toBe(4000);
+  });
+});
+
 describe("back in stock alerts", () => {
   test("messages each waiting shopper once, and only when the option is really back", async () => {
     const { variant } = await createVariant({ price: 2500, stock: 0 });

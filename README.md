@@ -37,6 +37,12 @@ Bulk prices ("5 bags or more: GH₵420 each") shown live as the quantity changes
 "Tell me when it's back" sign-up on out-of-stock items. Star ratings and reviews
 from verified buyers, published after staff approval. A WhatsApp chat button on
 every page, with the product already named in the message on product pages.
+A hero grid that rotates through the live catalogue, category banners, star
+ratings on product cards, quick view, "Often bought together" from real orders,
+and sale countdowns for sale prices with an end date. A slide-out cart with a
+free-delivery progress bar, plus an add-to-cart bar and an app-style bottom menu
+on phones. Accepted payment methods are shown in the cart, at checkout and in
+the footer.
 Policy, contact and image-credit pages.
 
 **Cart and checkout**: database-backed cart for guests and signed-in customers.

@@ -72,6 +72,10 @@ A feature is only ticked when its behaviour is implemented **and** verified
 - [x] "Tell me when it's back" alerts, sent once on restock or cancellation
 - [x] Verified-buyer reviews with staff approval, star ratings and rating data for search engines
 - [x] WhatsApp chat button on every page
+- [x] Hero grid rotating through the live catalogue
+- [x] Slide-out cart, free-delivery progress, phone add-to-cart bar and bottom menu
+- [x] Stars on product cards, quick view, often bought together, category banners
+- [x] Payment method badges and sale countdowns
 
 ## Open items
 - [ ] Business content before launch: real prices and stock, delivery zones and fees, pickup details, contact details, policy texts, tax treatment (checklist in docs/DEPLOYMENT.md)

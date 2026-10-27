@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { CardAddButton } from "./add-to-cart";
 import { Price } from "./price";
 import { QuickViewButton } from "./quick-view";
+import { SaleCountdown } from "./sale-countdown";
 import { WishlistButton } from "./wishlist-button";
 
 interface ProductCardProps {
@@ -89,6 +90,7 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
               effectivePriceMinor={variant.effectivePriceMinor}
               unit={variant.unit}
             />
+            {variant.saleEndsAt ? <SaleCountdown endsAt={variant.saleEndsAt} variant="inline" className="mt-1" /> : null}
             <div className="relative z-10 mt-auto pt-3">
               {product.variantCount > 1 ? (
                 <Link

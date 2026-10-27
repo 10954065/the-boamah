@@ -26,6 +26,8 @@ export interface VariantDraft {
   unit: SellingUnitCode;
   price: string;
   salePrice: string;
+  /** "YYYY-MM-DDTHH:mm" in Ghana time, or empty for no end date. */
+  saleEndsAt: string;
   step: string;
   min: string;
   max: string;
@@ -57,6 +59,7 @@ const emptyVariant = (): VariantDraft => ({
   unit: "ITEM",
   price: "",
   salePrice: "",
+  saleEndsAt: "",
   step: "1",
   min: "1",
   max: "",
@@ -105,6 +108,7 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         unit: v.unit,
         price: v.price,
         salePrice: v.salePrice || undefined,
+        saleEndsAt: v.salePrice && v.saleEndsAt ? v.saleEndsAt : undefined,
         step: v.step,
         min: v.min,
         max: v.max || undefined,
@@ -210,6 +214,15 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
               </Field>
               <Field id={`${p}.salePrice`} label="Sale price (GH₵)" error={err(`${p}.salePrice`)}>
                 <Input {...fieldAria(`${p}.salePrice`, err(`${p}.salePrice`))} inputMode="decimal" value={variant.salePrice} onChange={(e) => setVariant(index, { salePrice: e.target.value })} />
+              </Field>
+              <Field id={`${p}.saleEndsAt`} label="Sale ends (Ghana time)" hint="Optional. Leave empty to keep the sale on." error={err(`${p}.saleEndsAt`)}>
+                <Input
+                  {...fieldAria(`${p}.saleEndsAt`, err(`${p}.saleEndsAt`), "hint")}
+                  type="datetime-local"
+                  disabled={!variant.salePrice}
+                  value={variant.saleEndsAt}
+                  onChange={(e) => setVariant(index, { saleEndsAt: e.target.value })}
+                />
               </Field>
               <Field id={`${p}.step`} label="Quantity step" error={err(`${p}.step`)}>
                 <Input {...fieldAria(`${p}.step`, err(`${p}.step`))} inputMode="decimal" value={variant.step} onChange={(e) => setVariant(index, { step: e.target.value })} />

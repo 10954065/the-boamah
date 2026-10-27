@@ -95,7 +95,7 @@ function BulkPricing({ variant, quantity, onChoose }: BulkPricingProps) {
   const tiers = variant.tiers.filter((t) => t.minQtyMilli <= max);
   if (tiers.length === 0) return null;
   const per = UNIT_INFO[variant.unit].per;
-  const unitPrice = unitPriceForQuantity({ priceMinor: variant.priceMinor, salePriceMinor: variant.salePriceMinor }, tiers, quantity);
+  const unitPrice = unitPriceForQuantity({ priceMinor: variant.priceMinor, salePriceMinor: variant.salePriceMinor, saleEndsAt: variant.saleEndsAt }, tiers, quantity);
   const saving = lineTotalMinor(variant.effectivePriceMinor, quantity) - lineTotalMinor(unitPrice, quantity);
   const next = tiers.find((t) => t.minQtyMilli > quantity);
 
@@ -188,7 +188,7 @@ function StickyBuyBar({ show, productName, variant, quantity, pending, added, on
       document.documentElement.toggleAttribute("data-buy-bar", false);
     };
   }, [show]);
-  const unitPrice = unitPriceForQuantity({ priceMinor: variant.priceMinor, salePriceMinor: variant.salePriceMinor }, variant.tiers, quantity);
+  const unitPrice = unitPriceForQuantity({ priceMinor: variant.priceMinor, salePriceMinor: variant.salePriceMinor, saleEndsAt: variant.saleEndsAt }, variant.tiers, quantity);
   return (
     <div
       aria-hidden={!show}

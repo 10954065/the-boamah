@@ -39,6 +39,21 @@ const optionalQuantity = (label: string) =>
 
 const MAX_TIERS = 4;
 
+/** "2026-11-30T18:00" from a datetime-local input, read as Ghana time (GMT, no daylight saving). */
+const ghanaDateTime = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    const date = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v) ? new Date(`${v}:00Z`) : null;
+    if (!date || Number.isNaN(date.getTime())) {
+      ctx.addIssue({ code: "custom", message: "Enter a date and time." });
+      return z.NEVER;
+    }
+    return date;
+  });
+
 const tierSchema = z.object({
   minQty: quantity("Bulk quantity"),
   price: money("Bulk price"),
@@ -52,6 +67,7 @@ const variantSchema = z
     unit: z.enum(SELLING_UNITS as [SellingUnitCode, ...SellingUnitCode[]]),
     price: money("Price"),
     salePrice: optionalMoney("Sale price"),
+    saleEndsAt: ghanaDateTime,
     step: quantity("Quantity step"),
     min: quantity("Minimum quantity"),
     max: optionalQuantity("Maximum quantity"),
@@ -154,6 +170,7 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
             unit: variant.unit,
             priceMinor: variant.price,
             salePriceMinor: variant.salePrice,
+            saleEndsAt: variant.salePrice === null ? null : variant.saleEndsAt,
             stepMilli: variant.step,
             minQtyMilli: variant.min,
             maxQtyMilli: variant.max,
@@ -168,14 +185,21 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
             await tx.productVariant.update({ where: { id: current.id }, data: fields });
             keptIds.add(current.id);
             variantId = current.id;
-            if (current.priceMinor !== variant.price || current.salePriceMinor !== variant.salePrice) {
+            if (
+              current.priceMinor !== variant.price ||
+              current.salePriceMinor !== variant.salePrice ||
+              current.saleEndsAt?.getTime() !== (variant.salePrice === null ? null : variant.saleEndsAt)?.getTime()
+            ) {
               await recordAudit(
                 {
                   actorId: user.id,
                   action: "variant.price_change",
                   entityType: "ProductVariant",
                   entityId: current.id,
-                  details: { from: [current.priceMinor, current.salePriceMinor], to: [variant.price, variant.salePrice] },
+                  details: {
+                    from: [current.priceMinor, current.salePriceMinor, current.saleEndsAt?.toISOString() ?? null],
+                    to: [variant.price, variant.salePrice, variant.saleEndsAt?.toISOString() ?? null],
+                  },
                 },
                 tx,
               );

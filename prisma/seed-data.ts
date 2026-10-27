@@ -11,6 +11,8 @@ export interface SeedVariant {
   unit: Unit;
   price: number;
   sale?: number;
+  /** Sale ends this many days after seeding (sample countdown). */
+  saleDays?: number;
   /** Bulk prices: buy at least `min` units, pay `price` each. */
   tiers?: { min: number; price: number }[];
   stock: number;
@@ -50,7 +52,7 @@ export const PRODUCTS: SeedProduct[] = [
   { slug: "members-mark-vegetable-oil", name: "Member's Mark Vegetable Oil", category: "cooking-oil", short: "Twin pack of 3 quart bottles.", description: "Member's Mark vegetable oil in a twin pack of two 3 quart bottles.", keywords: "oil vegetable oil members mark cooking", variants: [{ name: "Twin pack (2 × 3 qt)", unit: "PACK", price: 26000, stock: 30_000, tiers: [{ min: 4, price: 23500 }] }] },
   // Breakfast & Coffee
   { slug: "kelloggs-corn-flakes", name: "Kellogg's Corn Flakes", category: "breakfast", short: "Kellogg's Corn Flakes cereal.", description: "Classic Kellogg's Corn Flakes breakfast cereal.", keywords: "cereal corn flakes kelloggs breakfast", variants: [{ name: "Pack", unit: "PACK", price: 9500, stock: 40_000 }] },
-  { slug: "quaker-quick-oats", name: "Quaker Quick 1-Minute Oats", category: "breakfast", short: "Two 5 lb bags of quick oats.", description: "Quaker Quick 1-Minute Oats in a value box of two 5 lb bags.", keywords: "oats quaker porridge breakfast", featured: true, variants: [{ name: "Box (2 × 5 lb bags)", unit: "BOX", price: 18500, sale: 16500, stock: 25_000 }] },
+  { slug: "quaker-quick-oats", name: "Quaker Quick 1-Minute Oats", category: "breakfast", short: "Two 5 lb bags of quick oats.", description: "Quaker Quick 1-Minute Oats in a value box of two 5 lb bags.", keywords: "oats quaker porridge breakfast", featured: true, variants: [{ name: "Box (2 × 5 lb bags)", unit: "BOX", price: 18500, sale: 16500, saleDays: 5, stock: 25_000 }] },
   { slug: "coffee-mate-original", name: "Coffee-mate Original Creamer", category: "breakfast", short: "Coffee-mate The Original creamer.", description: "Nestlé Coffee-mate The Original coffee creamer in a large canister.", keywords: "coffee creamer coffee mate nestle", variants: [{ name: "Canister", unit: "ITEM", price: 9000, stock: 30_000 }] },
   // Juices & Drinks
   { slug: "ocean-spray-cran-grape", name: "Ocean Spray Cran-Grape", category: "juices-drinks", short: "Grape and cranberry juice drink.", description: "Ocean Spray Cran-Grape grape and cranberry juice drink in a large bottle.", keywords: "juice cranberry grape ocean spray drink", featured: true, variants: [{ name: "Bottle", unit: "BOTTLE", price: 7500, stock: 60_000 }] },

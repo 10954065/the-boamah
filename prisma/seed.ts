@@ -76,6 +76,7 @@ async function seedCatalogue() {
             unit: variant.unit,
             priceMinor: variant.price,
             salePriceMinor: variant.sale ?? null,
+            saleEndsAt: variant.saleDays ? new Date(Date.now() + variant.saleDays * 86_400_000) : null,
             stepMilli: variant.step ?? 1000,
             minQtyMilli: variant.min ?? 1000,
             maxQtyMilli: variant.max ?? null,

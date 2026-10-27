@@ -47,6 +47,18 @@ export function formatDateTime(value: Date | string): string {
   return dateTimeFormatter.format(new Date(value));
 }
 
+/** Short "time left" text such as "2d 5h", "3h 20m" or "42m"; null once the time has passed. */
+export function formatTimeLeft(ms: number): string | null {
+  if (ms <= 0) return null;
+  const minutes = Math.max(1, Math.floor(ms / 60_000));
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  return `${mins}m`;
+}
+
 /** Only allow same-site relative redirects (prevents open redirects). */
 export function safeRedirectPath(value: unknown, fallback = "/"): string {
   if (typeof value !== "string") return fallback;

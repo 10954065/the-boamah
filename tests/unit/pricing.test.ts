@@ -7,11 +7,13 @@ import {
   evaluateCoupon,
   priceLines,
   freeDeliveryProgress,
+  isSaleActive,
   unitPriceForQuantity,
   usefulTiers,
   type CouponRule,
   type DeliveryZoneRule,
 } from "@/lib/pricing";
+import { formatTimeLeft } from "@/lib/utils";
 
 const now = new Date("2026-10-25T12:00:00Z");
 
@@ -195,5 +197,42 @@ describe("free delivery progress", () => {
 
   test("treats an empty cart as no progress", () => {
     expect(freeDeliveryProgress(0, 40_000)).toEqual({ reached: false, remainingMinor: 40_000, percent: 0 });
+  });
+});
+
+describe("sale end dates", () => {
+  const now = new Date("2026-11-01T12:00:00Z");
+  const onSale = { priceMinor: 18_500, salePriceMinor: 16_500 };
+
+  test("a sale with no end date keeps applying", () => {
+    expect(effectiveUnitPrice({ ...onSale, saleEndsAt: null }, now)).toBe(16_500);
+  });
+
+  test("the sale price applies until the end date", () => {
+    const variant = { ...onSale, saleEndsAt: new Date("2026-11-03T00:00:00Z") };
+    expect(isSaleActive(variant, now)).toBe(true);
+    expect(effectiveUnitPrice(variant, now)).toBe(16_500);
+  });
+
+  test("the regular price returns once the sale has ended", () => {
+    const variant = { ...onSale, saleEndsAt: "2026-11-01T11:59:00Z" };
+    expect(isSaleActive(variant, now)).toBe(false);
+    expect(effectiveUnitPrice(variant, now)).toBe(18_500);
+    expect(discountPercent({ ...variant, saleEndsAt: "2000-01-01T00:00:00Z" })).toBeNull();
+  });
+});
+
+describe("sale countdown text", () => {
+  const minute = 60_000;
+  test("shows days and hours, hours and minutes, or minutes", () => {
+    expect(formatTimeLeft((2 * 24 * 60 + 5 * 60 + 30) * minute)).toBe("2d 5h");
+    expect(formatTimeLeft((3 * 60 + 20) * minute)).toBe("3h 20m");
+    expect(formatTimeLeft(42 * minute)).toBe("42m");
+    expect(formatTimeLeft(20_000)).toBe("1m");
+  });
+
+  test("returns nothing once the time has passed", () => {
+    expect(formatTimeLeft(0)).toBeNull();
+    expect(formatTimeLeft(-5 * minute)).toBeNull();
   });
 });

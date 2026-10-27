@@ -93,6 +93,24 @@ test.describe("shopping features", () => {
     await expect(drawer.getByRole("link", { name: "Royal Basmati Rice" })).toHaveCount(0);
   });
 
+  test("a sale with an end date counts down, and the regular price returns after it", async ({ page }) => {
+    const product = await db.product.findUniqueOrThrow({ where: { slug: "quaker-quick-oats" }, include: { variants: true } });
+    const variant = product.variants[0]!;
+    try {
+      await db.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() + (2 * 24 + 3) * 3_600_000) } });
+      await page.goto("/products/quaker-quick-oats");
+      await expect(page.getByText(/Sale ends in 2d (2|3)h$/)).toBeVisible();
+      await expect(page.getByText("GH₵165.00").first()).toBeVisible();
+
+      await db.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() - 60_000) } });
+      await page.goto("/products/quaker-quick-oats");
+      await expect(page.getByText(/Sale ends in/)).toHaveCount(0);
+      await expect(page.getByText("GH₵185.00").first()).toBeVisible();
+    } finally {
+      await db.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: variant.saleEndsAt } });
+    }
+  });
+
   test("the WhatsApp button opens a chat about the product being viewed", async ({ page }) => {
     const settings = await db.storeSettings.findUnique({ where: { id: "default" }, select: { whatsappNumber: true } });
     await db.storeSettings.update({ where: { id: "default" }, data: { whatsappNumber: "024 123 4567" } });

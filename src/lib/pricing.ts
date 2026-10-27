@@ -3,7 +3,8 @@
  * produced here from database values — never from values sent by a browser.
  *
  * Policy
- * - Sale price applies when set and lower than the regular price.
+ * - Sale price applies when set, lower than the regular price, and its end
+ *   date (if any) has not passed.
  * - One coupon per order. Coupons apply on top of sale prices, only to
  *   eligible lines, and never exceed the eligible subtotal.
  * - Delivery minimum and free-delivery threshold are checked against the
@@ -17,13 +18,17 @@ import { lineTotalMinor } from "./quantity";
 export interface PriceSource {
   priceMinor: number;
   salePriceMinor: number | null;
+  /** When the sale price stops applying; null or missing means no end date. */
+  saleEndsAt?: Date | string | null;
 }
 
-export function effectiveUnitPrice(variant: PriceSource): number {
-  if (variant.salePriceMinor !== null && variant.salePriceMinor >= 0 && variant.salePriceMinor < variant.priceMinor) {
-    return variant.salePriceMinor;
-  }
-  return variant.priceMinor;
+export function isSaleActive(variant: PriceSource, now: Date = new Date()): boolean {
+  if (variant.salePriceMinor === null || variant.salePriceMinor < 0 || variant.salePriceMinor >= variant.priceMinor) return false;
+  return !variant.saleEndsAt || new Date(variant.saleEndsAt).getTime() > now.getTime();
+}
+
+export function effectiveUnitPrice(variant: PriceSource, now: Date = new Date()): number {
+  return isSaleActive(variant, now) && variant.salePriceMinor !== null ? variant.salePriceMinor : variant.priceMinor;
 }
 
 /** Whole-number discount percentage for badges, or null if not on sale. */

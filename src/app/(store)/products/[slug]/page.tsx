@@ -14,6 +14,7 @@ import { ProductReviews } from "@/components/store/product-reviews";
 import { RecentlyViewed, TrackRecentlyViewed } from "@/components/store/recently-viewed";
 import { ShareButton } from "@/components/store/share-button";
 import { SectionHeading } from "@/components/store/home-sections";
+import { SaleCountdown } from "@/components/store/sale-countdown";
 import { Stars } from "@/components/store/stars";
 import { WishlistButton } from "@/components/store/wishlist-button";
 import { minorToDecimalString } from "@/lib/money";
@@ -95,6 +96,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       sku: v.sku,
       price: minorToDecimalString(v.effectivePriceMinor),
       priceCurrency: "GHS",
+      ...(v.saleEndsAt ? { priceValidUntil: v.saleEndsAt.slice(0, 10) } : {}),
       availability: v.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       url: productUrl,
     })),
@@ -153,6 +155,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           {variant ? (
             <div className="mt-5 border-y border-line py-5">
               <Price size="lg" priceMinor={variant.priceMinor} effectivePriceMinor={variant.effectivePriceMinor} unit={variant.unit} />
+              {variant.saleEndsAt ? <SaleCountdown endsAt={variant.saleEndsAt} className="mt-2" /> : null}
               <p className="mt-1 text-sm text-ink-muted">{variant.name}{product.variantCount > 1 ? " · other sizes available" : ""}</p>
               <p className="mt-3 flex items-center gap-1.5 text-sm font-medium">
                 {!anyInStock ? (

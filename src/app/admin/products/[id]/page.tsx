@@ -62,6 +62,8 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
             unit: v.unit as SellingUnitCode,
             price: minorToDecimalString(v.priceMinor),
             salePrice: v.salePriceMinor !== null ? minorToDecimalString(v.salePriceMinor) : "",
+            // Ghana time is GMT, so the UTC value is what the admin sees on the shop's clock.
+            saleEndsAt: v.saleEndsAt ? v.saleEndsAt.toISOString().slice(0, 16) : "",
             step: milliToDecimalString(v.stepMilli),
             min: milliToDecimalString(v.minQtyMilli),
             max: v.maxQtyMilli !== null ? milliToDecimalString(v.maxQtyMilli) : "",

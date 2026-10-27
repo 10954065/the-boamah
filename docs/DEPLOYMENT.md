@@ -264,6 +264,9 @@ are left out.
 - **Restocking**: adding stock in *Admin → Inventory* emails (or texts, when SMS
   is on) everyone who asked to be told the item is back, once each. Cancelled
   orders that return stock do the same.
+- **Sale end dates**: a sale price can be given an end time (Ghana time) on the
+  product page in the admin. Shoppers see a countdown, and the regular price
+  returns by itself everywhere, cart and checkout included, when it passes.
 - **Bulk prices** are set per option on the product page in the admin. Each
   must be lower than the shelf price; a sale price lower than a bulk price wins.
 - **Stock** changes only through orders and recorded adjustments (receipts,

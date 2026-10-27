@@ -8,7 +8,10 @@ export interface VariantView {
   sku: string;
   unit: SellingUnitCode;
   priceMinor: number;
+  /** Null when there is no sale or it has ended. */
   salePriceMinor: number | null;
+  /** ISO time the current sale ends, if it has an end date. */
+  saleEndsAt: string | null;
   effectivePriceMinor: number;
   stepMilli: number;
   minQtyMilli: number;
