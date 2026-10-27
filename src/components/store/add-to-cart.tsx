@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ShoppingBasket, Tags } from "lucide-react";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode, type RefObject } from "react";
 import { toast } from "sonner";
 import { addToCart } from "@/actions/cart";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,69 @@ function BulkPricing({ variant, quantity, onChoose }: BulkPricingProps) {
   );
 }
 
+/** True once the element has scrolled up and out of view. */
+function useScrolledPast(ref: RefObject<HTMLElement | null>): boolean {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.bottom < 0);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return past;
+}
+
+interface StickyBuyBarProps {
+  show: boolean;
+  productName: string;
+  variant: VariantView;
+  quantity: number;
+  pending: boolean;
+  added: boolean;
+  onAdd: () => void;
+}
+
+/**
+ * Phones only: keeps the price and add button within reach once the main add
+ * button has scrolled away. Floating buttons move up while it shows.
+ */
+function StickyBuyBar({ show, productName, variant, quantity, pending, added, onAdd }: StickyBuyBarProps) {
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-buy-bar", show);
+    return () => {
+      document.documentElement.toggleAttribute("data-buy-bar", false);
+    };
+  }, [show]);
+  const unitPrice = unitPriceForQuantity({ priceMinor: variant.priceMinor, salePriceMinor: variant.salePriceMinor }, variant.tiers, quantity);
+  return (
+    <div
+      aria-hidden={!show}
+      inert={!show}
+      className={cn(
+        "fixed inset-x-0 bottom-[var(--nav-offset,0px)] z-30 border-t border-line bg-surface/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 shadow-[0_-10px_30px_-12px_rgba(15,48,34,0.25)] backdrop-blur transition-transform duration-300 ease-out lg:hidden",
+        show ? "translate-y-0" : "pointer-events-none translate-y-[calc(100%+var(--nav-offset,0px))]",
+      )}
+    >
+      <div className="mx-auto flex max-w-xl items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">{productName}</p>
+          <p className="text-sm tabular-nums">
+            <strong>{formatMoney(lineTotalMinor(unitPrice, quantity))}</strong>
+            <span className="text-ink-muted"> · {formatQuantity(quantity, variant.unit)}</span>
+          </p>
+        </div>
+        <Button size="lg" disabled={pending} onClick={onAdd} aria-label={`Add ${formatQuantity(quantity, variant.unit)} of ${productName} to cart`}>
+          {pending ? <Spinner label="Adding" /> : added ? <Check className="pop" /> : <ShoppingBasket />}
+          {added ? "Added" : "Add to cart"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface ProductPurchaseProps {
   variants: VariantView[];
   productName: string;
@@ -152,15 +215,19 @@ interface ProductPurchaseProps {
   secondaryAction?: ReactNode;
   /** Lets shoppers ask to be told when an out-of-stock option returns. */
   stockAlert?: { defaultContact?: string; smsEnabled: boolean };
+  /** Show the phone add-to-cart bar once the main button scrolls away (product page only). */
+  stickyBar?: boolean;
 }
 
 /** Variant picker + quantity stepper + add button for the product page. */
-export function ProductPurchase({ variants, productName, secondaryAction, stockAlert }: ProductPurchaseProps) {
+export function ProductPurchase({ variants, productName, secondaryAction, stockAlert, stickyBar = false }: ProductPurchaseProps) {
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const variant = variants.find((v) => v.id === variantId) ?? variants[0];
   const [quantity, setQuantity] = useState(variant?.minQtyMilli ?? 1000);
   const { pending, add } = useAddToCart();
   const [added, flash] = useAddedFlash();
+  const buyRow = useRef<HTMLDivElement>(null);
+  const scrolledPast = useScrolledPast(buyRow);
 
   if (!variant) return null;
 
@@ -208,7 +275,7 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
       {variant.inStock ? <BulkPricing variant={variant} quantity={quantity} onChoose={setQuantity} /> : null}
 
       {variant.inStock ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div ref={buyRow} className="flex flex-wrap items-center gap-3">
           <QuantityStepper
             value={quantity}
             onChange={setQuantity}
@@ -244,6 +311,17 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
       )}
       {variant.inStock && variant.lowStock ? (
         <p className="text-sm font-medium text-warning">Only {formatQuantity(variant.availableMilli, variant.unit)} left in stock.</p>
+      ) : null}
+      {stickyBar && variant.inStock ? (
+        <StickyBuyBar
+          show={scrolledPast}
+          productName={productName}
+          variant={variant}
+          quantity={quantity}
+          pending={pending}
+          added={added}
+          onAdd={() => add(variant.id, quantity, productName, flash)}
+        />
       ) : null}
     </div>
   );

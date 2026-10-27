@@ -165,6 +165,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               variants={product.variants}
               productName={product.name}
               stockAlert={{ defaultContact: user?.email, smsEnabled: settings.smsEnabled }}
+              stickyBar
               secondaryAction={
                 <WishlistButton variant="full" productId={product.id} productName={product.name} initialSaved={savedIds.has(product.id)} />
               }

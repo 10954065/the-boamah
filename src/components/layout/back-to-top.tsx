@@ -27,8 +27,10 @@ export function BackToTop({ raised = false }: { raised?: boolean }) {
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
       className={cn(
-        "fixed right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-brand-700 text-white shadow-[var(--shadow-overlay)] transition-[opacity,transform,background-color] duration-300 hover:bg-brand-800 sm:right-6",
-        raised ? "bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] right-5 sm:right-7" : "bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))]",
+        "fixed right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-brand-700 text-white shadow-[var(--shadow-overlay)] transition-[opacity,transform,background-color,bottom] duration-300 hover:bg-brand-800 sm:right-6",
+        raised
+          ? "bottom-[calc(5.25rem+var(--float-offset)+env(safe-area-inset-bottom,0px))] right-5 sm:right-7"
+          : "bottom-[calc(1.25rem+var(--float-offset)+env(safe-area-inset-bottom,0px))]",
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0",
       )}
     >

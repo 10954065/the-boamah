@@ -42,4 +42,17 @@ test.describe("responsive layout", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "Menu" })).toBeHidden();
   });
+
+  test("on phones the add-to-cart bar appears once the main button scrolls away", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto("/products/quaker-quick-oats");
+    const barButton = page.getByRole("button", { name: "Add 1 box of Quaker Quick 1-Minute Oats to cart" });
+    await expect(barButton).toHaveCount(0);
+
+    await page.getByRole("heading", { name: "Product description" }).scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 400);
+    await expect(barButton).toBeVisible();
+    await barButton.click();
+    await expect(page.getByRole("dialog", { name: /Your cart/ })).toBeVisible();
+  });
 });

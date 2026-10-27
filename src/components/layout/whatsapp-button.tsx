@@ -22,7 +22,7 @@ export function WhatsAppButton({ href, forProduct = false, className }: WhatsApp
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp (opens WhatsApp)"
       className={cn(
-        "pop group fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-[#25d366] text-white shadow-[var(--shadow-overlay)] ring-4 ring-white/70 transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-brand-500 sm:right-6",
+        "pop group fixed bottom-[calc(1.25rem+var(--float-offset)+env(safe-area-inset-bottom,0px))] right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-[#25d366] text-white shadow-[var(--shadow-overlay)] ring-4 ring-white/70 transition-[transform,bottom] duration-300 hover:scale-105 focus-visible:outline-none focus-visible:ring-brand-500 sm:right-6",
         className,
       )}
     >
