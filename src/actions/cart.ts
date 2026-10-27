@@ -8,6 +8,7 @@ import { evaluateCoupon, unitPriceForQuantity } from "@/lib/pricing";
 import { checkQuantity, clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { ensureCart, getCartView, toPricedLines } from "@/server/cart";
 import { countCustomerRedemptions, loadCoupon, normalizeCouponCode } from "@/server/coupons";
+import { getFreeDeliveryTarget, type FreeDeliveryTarget } from "@/server/delivery";
 import { authorizeCustomer, getCurrentUser, runAction } from "@/server/session";
 
 const idSchema = z.string().min(1).max(64);
@@ -82,12 +83,13 @@ export interface CartDrawerSummary {
   subtotalMinor: number;
   couponDiscountMinor: number;
   hasBlockingIssues: boolean;
+  freeDelivery: FreeDeliveryTarget | null;
 }
 
 /** Current cart for the slide-out cart panel, revalidated against live prices and stock. */
 export async function getCartDrawer(): Promise<ActionResult<CartDrawerSummary>> {
   return runAction("cart.drawer", async () => {
-    const cart = await getCartView();
+    const [cart, freeDelivery] = await Promise.all([getCartView(), getFreeDeliveryTarget()]);
     return ok({
       lines: cart.lines.map((line) => ({
         itemId: line.itemId,
@@ -108,6 +110,7 @@ export async function getCartDrawer(): Promise<ActionResult<CartDrawerSummary>> 
       subtotalMinor: cart.subtotalMinor,
       couponDiscountMinor: cart.couponDiscountMinor,
       hasBlockingIssues: cart.hasBlockingIssues,
+      freeDelivery,
     });
   });
 }

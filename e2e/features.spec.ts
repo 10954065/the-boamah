@@ -39,6 +39,8 @@ test.describe("shopping features", () => {
     await expect(drawer.getByRole("status").filter({ hasText: "added to your cart" })).toBeVisible();
     await expect(drawer.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toBeVisible();
     await expect(drawer.getByText("GH₵165.00").first()).toBeVisible();
+    // Accra Central has the lowest free-delivery amount in the sample zones (GH₵400).
+    await expect(drawer.getByText(/Add GH₵235\.00 more for free delivery in Accra Central/)).toBeVisible();
 
     await drawer.getByRole("button", { name: "Increase quantity" }).click();
     await expect(drawer.getByText("GH₵330.00").first()).toBeVisible();
@@ -63,6 +65,7 @@ test.describe("shopping features", () => {
     await page.goto("/cart");
     await expect(page.getByText("Bulk price", { exact: true })).toBeVisible();
     await expect(page.getByText("GH₵2,100.00").first()).toBeVisible(); // 5 × GH₵420
+    await expect(page.getByText("You have free delivery in Accra Central.")).toBeVisible();
   });
 
   test("the WhatsApp button opens a chat about the product being viewed", async ({ page }) => {

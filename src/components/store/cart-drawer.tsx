@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/feedback";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { CartLineControls } from "./cart-controls";
+import { FreeDeliveryBar } from "./free-delivery-bar";
 
 interface CartDrawerApi {
   /** Opens the cart panel; `notice` confirms what just happened, e.g. an item added. */
@@ -69,6 +70,7 @@ export function CartDrawerProvider({ children }: { children: ReactNode }) {
           footer={
             lines.length > 0 && summary ? (
               <div className="space-y-3">
+                {summary.freeDelivery ? <FreeDeliveryBar goodsTotalMinor={total} target={summary.freeDelivery} /> : null}
                 <dl className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-ink-muted">Subtotal</dt>

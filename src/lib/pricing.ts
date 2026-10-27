@@ -204,6 +204,21 @@ export function computeDeliveryFee(zone: DeliveryZoneRule, goodsTotalMinor: numb
   return { ok: true, feeMinor: zone.feeMinor, freeDeliveryApplied: false };
 }
 
+export interface FreeDeliveryProgress {
+  reached: boolean;
+  /** Still to add, in minor units; 0 once reached. */
+  remainingMinor: number;
+  /** 0 to 100, for a progress bar. */
+  percent: number;
+}
+
+/** How close the goods total (after discounts) is to a zone's free-delivery amount. */
+export function freeDeliveryProgress(goodsTotalMinor: number, thresholdMinor: number): FreeDeliveryProgress {
+  const total = Math.max(0, goodsTotalMinor);
+  if (thresholdMinor <= 0 || total >= thresholdMinor) return { reached: true, remainingMinor: 0, percent: 100 };
+  return { reached: false, remainingMinor: thresholdMinor - total, percent: Math.floor((total / thresholdMinor) * 100) };
+}
+
 // ---------------------------------------------------------------------------
 // Totals
 // ---------------------------------------------------------------------------

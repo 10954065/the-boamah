@@ -9,7 +9,9 @@ import { PageHeader } from "@/components/store/page-header";
 import { formatMoney } from "@/lib/money";
 import { formatQuantity, UNIT_INFO } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
+import { FreeDeliveryBar } from "@/components/store/free-delivery-bar";
 import { getCartView } from "@/server/cart";
+import { getFreeDeliveryTarget } from "@/server/delivery";
 
 export const metadata: Metadata = {
   title: "Your cart",
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
-  const cart = await getCartView();
+  const [cart, freeDelivery] = await Promise.all([getCartView(), getFreeDeliveryTarget()]);
 
   if (cart.lines.length === 0) {
     return (
@@ -135,6 +137,7 @@ export default async function CartPage() {
           <h2 id="summary-title" className="text-lg font-extrabold">
             Order summary
           </h2>
+          {freeDelivery ? <FreeDeliveryBar goodsTotalMinor={estimatedTotal} target={freeDelivery} /> : null}
           <CouponForm appliedCode={cart.couponCode} message={cart.couponMessage} />
           <dl className="space-y-2.5 border-t border-line pt-4 text-sm">
             <div className="flex justify-between">

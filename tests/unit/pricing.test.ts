@@ -6,6 +6,7 @@ import {
   effectiveUnitPrice,
   evaluateCoupon,
   priceLines,
+  freeDeliveryProgress,
   unitPriceForQuantity,
   usefulTiers,
   type CouponRule,
@@ -180,5 +181,19 @@ describe("bulk pricing", () => {
       { minQtyMilli: 10_000, unitPriceMinor: 43_000 },
     ];
     expect(usefulTiers(rice, flat)).toEqual([{ minQtyMilli: 5_000, unitPriceMinor: 42_000 }]);
+  });
+});
+
+describe("free delivery progress", () => {
+  test("shows how much more is needed", () => {
+    expect(freeDeliveryProgress(30_000, 40_000)).toEqual({ reached: false, remainingMinor: 10_000, percent: 75 });
+  });
+
+  test("is reached at the threshold", () => {
+    expect(freeDeliveryProgress(40_000, 40_000)).toEqual({ reached: true, remainingMinor: 0, percent: 100 });
+  });
+
+  test("treats an empty cart as no progress", () => {
+    expect(freeDeliveryProgress(0, 40_000)).toEqual({ reached: false, remainingMinor: 40_000, percent: 0 });
   });
 });
