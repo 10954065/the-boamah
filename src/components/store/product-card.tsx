@@ -5,6 +5,7 @@ import { ImageOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ProductCardView } from "@/lib/catalog-types";
 import { discountPercent } from "@/lib/pricing";
+import { Stars } from "./stars";
 import { cn } from "@/lib/utils";
 import { CardAddButton } from "./add-to-cart";
 import { Price } from "./price";
@@ -62,6 +63,16 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
         {variant ? (
           <>
             <p className="mt-0.5 text-xs text-ink-muted">{variant.name}</p>
+            {product.rating ? (
+              <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
+                <Stars rating={product.rating.average} size="sm" />
+                <span className="font-semibold text-ink">{product.rating.average.toFixed(1)}</span>
+                <span>
+                  ({product.rating.count}
+                  <span className="sr-only"> {product.rating.count === 1 ? "review" : "reviews"}</span>)
+                </span>
+              </p>
+            ) : null}
             <Price
               className="mt-2"
               size="md"

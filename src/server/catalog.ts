@@ -70,7 +70,21 @@ function toCardView(product: CardProduct): ProductCardView {
     isFeatured: product.isFeatured,
     variantCount: product.variants.length,
     defaultVariant: first ? toVariantView(first) : null,
+    rating: null,
   };
+}
+
+/** Adds star ratings (approved reviews) to cards with one grouped query. */
+async function withRatings(cards: ProductCardView[]): Promise<ProductCardView[]> {
+  if (cards.length === 0) return cards;
+  const groups = await prisma.review.groupBy({
+    by: ["productId"],
+    where: { productId: { in: cards.map((c) => c.id) }, status: "APPROVED" },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  const byProduct = new Map(groups.map((g) => [g.productId, { average: Math.round((g._avg.rating ?? 0) * 10) / 10, count: g._count._all }]));
+  return cards.map((card) => ({ ...card, rating: byProduct.get(card.id) ?? null }));
 }
 
 const publishedWhere = {
@@ -82,7 +96,7 @@ const publishedWhere = {
 export async function cardsByIds(ids: string[]): Promise<ProductCardView[]> {
   if (ids.length === 0) return [];
   const products = await prisma.product.findMany({ where: { id: { in: ids }, ...publishedWhere }, include: cardInclude });
-  const byId = new Map(products.map((p) => [p.id, toCardView(p)]));
+  const byId = new Map((await withRatings(products.map(toCardView))).map((card) => [card.id, card]));
   return ids.map((id) => byId.get(id)).filter((p): p is ProductCardView => Boolean(p));
 }
 
@@ -228,7 +242,7 @@ export async function getFeaturedProducts(limit = 10): Promise<ProductCardView[]
     orderBy: { publishedAt: "desc" },
     take: limit,
   });
-  return products.map(toCardView);
+  return withRatings(products.map(toCardView));
 }
 
 export async function getNewArrivals(limit = 10): Promise<ProductCardView[]> {
@@ -238,7 +252,7 @@ export async function getNewArrivals(limit = 10): Promise<ProductCardView[]> {
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: limit,
   });
-  return products.map(toCardView);
+  return withRatings(products.map(toCardView));
 }
 
 const NEW_FOR_DAYS = 21;
@@ -322,6 +336,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     isFeatured: product.isFeatured,
     variantCount: variants.length,
     defaultVariant: variants[0] ?? null,
+    rating: null,
     description: product.description,
     shortDescription: product.shortDescription,
     images: product.images.map((i) => ({ id: i.id, url: i.url, alt: i.alt, credit: i.credit })),
@@ -338,7 +353,7 @@ export async function getRelatedProducts(product: { id: string; categoryId: stri
     orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
     take: limit,
   });
-  return products.map(toCardView);
+  return withRatings(products.map(toCardView));
 }
 
 /**

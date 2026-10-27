@@ -68,6 +68,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
     isFeatured: product.isFeatured,
     variantCount: product.variantCount,
     defaultVariant: product.defaultVariant,
+    rating: null,
   };
   const eligibility = await getReviewEligibility(product.id, user);
   const composer =

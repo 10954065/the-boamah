@@ -32,6 +32,8 @@ export interface ProductCardView {
   isFeatured: boolean;
   variantCount: number;
   defaultVariant: VariantView | null;
+  /** Approved reviews only; null when there are none (or not loaded). */
+  rating: { average: number; count: number } | null;
 }
 
 export interface ProductDetailView extends ProductCardView {

@@ -144,6 +144,11 @@ test.describe("shopping features", () => {
       await expect(page.getByText("Ama B.").first()).toBeVisible();
       const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent();
       expect(jsonLd).toContain('"aggregateRating"');
+
+      // Product cards show the rating too.
+      await page.goto("/categories/rice-grains");
+      const card = page.locator("article").filter({ has: page.getByRole("link", { name: "Royal Basmati Rice" }) });
+      await expect(card.getByRole("img", { name: /out of 5 stars/ })).toBeVisible();
     } finally {
       await db.review.deleteMany({ where: { user: { email } } });
     }
