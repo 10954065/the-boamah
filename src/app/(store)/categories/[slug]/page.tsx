@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/store/page-header";
+import { CategoryHeader } from "@/components/store/page-header";
 import { ProductListing } from "@/components/store/product-listing";
 import { hasActiveFilters, parseListingParams } from "@/lib/listing-params";
 import { getCategoryBySlug } from "@/server/catalog";
@@ -27,9 +27,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
 
   return (
     <>
-      <PageHeader
-        title={category.name}
-        description={category.description ?? undefined}
+      <CategoryHeader
+        category={category}
         crumbs={[
           { href: "/", label: "Home" },
           { href: "/categories", label: "Categories" },
