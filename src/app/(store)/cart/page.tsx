@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 import { FreeDeliveryBar } from "@/components/store/free-delivery-bar";
 import { getCartView } from "@/server/cart";
 import { getFreeDeliveryTarget } from "@/server/delivery";
+import { PaymentBadges } from "@/components/store/payment-badges";
+import { isOnlinePaymentAvailable } from "@/server/payments/config";
+import { getStoreSettings } from "@/server/settings";
 
 export const metadata: Metadata = {
   title: "Your cart",
@@ -19,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
-  const [cart, freeDelivery] = await Promise.all([getCartView(), getFreeDeliveryTarget()]);
+  const [cart, freeDelivery, settings] = await Promise.all([getCartView(), getFreeDeliveryTarget(), getStoreSettings()]);
 
   if (cart.lines.length === 0) {
     return (
@@ -171,6 +174,7 @@ export default async function CartPage() {
           <p className="flex items-center justify-center gap-1.5 text-xs text-ink-muted">
             <ShieldCheck className="h-4 w-4 text-leaf-600" aria-hidden="true" /> Totals are confirmed securely at checkout.
           </p>
+          <PaymentBadges online={isOnlinePaymentAvailable(settings)} cod={settings.codEnabled} className="justify-center border-t border-line pt-4" />
         </aside>
       </div>
     </>

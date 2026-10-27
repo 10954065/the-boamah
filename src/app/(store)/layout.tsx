@@ -4,13 +4,14 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { CartDrawerProvider } from "@/components/store/cart-drawer";
 import { whatsappLink } from "@/lib/whatsapp";
+import { isOnlinePaymentAvailable } from "@/server/payments/config";
 import { getStoreSettings } from "@/server/settings";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getStoreSettings();
   const whatsapp = whatsappLink(settings.whatsappNumber, `Hi, I have a question for ${settings.storeName}.`);
   return (
-    <CartDrawerProvider>
+    <CartDrawerProvider payment={{ online: isOnlinePaymentAvailable(settings), cod: settings.codEnabled }}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-white"

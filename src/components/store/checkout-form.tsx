@@ -18,6 +18,7 @@ import { formatMoney } from "@/lib/money";
 import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
 import { emailField, ghanaPhone } from "@/lib/validation";
+import { PaymentBadges } from "./payment-badges";
 
 export interface CheckoutZone {
   id: string;
@@ -463,6 +464,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
           {isSubmitting ? <Spinner label="Placing order" /> : <Lock />}
           {paymentMethod === "PAYSTACK" ? "Continue to secure payment" : "Place order"}
         </Button>
+        <PaymentBadges online={payment.online} cod={payment.cod} label="Pay with" className="justify-center" />
         <p className="text-center text-xs text-ink-subtle">
           By placing your order you agree to our{" "}
           <Link href="/policies/terms" className="underline">

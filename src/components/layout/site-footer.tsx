@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
+import { PaymentBadges } from "@/components/store/payment-badges";
 import { isOnlinePaymentAvailable } from "@/server/payments/config";
 import { getStoreSettings } from "@/server/settings";
 import { NewsletterForm } from "./newsletter-form";
@@ -54,10 +55,7 @@ export async function SiteFooter() {
     { label: "TikTok", url: safeExternal(settings.socialTiktok) },
   ].filter((s): s is { label: string; url: string } => Boolean(s.url));
 
-  const paymentMethods = [
-    ...(isOnlinePaymentAvailable(settings) ? ["Mobile Money & cards via Paystack"] : []),
-    ...(settings.codEnabled ? ["Cash on delivery"] : []),
-  ];
+  const payment = { online: isOnlinePaymentAvailable(settings), cod: settings.codEnabled };
 
   return (
     <footer className="relative isolate mt-16 overflow-hidden bg-brand-900 text-brand-100">
@@ -150,7 +148,7 @@ export async function SiteFooter() {
           <p>
             © {new Date().getFullYear()} {settings.storeName}. All rights reserved.
           </p>
-          {paymentMethods.length > 0 ? <p>We accept: {paymentMethods.join(" · ")}</p> : null}
+          <PaymentBadges {...payment} tone="dark" />
         </div>
         <p className="container-page pb-20 pt-4 text-center text-xs text-brand-300 sm:pb-6">
           Created by{" "}

@@ -13,6 +13,7 @@ import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { CartLineControls } from "./cart-controls";
 import { FreeDeliveryBar } from "./free-delivery-bar";
+import { PaymentBadges, type PaymentOptions } from "./payment-badges";
 
 interface CartDrawerApi {
   /** Opens the cart panel; `notice` confirms what just happened, e.g. an item added. */
@@ -27,7 +28,7 @@ export function useCartDrawer(): CartDrawerApi {
 }
 
 /** Slide-out cart available on every store page. */
-export function CartDrawerProvider({ children }: { children: ReactNode }) {
+export function CartDrawerProvider({ children, payment }: { children: ReactNode; payment: PaymentOptions }) {
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [summary, setSummary] = useState<CartDrawerSummary | null>(null);
@@ -101,6 +102,7 @@ export function CartDrawerProvider({ children }: { children: ReactNode }) {
                     </Link>
                   )}
                 </div>
+                <PaymentBadges {...payment} label="Pay with" className="justify-center" />
               </div>
             ) : null
           }
