@@ -68,6 +68,18 @@ test.describe("shopping features", () => {
     await expect(page.getByText("You have free delivery in Accra Central.")).toBeVisible();
   });
 
+  test("products often ordered together can be added in one go", async ({ page }) => {
+    // Rice and Member's Mark oil share orders in the sample data and in the checkout tests.
+    await page.goto("/products/royal-basmati-rice");
+    const together = page.getByRole("region", { name: "Often bought together" });
+    await expect(together.getByText("Member's Mark Vegetable Oil")).toBeVisible();
+    await together.getByRole("checkbox", { name: /This item: Royal Basmati Rice/ }).uncheck();
+    await together.getByRole("button", { name: /Add (selected|all) to cart/ }).click();
+    const drawer = page.getByRole("dialog", { name: /Your cart/ });
+    await expect(drawer.getByRole("link", { name: "Member's Mark Vegetable Oil" })).toBeVisible();
+    await expect(drawer.getByRole("link", { name: "Royal Basmati Rice" })).toHaveCount(0);
+  });
+
   test("the WhatsApp button opens a chat about the product being viewed", async ({ page }) => {
     const settings = await db.storeSettings.findUnique({ where: { id: "default" }, select: { whatsappNumber: true } });
     await db.storeSettings.update({ where: { id: "default" }, data: { whatsappNumber: "024 123 4567" } });

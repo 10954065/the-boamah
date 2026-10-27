@@ -341,6 +341,27 @@ export async function getRelatedProducts(product: { id: string; categoryId: stri
   return products.map(toCardView);
 }
 
+/**
+ * Products most often in the same order as this one (completed and active
+ * orders only), most frequent first. Empty until there is order history.
+ */
+export async function getBoughtTogether(productId: string, limit = 3): Promise<ProductCardView[]> {
+  const rows = await prisma.$queryRaw<{ productId: string }[]>`
+    SELECT other."productId"
+    FROM "OrderItem" mine
+    JOIN "Order" o ON o.id = mine."orderId"
+    JOIN "OrderItem" other ON other."orderId" = mine."orderId" AND other."productId" <> mine."productId"
+    WHERE mine."productId" = ${productId}
+      AND other."productId" IS NOT NULL
+      AND o.status NOT IN ('CANCELLED', 'PENDING_PAYMENT')
+    GROUP BY other."productId"
+    ORDER BY count(DISTINCT mine."orderId") DESC, max(o."createdAt") DESC
+    LIMIT ${limit * 2}
+  `;
+  const cards = await cardsByIds(rows.map((r) => r.productId));
+  return cards.filter((card) => card.defaultVariant?.inStock).slice(0, limit);
+}
+
 /** Lightweight suggestions for the header search box. */
 export async function searchSuggestions(term: string, limit = 6): Promise<{ slug: string; name: string; imageUrl: string | null; categoryName: string }[]> {
   const q = term.trim();

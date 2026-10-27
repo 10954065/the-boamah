@@ -5,6 +5,7 @@ import { CheckCircle2, CircleAlert, CircleSlash, Truck } from "lucide-react";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { Badge } from "@/components/ui/badge";
 import { ProductPurchase } from "@/components/store/add-to-cart";
+import { BoughtTogether } from "@/components/store/bought-together";
 import { Breadcrumbs } from "@/components/store/page-header";
 import { Price } from "@/components/store/price";
 import { ProductGrid } from "@/components/store/product-card";
@@ -19,7 +20,7 @@ import { minorToDecimalString } from "@/lib/money";
 import { discountPercent } from "@/lib/pricing";
 import { siteUrl } from "@/lib/utils";
 import { whatsappLink } from "@/lib/whatsapp";
-import { getProductBySlug, getRelatedProducts } from "@/server/catalog";
+import { getBoughtTogether, getProductBySlug, getRelatedProducts } from "@/server/catalog";
 import { getReviewEligibility, getReviewSummary } from "@/server/reviews";
 import { getCurrentUser } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
@@ -48,13 +49,26 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, savedIds, reviews, user, settings] = await Promise.all([
+  const [related, savedIds, reviews, user, settings, together] = await Promise.all([
     getRelatedProducts(product),
     getWishlistIds(),
     getReviewSummary(product.id),
     getCurrentUser(),
     getStoreSettings(),
+    getBoughtTogether(product.id),
   ]);
+  const thisItem = {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    categoryName: product.categoryName,
+    categorySlug: product.categorySlug,
+    imageUrl: product.imageUrl,
+    imageAlt: product.imageAlt,
+    isFeatured: product.isFeatured,
+    variantCount: product.variantCount,
+    defaultVariant: product.defaultVariant,
+  };
   const eligibility = await getReviewEligibility(product.id, user);
   const composer =
     eligibility.state === "SIGNED_OUT"
@@ -183,6 +197,18 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           </div>
         </div>
       </div>
+
+      {together.length > 0 && product.defaultVariant?.inStock ? (
+        <section aria-labelledby="together-title" className="mt-14">
+          <h2 id="together-title" className="text-xl font-extrabold">
+            Often bought together
+          </h2>
+          <p className="mt-1 text-sm text-ink-muted">Based on what other customers ordered with {product.name}.</p>
+          <div className="mt-4">
+            <BoughtTogether products={[thisItem, ...together]} />
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="description-title" className="mt-14 max-w-3xl">
         <h2 id="description-title" className="text-xl font-extrabold">
