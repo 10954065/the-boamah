@@ -60,6 +60,58 @@ export async function addToCart(input: { variantId: string; quantityMilli: numbe
   });
 }
 
+export interface CartDrawerLine {
+  itemId: string;
+  productName: string;
+  productSlug: string;
+  variantName: string;
+  unit: SellingUnitCode;
+  imageUrl: string | null;
+  imageAlt: string;
+  quantityMilli: number;
+  lineTotalMinor: number;
+  stepMilli: number;
+  minQtyMilli: number;
+  maxMilli: number;
+  purchasable: boolean;
+  bulkPriceApplied: boolean;
+}
+
+export interface CartDrawerSummary {
+  lines: CartDrawerLine[];
+  subtotalMinor: number;
+  couponDiscountMinor: number;
+  hasBlockingIssues: boolean;
+}
+
+/** Current cart for the slide-out cart panel, revalidated against live prices and stock. */
+export async function getCartDrawer(): Promise<ActionResult<CartDrawerSummary>> {
+  return runAction("cart.drawer", async () => {
+    const cart = await getCartView();
+    return ok({
+      lines: cart.lines.map((line) => ({
+        itemId: line.itemId,
+        productName: line.productName,
+        productSlug: line.productSlug,
+        variantName: line.variantName,
+        unit: line.unit,
+        imageUrl: line.imageUrl,
+        imageAlt: line.imageAlt,
+        quantityMilli: line.quantityMilli,
+        lineTotalMinor: line.lineTotalMinor,
+        stepMilli: line.stepMilli,
+        minQtyMilli: line.minQtyMilli,
+        maxMilli: Math.min(line.availableMilli, line.maxQtyMilli ?? Number.MAX_SAFE_INTEGER),
+        purchasable: line.purchasable,
+        bulkPriceApplied: line.bulkPriceApplied,
+      })),
+      subtotalMinor: cart.subtotalMinor,
+      couponDiscountMinor: cart.couponDiscountMinor,
+      hasBlockingIssues: cart.hasBlockingIssues,
+    });
+  });
+}
+
 export interface BuyAgainSummary {
   added: number;
   reduced: number;

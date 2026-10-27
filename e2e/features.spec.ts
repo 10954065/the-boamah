@@ -32,6 +32,24 @@ async function placeCashOrder(page: Page): Promise<string> {
 }
 
 test.describe("shopping features", () => {
+  test("adding to cart opens the slide-out cart, where quantities can change", async ({ page }) => {
+    await page.goto("/products/quaker-quick-oats");
+    await page.getByRole("button", { name: /^Add to cart$/ }).click();
+    const drawer = page.getByRole("dialog", { name: /Your cart/ });
+    await expect(drawer.getByRole("status").filter({ hasText: "added to your cart" })).toBeVisible();
+    await expect(drawer.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toBeVisible();
+    await expect(drawer.getByText("GH₵165.00").first()).toBeVisible();
+
+    await drawer.getByRole("button", { name: "Increase quantity" }).click();
+    await expect(drawer.getByText("GH₵330.00").first()).toBeVisible();
+    await expect(drawer.getByRole("link", { name: /Checkout/ })).toHaveAttribute("href", "/checkout");
+
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await page.getByRole("link", { name: /^Cart, 1 item$/ }).click();
+    await expect(page.getByRole("dialog", { name: /Your cart/ })).toBeVisible();
+  });
+
   test("bulk prices show on the product page and apply in the cart", async ({ page }) => {
     await page.goto("/products/royal-basmati-rice");
     const bulk = page.getByRole("group", { name: "Buy more, pay less" });

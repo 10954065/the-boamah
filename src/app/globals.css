@@ -144,6 +144,24 @@
   }
 }
 
+@keyframes sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-state="open"][role="dialog"] {
+    animation: none !important;
+  }
+}
+
 @keyframes ken-burns {
   from {
     transform: scale(1);

@@ -18,9 +18,11 @@ interface LineControlsProps {
   maxMilli: number;
   unit: SellingUnitCode;
   purchasable: boolean;
+  /** Called after a successful change, e.g. so the cart panel can reload. */
+  onChanged?: () => void;
 }
 
-export function CartLineControls({ itemId, productName, quantityMilli, stepMilli, minQtyMilli, maxMilli, unit, purchasable }: LineControlsProps) {
+export function CartLineControls({ itemId, productName, quantityMilli, stepMilli, minQtyMilli, maxMilli, unit, purchasable, onChanged }: LineControlsProps) {
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(quantityMilli);
 
@@ -32,6 +34,8 @@ export function CartLineControls({ itemId, productName, quantityMilli, stepMilli
       if (!result.ok) {
         setValue(previous);
         toast.error(result.error);
+      } else {
+        onChanged?.();
       }
     });
   };
@@ -40,6 +44,7 @@ export function CartLineControls({ itemId, productName, quantityMilli, stepMilli
     startTransition(async () => {
       const result = await removeCartItem({ itemId });
       if (!result.ok) toast.error(result.error);
+      else onChanged?.();
     });
 
   return (

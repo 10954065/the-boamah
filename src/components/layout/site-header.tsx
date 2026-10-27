@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, Heart, LayoutDashboard, ShoppingBasket, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { CartLink } from "@/components/store/cart-drawer";
 import { getCartCount } from "@/server/cart";
 import { getActiveCategories } from "@/server/catalog";
 import { getCurrentUser } from "@/server/session";
@@ -94,17 +95,16 @@ export async function SiteHeader() {
             >
               <Heart className="h-5 w-5" aria-hidden="true" />
             </Link>
-            <Link
-              href="/cart"
+            <CartLink
+              count={cartCount}
               className="relative flex h-10 items-center gap-2 rounded-md bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800"
-              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
             >
               <ShoppingBasket className="h-5 w-5" aria-hidden="true" />
               <span className="hidden sm:inline">Cart</span>
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[11px] font-bold text-brand-900">
                 {cartCount}
               </span>
-            </Link>
+            </CartLink>
           </nav>
         </div>
         <div className="container-page pb-3 lg:hidden">

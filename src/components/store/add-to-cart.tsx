@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Check, ShoppingBasket, Tags } from "lucide-react";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -12,6 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { unitPriceForQuantity } from "@/lib/pricing";
 import { formatQuantity, lineTotalMinor, UNIT_INFO } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
+import { useCartDrawer } from "./cart-drawer";
 import { QuantityStepper } from "./quantity-stepper";
 import { StockAlertForm } from "./stock-alert-form";
 
@@ -20,17 +20,15 @@ function maxSelectable(variant: VariantView): number {
   return Math.max(variant.minQtyMilli, Math.min(variant.availableMilli, cap));
 }
 
-function useAddToCart() {
-  const router = useRouter();
+export function useAddToCart() {
+  const { openCart } = useCartDrawer();
   const [pending, startTransition] = useTransition();
   const add = (variantId: string, quantityMilli: number, productName: string, onAdded?: () => void) =>
     startTransition(async () => {
       const result = await addToCart({ variantId, quantityMilli });
       if (result.ok) {
         onAdded?.();
-        toast.success(result.message ?? `${productName} added to your cart.`, {
-          action: { label: "View cart", onClick: () => router.push("/cart") },
-        });
+        openCart(result.message ?? `${productName} added to your cart.`);
       } else {
         toast.error(result.error);
       }
