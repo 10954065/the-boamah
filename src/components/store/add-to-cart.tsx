@@ -224,15 +224,21 @@ interface ProductPurchaseProps {
   stockAlert?: { defaultContact?: string; smsEnabled: boolean };
   /** Show the phone add-to-cart bar once the main button scrolls away (product page only). */
   stickyBar?: boolean;
+  /** Called after a successful add, e.g. to close a quick-view window. */
+  onAdded?: () => void;
 }
 
 /** Variant picker + quantity stepper + add button for the product page. */
-export function ProductPurchase({ variants, productName, secondaryAction, stockAlert, stickyBar = false }: ProductPurchaseProps) {
+export function ProductPurchase({ variants, productName, secondaryAction, stockAlert, stickyBar = false, onAdded }: ProductPurchaseProps) {
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const variant = variants.find((v) => v.id === variantId) ?? variants[0];
   const [quantity, setQuantity] = useState(variant?.minQtyMilli ?? 1000);
   const { pending, add } = useAddToCart();
   const [added, flash] = useAddedFlash();
+  const afterAdd = () => {
+    flash();
+    onAdded?.();
+  };
   const buyRow = useRef<HTMLDivElement>(null);
   const scrolledPast = useScrolledPast(buyRow);
 
@@ -292,7 +298,7 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
             unit={variant.unit}
             label={`Quantity of ${productName}`}
           />
-          <Button size="lg" className="min-w-48 flex-1 sm:flex-none" disabled={pending} onClick={() => add(variant.id, quantity, productName, flash)}>
+          <Button size="lg" className="min-w-48 flex-1 sm:flex-none" disabled={pending} onClick={() => add(variant.id, quantity, productName, afterAdd)}>
             {pending ? <Spinner label="Adding" /> : added ? <Check className="pop" /> : <ShoppingBasket />}
             {added ? "Added to cart" : "Add to cart"}
           </Button>
@@ -327,7 +333,7 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
           quantity={quantity}
           pending={pending}
           added={added}
-          onAdd={() => add(variant.id, quantity, productName, flash)}
+          onAdd={() => add(variant.id, quantity, productName, afterAdd)}
         />
       ) : null}
     </div>

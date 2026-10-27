@@ -40,7 +40,7 @@ export function DialogContent({ className, children, title, description, hideTit
         ) : (
           <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
         )}
-        <div className="mt-4">{children}</div>
+        <div className={cn(!hideTitle && "mt-4")}>{children}</div>
         <DialogPrimitive.Close
           className="absolute right-3 top-3 rounded-md p-1.5 text-ink-muted hover:bg-soft hover:text-ink"
           aria-label="Close"

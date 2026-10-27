@@ -9,6 +9,7 @@ import { Stars } from "./stars";
 import { cn } from "@/lib/utils";
 import { CardAddButton } from "./add-to-cart";
 import { Price } from "./price";
+import { QuickViewButton } from "./quick-view";
 import { WishlistButton } from "./wishlist-button";
 
 interface ProductCardProps {
@@ -51,6 +52,14 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
           initialSaved={saved}
           className="absolute right-2 top-2 z-10"
         />
+        {variant ? (
+          // Mouse and keyboard only: on touch screens the card itself opens the product.
+          <QuickViewButton
+            slug={product.slug}
+            name={product.name}
+            className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 [@media(hover:none)]:hidden"
+          />
+        ) : null}
       </div>
 
       <div className="mt-3 flex flex-1 flex-col">

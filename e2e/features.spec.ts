@@ -68,6 +68,19 @@ test.describe("shopping features", () => {
     await expect(page.getByText("You have free delivery in Accra Central.")).toBeVisible();
   });
 
+  test("quick view adds to cart without leaving the listing", async ({ page }) => {
+    await page.goto("/categories/rice-grains");
+    const card = page.locator("article").filter({ has: page.getByRole("link", { name: "Royal Basmati Rice" }) });
+    await card.hover();
+    await card.getByRole("button", { name: "Quick view: Royal Basmati Rice" }).click();
+    const quick = page.getByRole("dialog", { name: "Royal Basmati Rice" });
+    await expect(quick.getByRole("group", { name: "Buy more, pay less" })).toBeVisible();
+    await quick.getByRole("button", { name: /^Add to cart$/ }).click();
+    await expect(quick).toBeHidden();
+    await expect(page.getByRole("dialog", { name: /Your cart/ }).getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();
+    await expect(page).toHaveURL(/\/categories\/rice-grains$/);
+  });
+
   test("products often ordered together can be added in one go", async ({ page }) => {
     // Rice and Member's Mark oil share orders in the sample data and in the checkout tests.
     await page.goto("/products/royal-basmati-rice");
