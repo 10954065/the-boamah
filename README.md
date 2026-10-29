@@ -80,9 +80,9 @@ security headers, rate limiting and server-side permission checks.
 | Auth | Better Auth (email + password, database sessions) |
 | Payments | Paystack (REST API + signed webhooks) |
 | Email / SMS | Resend / Arkesel (both optional) |
-| File storage | Vercel Blob (local `public/uploads` in development) |
+| File storage | Vercel Blob or a persistent disk such as a Railway volume (local `public/uploads` in development) |
 | Tests | Vitest (unit + integration against Postgres), Playwright (E2E) |
-| Hosting | Vercel, with Vercel Cron for expiring unpaid orders |
+| Hosting | Railway (site, database, volume and cron service) or Vercel with Vercel Cron |
 
 ## Run it locally
 
@@ -159,8 +159,9 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 | `EMAIL_FROM` | For email | Sender on a domain verified in Resend, e.g. `Boamah's Grocery <orders@yourdomain>`. |
 | `SMS_PROVIDER` | No | `none` (default) or `arkesel`. |
 | `SMS_API_KEY`, `SMS_SENDER_ID` | For SMS | Arkesel API key and approved sender ID. |
-| `BLOB_READ_WRITE_TOKEN` | Production uploads | Vercel Blob token. Without it, production image uploads are refused. |
-| `CRON_SECRET` | Yes | Vercel Cron sends it as a bearer token to `/api/cron/expire-orders`. |
+| `BLOB_READ_WRITE_TOKEN` | Production uploads (or `UPLOAD_DIR`) | Vercel Blob token. Takes priority over `UPLOAD_DIR`. |
+| `UPLOAD_DIR` | Production uploads (or Blob) | Folder on a persistent disk, e.g. `/data/uploads` on a Railway volume. With neither set, production image uploads are refused. |
+| `CRON_SECRET` | Yes | Bearer token for `/api/cron/expire-orders`, sent by Vercel Cron or `scripts/expire-orders.mjs`. |
 
 ## Scripts
 
@@ -265,6 +266,7 @@ the shop's own photos when available.
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel, the production
-database, Paystack (test and live), Resend, Blob storage, the cron job, and the
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for hosting on Railway (site,
+database, image volume and cron service in one project) or on Vercel, plus
+Paystack (test and live), Resend, image storage, the cron job, and the
 checklist of business decisions needed before launch.

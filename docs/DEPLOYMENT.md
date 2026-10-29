@@ -1,8 +1,15 @@
 # Deploying The Boamah's Online Grocery Shop
 
-This guide takes the shop from the GitHub repository to a live site on Vercel
-with a managed PostgreSQL database, Paystack payments and email.
+This guide takes the shop from the GitHub repository to a live site with a
+PostgreSQL database, Paystack payments and email. There are two ways to host
+it:
 
+- **Railway**: the site, its database, image storage and the scheduled job all
+  in one Railway project. Follow [Railway](#railway-site-and-database-together),
+  then continue from [4. Paystack](#4-paystack).
+- **Vercel** with a managed database (Neon or Supabase): follow sections 1 to 9.
+
+- [Railway (site and database together)](#railway-site-and-database-together)
 - [What production needs](#what-production-needs)
 - [1. Database](#1-database)
 - [2. Vercel project](#2-vercel-project)
@@ -16,6 +23,126 @@ with a managed PostgreSQL database, Paystack payments and email.
 - [Before going live](#before-going-live)
 - [Running the shop](#running-the-shop)
 - [Updates and rollbacks](#updates-and-rollbacks)
+
+## Railway (site and database together)
+
+The Hobby plan is enough to start. Everything below is set in the Railway
+dashboard; the repository needs no Railway config file.
+
+The build does not touch the database. Every page is rendered when it is
+requested, and migrations run in a separate pre-deploy step. This matters on
+Railway because the database's private address (`postgres.railway.internal`)
+only works while the app is running, not while it is being built.
+
+### R1. Project and database
+
+1. On railway.com: *New Project → Deploy from GitHub repo* → pick
+   `10954065/the-boamah`. Railway creates a service for the shop (called
+   `shop` below; use whatever name yours has). Its first build may fail until
+   the variables in R2 are set. That is expected.
+2. In the same project: *Create → Database → PostgreSQL*.
+3. Shop service → *Settings → Networking → Generate Domain*. This gives an
+   address like `https://the-boamah-production.up.railway.app`. A custom domain
+   can be added there later.
+
+### R2. Variables
+
+Shop service → *Variables*. Use *Add Reference* for `DATABASE_URL` so it
+follows the database if its password changes.
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (private network: fast, no egress charge) |
+| `NEXT_PUBLIC_SITE_URL` | The address from R1, e.g. `https://the-boamah-production.up.railway.app` (no trailing slash) |
+| `BETTER_AUTH_URL` | Same as above |
+| `BETTER_AUTH_SECRET` | New random value: `openssl rand -base64 32` |
+| `CRON_SECRET` | New random value |
+| `UPLOAD_DIR` | `/data/uploads` (see R4) |
+| `PAYSTACK_SECRET_KEY` | See [Paystack](#4-paystack) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | See [Email](#5-email-resend) |
+| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | Optional |
+
+- Leave `DIRECT_DATABASE_URL` unset. Railway's PostgreSQL has no connection
+  pooler, so the one URL serves both the app and migrations.
+- `NEXT_PUBLIC_SITE_URL` is built into the pages. After changing it (for
+  example when adding a custom domain), redeploy.
+- Do **not** set `PAYMENTS_MOCK`.
+
+### R3. Deploy settings
+
+Shop service → *Settings → Deploy*:
+
+| Setting | Value |
+| --- | --- |
+| Pre-deploy command | `npm run db:deploy` |
+| Healthcheck path | `/` |
+| Build command, start command | Leave empty. Railway runs `npm run build` and `npm start`, and `next start` listens on the `PORT` Railway provides. |
+
+The pre-deploy command applies new database migrations over the private
+network before the new version goes live. If it fails, the deploy stops and
+the previous version keeps serving customers.
+
+Then *Deploy* (or push to GitHub). Every push to `main` deploys again.
+
+### R4. Image uploads (volume)
+
+Product, category and banner images uploaded in the admin need permanent
+storage, because a deploy replaces the app's own disk.
+
+1. Right-click the shop service → *Attach Volume*, mount path `/data`.
+2. With `UPLOAD_DIR=/data/uploads` (R2), uploads are saved on the volume and
+   served from `/uploads/...`. Only file names the app itself created can be
+   served from there.
+
+The Hobby plan's volume holds 5 GB, which is thousands of product photos. A
+service with a volume runs as a single instance and is briefly unavailable
+(a few seconds) during each redeploy. The bundled photos in `public/images`
+ship with the site and do not use the volume.
+
+If you prefer Vercel Blob for images, set `BLOB_READ_WRITE_TOKEN` instead. It
+takes priority over `UPLOAD_DIR`.
+
+### R5. Unpaid order expiry (cron service)
+
+Online orders that are not paid in time must be cancelled so their stock is
+released. On Railway this is a small second service that runs every 15
+minutes and then stops:
+
+1. *Create → GitHub Repo* → the same repository. Name the service
+   `order-expiry`.
+2. `order-expiry` → *Settings*:
+   - Custom build command: `echo "nothing to build"`
+   - Custom start command: `node scripts/expire-orders.mjs`
+   - Cron schedule: `*/15 * * * *`
+3. `order-expiry` → *Variables*:
+
+   | Variable | Value |
+   | --- | --- |
+   | `SHOP_URL` | `${{shop.RAILWAY_PUBLIC_DOMAIN}}`, or the custom domain |
+   | `CRON_SECRET` | `${{shop.CRON_SECRET}}` |
+
+Each run's log shows how many orders were expired, found paid or deferred, and
+the run is marked failed if the shop could not be reached. Railway skips a run
+if the previous one is still going.
+
+Instead of this service you can call the endpoint from any outside scheduler,
+as described in [Scheduled job](#3-scheduled-job-unpaid-order-expiry).
+
+### R6. First admin
+
+Run this from your own computer. Use the database's public address, found in
+Postgres service → *Variables* → `DATABASE_PUBLIC_URL`:
+
+```bash
+DATABASE_URL="<DATABASE_PUBLIC_URL>" \
+  npm run admin:create -- --email owner@your-domain --name "Owner Name"
+```
+
+Then continue with [Paystack](#4-paystack), [Email](#5-email-resend),
+[First admin and store set-up](#8-first-admin-and-store-set-up) and
+[Search engines](#9-search-engines). Skip the Vercel-only parts: Vercel Cron
+and Vercel Blob are replaced by R4 and R5. Turn on backups in the Postgres
+service's *Backups* tab.
 
 ## What production needs
 
@@ -201,9 +328,9 @@ The site publishes these automatically:
 | `/sitemaps/products/sitemap.xml` | Every published product in an active category, with its images |
 | `/robots.txt` | Lists every sitemap, blocks the admin, account, cart, checkout, order and sign-in pages, and blocks search, sort and filter URLs |
 
-Sitemaps are generated at build time and refreshed every hour from the
-database. Their links use `NEXT_PUBLIC_SITE_URL`, so set it to the real domain
-**before** deploying.
+Sitemaps are generated from the database each time they are requested, so a
+new product appears in them straight away. Their links use
+`NEXT_PUBLIC_SITE_URL`, so set it to the real domain **before** deploying.
 
 After launch, submit `https://your-domain/sitemap.xml` in
 [Google Search Console](https://search.google.com/search-console) and
@@ -287,6 +414,7 @@ are left out.
 - Changes to the database schema go through `npm run db:migrate` in
   development, which creates a migration file to commit. Production applies it
   on the next deploy.
-- Vercel can roll back to a previous deployment instantly, but **migrations are
+- Vercel and Railway can both roll back to a previous deployment instantly
+  (on Railway: the deployment's menu → *Redeploy*), but **migrations are
   not rolled back**. Make schema changes backward compatible (add first, remove
   later) so an older deployment still works with the newer schema.

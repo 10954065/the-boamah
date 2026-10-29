@@ -29,12 +29,32 @@ export function detectImageType(bytes: Uint8Array): { type: string; ext: string 
   return match ? { type: match.type, ext: match.ext } : null;
 }
 
+export const UPLOAD_FOLDERS = ["products", "categories", "banners"] as const;
+export type UploadFolder = (typeof UPLOAD_FOLDERS)[number];
+
+const UPLOADED_NAME = /^\d{10,}-[0-9a-f]{16}\.(jpg|png|webp)$/;
+const CONTENT_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
+
 /**
- * Stores an uploaded image and returns its public URL. Uses Vercel Blob when
- * BLOB_READ_WRITE_TOKEN is configured, otherwise the local public/uploads
- * folder (development only).
+ * Checks a requested /uploads/<folder>/<file> path against the names
+ * storeImage generates, so nothing else on the disk can be served.
  */
-export async function storeImage(file: File, folder: "products" | "categories" | "banners"): Promise<string> {
+export function uploadedFile(segments: readonly string[]): { relative: string; contentType: string } | null {
+  if (segments.length !== 2) return null;
+  const [folder, name] = segments as [string, string];
+  if (!(UPLOAD_FOLDERS as readonly string[]).includes(folder)) return null;
+  const match = UPLOADED_NAME.exec(name);
+  if (!match) return null;
+  return { relative: `${folder}/${name}`, contentType: CONTENT_TYPES[match[1]!]! };
+}
+
+/**
+ * Stores an uploaded image and returns its public URL. In order of preference:
+ * Vercel Blob (BLOB_READ_WRITE_TOKEN), a persistent disk such as a Railway
+ * volume (UPLOAD_DIR, served by /uploads/[...path]), or the local
+ * public/uploads folder (development only).
+ */
+export async function storeImage(file: File, folder: UploadFolder): Promise<string> {
   if (file.size === 0) throw new UploadError("The file is empty.");
   if (file.size > MAX_UPLOAD_BYTES) throw new UploadError("Images must be 5 MB or smaller.");
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -47,10 +67,11 @@ export async function storeImage(file: File, folder: "products" | "categories" |
     const blob = await put(name, Buffer.from(bytes), { access: "public", contentType: detected.type, addRandomSuffix: false });
     return blob.url;
   }
-  if (process.env.NODE_ENV === "production") {
-    throw new UploadError("File storage is not configured. Set BLOB_READ_WRITE_TOKEN.");
+  const uploadDir = process.env.UPLOAD_DIR;
+  if (!uploadDir && process.env.NODE_ENV === "production") {
+    throw new UploadError("File storage is not configured. Set BLOB_READ_WRITE_TOKEN or UPLOAD_DIR.");
   }
-  const target = path.join(process.cwd(), "public", "uploads", name);
+  const target = path.join(uploadDir || path.join(process.cwd(), "public", "uploads"), name);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, bytes);
   return `/uploads/${name}`;

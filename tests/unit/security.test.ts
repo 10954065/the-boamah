@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { parseListingParams } from "@/lib/listing-params";
 import { safeRedirectPath, slugify } from "@/lib/utils";
 import { isValidPaystackSignature } from "@/server/payments/paystack";
-import { detectImageType, isAllowedImageUrl } from "@/server/storage";
+import { detectImageType, isAllowedImageUrl, uploadedFile } from "@/server/storage";
 
 describe("Paystack webhook signature", () => {
   const key = "sk_test_abc";
@@ -42,6 +42,20 @@ describe("upload validation", () => {
     expect(isAllowedImageUrl("/images/../../etc/passwd")).toBe(false);
     expect(isAllowedImageUrl("https://evil.example.com/x.png")).toBe(false);
     expect(isAllowedImageUrl("javascript:alert(1)")).toBe(false);
+  });
+
+  test("serves only the file names storeImage creates from the upload disk", () => {
+    expect(uploadedFile(["products", "1761700000000-0123456789abcdef.webp"])).toEqual({
+      relative: "products/1761700000000-0123456789abcdef.webp",
+      contentType: "image/webp",
+    });
+    expect(uploadedFile(["banners", "1761700000000-0123456789abcdef.jpg"])?.contentType).toBe("image/jpeg");
+    expect(uploadedFile(["..", "1761700000000-0123456789abcdef.png"])).toBeNull();
+    expect(uploadedFile(["products", "..", "secret.png"])).toBeNull();
+    expect(uploadedFile(["products", "../../etc/passwd"])).toBeNull();
+    expect(uploadedFile(["products", "1761700000000-0123456789abcdef.svg"])).toBeNull();
+    expect(uploadedFile(["private", "1761700000000-0123456789abcdef.png"])).toBeNull();
+    expect(uploadedFile(["products"])).toBeNull();
   });
 });
 
