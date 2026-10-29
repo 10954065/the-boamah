@@ -141,8 +141,54 @@ DATABASE_URL="<DATABASE_PUBLIC_URL>" \
 Then continue with [Paystack](#4-paystack), [Email](#5-email-resend),
 [First admin and store set-up](#8-first-admin-and-store-set-up) and
 [Search engines](#9-search-engines). Skip the Vercel-only parts: Vercel Cron
-and Vercel Blob are replaced by R4 and R5. Turn on backups in the Postgres
-service's *Backups* tab.
+and Vercel Blob are replaced by R4 and R5. Set up backups next (R7).
+
+### R7. Database backups
+
+Railway's own volume backups are not available on the Hobby plan, so the
+repository includes a nightly backup job (`ops/db-backup`). It runs `pg_dump`
+inside Railway's private network, checks the result (a valid gzip file of a
+sensible size that contains the orders table) and stores it in a private
+Railway Storage Bucket. It keeps the 14 newest daily backups and the first
+backup of each month for 12 months. A typical backup is well under 1 MB, so
+storage costs a few cents a month.
+
+1. *Create → Bucket*, name it `db-backups`, region EU West (same as the
+   database).
+2. *Create → GitHub Repo* → the same repository. Name the service `db-backup`.
+3. `db-backup` → *Settings*:
+   - Root directory: `ops/db-backup` (Railway builds its Dockerfile)
+   - Watch paths: `ops/db-backup/**`
+   - Cron schedule: `0 2 * * *` (02:00 GMT, Ghana time, every night)
+   - Restart policy: never
+4. `db-backup` → *Variables*:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+   | `BUCKET`, `ENDPOINT`, `REGION`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY` | References to the same variables on `db-backups` |
+   | `KEEP_DAILY`, `KEEP_MONTHLY` | Optional, defaults 14 and 12 |
+
+5. Run it once from the service's cron panel and check its log ends with
+   `Backup stored: daily/boamah-….sql.gz`. Railway marks a run as failed if the
+   backup could not be made or stored.
+
+**Restoring.** Restore into a new, empty database, never over the live one:
+
+1. Create a new PostgreSQL service in the project.
+2. Download a backup from the `db-backups` bucket with any S3 tool and the
+   bucket's credentials (shown on the bucket in the dashboard), for example:
+   `aws --endpoint-url "$ENDPOINT" s3 cp "s3://$BUCKET/daily/boamah-2026-11-03T0200Z.sql.gz" .`
+   (`aws … s3 ls "s3://$BUCKET/daily/"` lists them).
+3. Load it: `gunzip -c boamah-….sql.gz | psql "<new database URL>"`. The file
+   is plain SQL with no owners or grants, so it also loads into any other
+   PostgreSQL 18 host.
+4. Point the shop's `DATABASE_URL` at the new database and redeploy.
+
+Test a restore once a month the same way, into a scratch database, so you know
+the backups work before you need them. Bucket storage is on Railway too; for
+protection against losing the Railway account itself, also download a monthly
+backup and keep it somewhere else.
 
 ## What production needs
 
@@ -376,7 +422,8 @@ are left out.
 - [ ] Resend domain verified and a test email received.
 - [ ] Custom domain connected, with `NEXT_PUBLIC_SITE_URL`/`BETTER_AUTH_URL`
       updated.
-- [ ] Database backups enabled.
+- [ ] Database backups running (on Railway: [R7](#r7-database-backups)) and one
+      restore tested.
 
 ## Running the shop
 
