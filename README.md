@@ -25,6 +25,7 @@ calculated on the server.
 - [How orders, stock and payments work](#how-orders-stock-and-payments-work)
 - [Project layout](#project-layout)
 - [Deployment](docs/DEPLOYMENT.md)
+- [Using the till](docs/TILL.md)
 
 ## Features
 

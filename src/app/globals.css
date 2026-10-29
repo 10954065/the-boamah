@@ -265,3 +265,25 @@
     display: none;
   }
 }
+
+/*
+ * Till receipts and shift reports (components/pos/receipt.tsx). While one is
+ * ready to print, printing the page prints only that document.
+ */
+.pos-print {
+  display: none;
+}
+
+@media print {
+  body:has(> .pos-print) {
+    background: #fff;
+  }
+
+  body:has(> .pos-print) > :not(.pos-print) {
+    display: none !important;
+  }
+
+  .pos-print {
+    display: block;
+  }
+}

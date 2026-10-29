@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatReceiptNumber, parseReceiptNumber, posSaleUploadSchema, settleTender } from "@/lib/pos";
+import { countDifferences, formatReceiptNumber, parseReceiptNumber, posSaleUploadSchema, posShiftCloseSchema, settleTender, summariseShift } from "@/lib/pos";
 
 describe("receipt numbers", () => {
   test("are the till code and a six-digit sequence", () => {
@@ -77,5 +77,36 @@ describe("sale upload format", () => {
       { ...valid, payments: [{ method: "CHEQUE", amountMinor: 5000 }] },
     ];
     for (const sale of bad) expect(posSaleUploadSchema.safeParse(sale).success).toBe(false);
+  });
+});
+
+describe("shift totals", () => {
+  test("cash expected is the float plus cash taken less change; other methods as paid", () => {
+    const summary = summariseShift(20_000, [
+      { totalMinor: 7500, changeMinor: 2500, payments: [{ method: "CASH", amountMinor: 10_000 }] },
+      { totalMinor: 9000, changeMinor: 1000, payments: [{ method: "MOMO", amountMinor: 5000 }, { method: "CASH", amountMinor: 5000 }] },
+      { totalMinor: 3000, changeMinor: 0, payments: [{ method: "CARD", amountMinor: 3000 }] },
+    ]);
+    expect(summary).toEqual({
+      salesCount: 3,
+      salesTotalMinor: 19_500,
+      takenMinor: { CASH: 11_500, MOMO: 5000, CARD: 3000 },
+      expectedMinor: { CASH: 31_500, MOMO: 5000, CARD: 3000 },
+    });
+  });
+
+  test("an empty shift expects just the float", () => {
+    expect(summariseShift(15_000, []).expectedMinor).toEqual({ CASH: 15_000, MOMO: 0, CARD: 0 });
+  });
+
+  test("differences are counted minus expected, so money missing is below zero", () => {
+    expect(countDifferences({ CASH: 31_500, MOMO: 5000, CARD: 3000 }, { CASH: 31_000, MOMO: 5000, CARD: 3500 })).toEqual({ CASH: -500, MOMO: 0, CARD: 500 });
+  });
+
+  test("a close needs whole, non negative counts", () => {
+    const close = { clientId: "1f0c6f5e-3b9a-4c1e-9d2a-7b6f2f0c9a11", closedAt: "2026-11-02T18:00:00.000Z", countedCashMinor: 31_000, countedMomoMinor: 0, countedCardMinor: 0 };
+    expect(posShiftCloseSchema.safeParse(close).success).toBe(true);
+    expect(posShiftCloseSchema.safeParse({ ...close, countedCashMinor: -1 }).success).toBe(false);
+    expect(posShiftCloseSchema.safeParse({ ...close, countedMomoMinor: 1.5 }).success).toBe(false);
   });
 });

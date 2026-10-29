@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { prisma } from "@/lib/db";
 import type { PosSaleUpload } from "@/lib/pos";
 import { recordPosSale, recordPosSales } from "@/server/pos/sales";
+import { closePosShift, openPosShift } from "@/server/pos/shifts";
 import { createStaff, createTill, createVariant, resetDatabase } from "./factories";
 
 beforeEach(resetDatabase);
@@ -52,7 +53,7 @@ describe("recording a till sale", () => {
     const upload = sale({ cashierId: cashier.id, items: [{ variantId: variant.id, quantityMilli: 2000, unitPriceMinor: 2500 }], payments: [{ method: "CARD", amountMinor: 5000 }] });
 
     const first = await recordPosSale(upload, NOW);
-    const again = await recordPosSales([upload, upload], NOW);
+    const again = await recordPosSales([upload, upload], cashier, NOW);
 
     expect(first.status).toBe("recorded");
     expect(again.map((r) => r.status)).toEqual(["duplicate", "duplicate"]);
@@ -181,7 +182,7 @@ describe("sales the server refuses", () => {
 
     const clash = await recordPosSale(sale({ cashierId: cashier.id, items: line, payments: paid }), NOW);
 
-    expect(clash).toMatchObject({ status: "rejected", error: expect.stringMatching(/already used/) });
+    expect(clash).toMatchObject({ status: "rejected", error: expect.stringMatching(/already used/), reason: "receipt-used", lastReceiptSeq: 1 });
     expect(await prisma.posSale.count()).toBe(1);
     expect(await stockOf(variant.id)).toBe(9000);
   });
@@ -193,5 +194,84 @@ describe("sales the server refuses", () => {
       /no longer in the catalogue/,
       variant.id,
     );
+  });
+});
+
+describe("who and which shift a sale belongs to", () => {
+  const paid = [{ method: "CASH" as const, amountMinor: 2500 }];
+
+  async function setup() {
+    await createTill();
+    const cashier = await createStaff();
+    const { variant } = await createVariant({ price: 2500, stock: 10_000 });
+    const line = [{ variantId: variant.id, quantityMilli: 1000, unitPriceMinor: 2500 }];
+    const opened = await openPosShift({ clientId: randomUUID(), tillCode: "T1", openedAt: "2026-11-02T08:00:00Z", openingFloatMinor: 0 }, cashier, NOW);
+    if (opened.status === "rejected") throw new Error(opened.error);
+    return { cashier, line, shift: opened.shift };
+  }
+
+  test("a sale goes into its cashier's open shift on the till", async () => {
+    const { cashier, line, shift } = await setup();
+
+    const result = await recordPosSale(sale({ cashierId: cashier.id, shiftClientId: shift.clientId, items: line, payments: paid }), NOW);
+
+    expect(result.status).toBe("recorded");
+    expect((await prisma.posSale.findFirstOrThrow({ include: { shift: true } })).shift?.clientId).toBe(shift.clientId);
+  });
+
+  test("refuses another cashier's shift and a shift that does not exist", async () => {
+    const { line, shift } = await setup();
+    const other = await createStaff();
+
+    expect(await recordPosSale(sale({ cashierId: other.id, shiftClientId: shift.clientId, items: line, payments: paid }), NOW)).toMatchObject({
+      status: "rejected",
+      error: expect.stringMatching(/another cashier's shift/),
+    });
+    expect(await recordPosSale(sale({ cashierId: other.id, shiftClientId: randomUUID(), items: line, payments: paid }), NOW)).toMatchObject({
+      status: "rejected",
+      error: expect.stringMatching(/not found/),
+    });
+    expect(await prisma.posSale.count()).toBe(0);
+  });
+
+  test("a shift closed before the sale refuses it; a sale made before the close still counts", async () => {
+    const { cashier, line, shift } = await setup();
+    await closePosShift({ clientId: shift.clientId, closedAt: "2026-11-02T09:00:00Z", countedCashMinor: 0, countedMomoMinor: 0, countedCardMinor: 0 }, cashier, NOW);
+
+    const after = await recordPosSale(sale({ cashierId: cashier.id, shiftClientId: shift.clientId, soldAt: "2026-11-02T09:30:00Z", items: line, payments: paid }), NOW);
+    const before = await recordPosSale(
+      sale({ cashierId: cashier.id, shiftClientId: shift.clientId, receiptNumber: "T1-000002", soldAt: "2026-11-02T08:45:00Z", items: line, payments: paid }),
+      NOW,
+    );
+
+    expect(after).toMatchObject({ status: "rejected", reason: "shift-closed" });
+    expect(before.status).toBe("recorded");
+  });
+
+  test("a cashier sends only their own sales; a manager may send anyone's", async () => {
+    const { cashier, line } = await setup();
+    const otherCashier = await createStaff();
+    const manager = await createStaff("STORE_MANAGER");
+    const upload = sale({ cashierId: cashier.id, items: line, payments: paid });
+
+    const byOther = await recordPosSales([upload], otherCashier, NOW);
+    expect(byOther).toEqual([expect.objectContaining({ status: "rejected", reason: "other-cashier" })]);
+    expect(await prisma.posSale.count()).toBe(0);
+
+    const byManager = await recordPosSales([upload], manager, NOW);
+    expect(byManager).toEqual([expect.objectContaining({ status: "recorded" })]);
+  });
+
+  test("refuses a suspended cashier and a receipt number far ahead of the till", async () => {
+    const { cashier, line } = await setup();
+    await prisma.user.update({ where: { id: cashier.id }, data: { status: "SUSPENDED" } });
+    expect(await recordPosSale(sale({ cashierId: cashier.id, items: line, payments: paid }), NOW)).toMatchObject({ status: "rejected", error: expect.stringMatching(/not allowed/) });
+
+    await prisma.user.update({ where: { id: cashier.id }, data: { status: "ACTIVE" } });
+    expect(await recordPosSale(sale({ cashierId: cashier.id, receiptNumber: "T1-999999", items: line, payments: paid }), NOW)).toMatchObject({
+      status: "rejected",
+      error: expect.stringMatching(/far ahead/),
+    });
+    expect((await prisma.posTill.findUniqueOrThrow({ where: { code: "T1" } })).lastReceiptSeq).toBe(0);
   });
 });

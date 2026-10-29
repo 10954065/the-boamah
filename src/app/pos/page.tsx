@@ -1,38 +1,37 @@
 import { redirect } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
-import { SignOutButton } from "@/components/account/account-forms";
-import { LogoMark } from "@/components/brand/logo";
+import { CircleOff } from "lucide-react";
+import { TillApp } from "@/components/pos/till-app";
 import { prisma } from "@/lib/db";
-import { hasPermission, ROLE_LABELS } from "@/lib/permissions";
+import { hasPermission } from "@/lib/permissions";
+import { openShiftForTill } from "@/server/pos/shifts";
 import { getCurrentUser } from "@/server/session";
+import { getStoreSettings } from "@/server/settings";
 
-/** Till home. The selling screen is built on this page in the next phase. */
+/** The till: who is signed in, which till this is, its open shift and the shop's details for receipts. */
 export default async function PosHomePage() {
   const user = await getCurrentUser();
   if (!user || !hasPermission(user.role, "pos:sell")) redirect("/pos/login");
-  const till = await prisma.posTill.findFirst({ where: { isActive: true }, orderBy: { code: "asc" }, select: { code: true, name: true } });
+  const till = await prisma.posTill.findFirst({ where: { isActive: true }, orderBy: { code: "asc" }, select: { code: true, name: true, lastReceiptSeq: true } });
 
-  return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3">
-        <LogoMark className="h-8 w-8" />
-        <div className="min-w-0">
-          <p className="font-display font-extrabold leading-tight">{till ? `Till ${till.code} · ${till.name}` : "No till set up"}</p>
-          <p className="truncate text-xs text-ink-muted">
-            {user.name} · {ROLE_LABELS[user.role]}
-          </p>
-        </div>
-        <SignOutButton className="ml-auto" />
-      </header>
-      <main id="main" className="flex flex-1 items-center justify-center p-6">
+  if (!till) {
+    return (
+      <main id="main" className="flex min-h-dvh items-center justify-center p-6">
         <div className="max-w-md rounded-lg border border-line bg-surface p-6 text-center shadow-[var(--shadow-card)]">
-          <CheckCircle2 className="mx-auto h-10 w-10 text-leaf-600" aria-hidden="true" />
-          <h1 className="mt-3 font-display text-xl font-extrabold">The till is connected</h1>
-          <p className="mt-2 text-sm leading-6 text-ink-muted">
-            It uses the shop&apos;s live products, prices and stock. The selling screen arrives in the next update.
-          </p>
+          <CircleOff className="mx-auto h-10 w-10 text-ink-subtle" aria-hidden="true" />
+          <h1 className="mt-3 font-display text-xl font-extrabold">No till is switched on</h1>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">A manager needs to switch a till on before sales can be taken here.</p>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  const [initialShift, settings] = await Promise.all([openShiftForTill(till.code), getStoreSettings()]);
+  return (
+    <TillApp
+      till={till}
+      cashier={{ id: user.id, name: user.name, canManage: hasPermission(user.role, "pos:manage") }}
+      initialShift={initialShift}
+      shop={{ name: settings.storeName, address: settings.address, phone: settings.contactPhone }}
+    />
   );
 }

@@ -19,9 +19,11 @@ interface DialogContentProps extends ComponentProps<typeof DialogPrimitive.Conte
   title: string;
   description?: ReactNode;
   hideTitle?: boolean;
+  /** For dialogs that must not be dismissed, e.g. while a till sale is being saved. */
+  hideClose?: boolean;
 }
 
-export function DialogContent({ className, children, title, description, hideTitle, ...props }: DialogContentProps) {
+export function DialogContent({ className, children, title, description, hideTitle, hideClose, ...props }: DialogContentProps) {
   return (
     <DialogPrimitive.Portal>
       <Overlay />
@@ -41,12 +43,14 @@ export function DialogContent({ className, children, title, description, hideTit
           <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
         )}
         <div className={cn(!hideTitle && "mt-4")}>{children}</div>
-        <DialogPrimitive.Close
-          className="absolute right-3 top-3 rounded-md p-1.5 text-ink-muted hover:bg-soft hover:text-ink"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </DialogPrimitive.Close>
+        {hideClose ? null : (
+          <DialogPrimitive.Close
+            className="absolute right-3 top-3 rounded-md p-1.5 text-ink-muted hover:bg-soft hover:text-ink"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );

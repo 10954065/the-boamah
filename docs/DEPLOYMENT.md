@@ -241,9 +241,11 @@ Railway address instead:
 service running the same code): add that custom domain, set `POS_HOST` to it,
 and put the Railway address back in `REDIRECT_HOSTS`. Cashiers then sign in
 again once on the new address.
-3. Give staff the **Cashier** role in *Admin → Staff* (they register a normal
-   account first). Cashiers can only use the till; Store Managers and Super
-   Admins can use it too.
+
+**Staff:** give them the **Cashier** role in *Admin → Staff* (they register a
+normal account first). Cashiers can only use the till; Store Managers and Super
+Admins can use it too. How to sell, print receipts and close shifts is in
+[Using the till](TILL.md).
 
 The first till, **T1 "Front counter"**, is created by the database migration.
 Receipt numbers are issued on the till (T1-000001, T1-000002, …), so it can

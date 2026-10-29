@@ -76,7 +76,7 @@ export function settleTender(totalMinor: number, tenders: readonly TenderLine[])
 
 export const POS_MAX_ITEMS = 200;
 export const POS_MAX_SALES_PER_UPLOAD = 50;
-const MAX_QUANTITY_MILLI = 1_000_000; // 1,000 units or kg in one line
+export const POS_MAX_QUANTITY_MILLI = 1_000_000; // 1,000 units or kg in one line
 const MAX_AMOUNT_MINOR = 100_000_000; // GH₵1,000,000
 
 export const posSaleUploadSchema = z.object({
@@ -90,7 +90,7 @@ export const posSaleUploadSchema = z.object({
     .array(
       z.object({
         variantId: z.string().min(1).max(64),
-        quantityMilli: z.number().int().positive().max(MAX_QUANTITY_MILLI),
+        quantityMilli: z.number().int().positive().max(POS_MAX_QUANTITY_MILLI),
         unitPriceMinor: z.number().int().min(0).max(MAX_AMOUNT_MINOR),
       }),
     )
@@ -113,3 +113,66 @@ export type PosSaleUpload = z.infer<typeof posSaleUploadSchema>;
 export const posSyncSchema = z.object({
   sales: z.array(posSaleUploadSchema).min(1).max(POS_MAX_SALES_PER_UPLOAD),
 });
+
+// ---------------------------------------------------------------------------
+// Shifts: opened with a cash float, closed with what the cashier counted.
+// Expected amounts always come from the shift's recorded sales.
+// ---------------------------------------------------------------------------
+
+const MAX_FLOAT_MINOR = 10_000_000; // GH₵100,000
+const countedAmount = z.number().int().min(0).max(MAX_AMOUNT_MINOR);
+
+export const posShiftOpenSchema = z.object({
+  clientId: z.uuid(),
+  tillCode: z.string().regex(TILL_CODE_PATTERN),
+  openedAt: z.iso.datetime({ offset: true }),
+  openingFloatMinor: z.number().int().min(0).max(MAX_FLOAT_MINOR),
+});
+
+export type PosShiftOpen = z.infer<typeof posShiftOpenSchema>;
+
+export const posShiftCloseSchema = z.object({
+  clientId: z.uuid(),
+  closedAt: z.iso.datetime({ offset: true }),
+  countedCashMinor: countedAmount,
+  countedMomoMinor: countedAmount,
+  countedCardMinor: countedAmount,
+  notes: z.string().trim().max(500).nullish(),
+});
+
+export type PosShiftClose = z.infer<typeof posShiftCloseSchema>;
+
+export type TenderTotals = Record<PosTenderCode, number>;
+
+export interface ShiftSaleTotals {
+  changeMinor: number;
+  totalMinor: number;
+  payments: readonly { method: PosTenderCode; amountMinor: number }[];
+}
+
+export interface ShiftSummary {
+  salesCount: number;
+  salesTotalMinor: number;
+  /** Money taken per method. Cash is net of the change given back. */
+  takenMinor: TenderTotals;
+  /** What should be at the till at close: cash includes the opening float. */
+  expectedMinor: TenderTotals;
+}
+
+export function summariseShift(openingFloatMinor: number, sales: readonly ShiftSaleTotals[]): ShiftSummary {
+  const payments = sales.flatMap((sale) => sale.payments);
+  const paidBy = (method: PosTenderCode) => payments.filter((p) => p.method === method).reduce((sum, p) => sum + p.amountMinor, 0);
+  const changeMinor = sales.reduce((sum, sale) => sum + sale.changeMinor, 0);
+  const takenMinor: TenderTotals = { CASH: paidBy("CASH") - changeMinor, MOMO: paidBy("MOMO"), CARD: paidBy("CARD") };
+  return {
+    salesCount: sales.length,
+    salesTotalMinor: sales.reduce((sum, sale) => sum + sale.totalMinor, 0),
+    takenMinor,
+    expectedMinor: { ...takenMinor, CASH: openingFloatMinor + takenMinor.CASH },
+  };
+}
+
+/** Counted minus expected for each method: below zero is money missing. */
+export function countDifferences(expected: TenderTotals, counted: TenderTotals): TenderTotals {
+  return { CASH: counted.CASH - expected.CASH, MOMO: counted.MOMO - expected.MOMO, CARD: counted.CARD - expected.CARD };
+}

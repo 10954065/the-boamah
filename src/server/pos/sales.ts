@@ -1,23 +1,29 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma, type Tx } from "@/lib/db";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, type RoleCode } from "@/lib/permissions";
 import { parseReceiptNumber, settleTender, type PosSaleUpload } from "@/lib/pos";
 import { unitPriceForQuantity } from "@/lib/pricing";
 import { formatQuantity, lineTotalMinor, type SellingUnitCode } from "@/lib/quantity";
 import { invalidateStorefront } from "@/server/storefront-cache";
+import { activeTill, checkTillClock, PosRejected, type PosRejectReason } from "./common";
 
-/** The till's clock may run a little fast. */
-const CLOCK_SKEW_MS = 10 * 60_000;
-/** A till that has been offline longer than this needs a manager to look at its sales. */
-const MAX_OFFLINE_MS = 90 * 86_400_000;
+/**
+ * Receipts are numbered on the till, so the server only accepts a number a
+ * little ahead of the last one it has seen. A batch from a till that was
+ * offline is recorded oldest first, so each sale stays within reach.
+ */
+const MAX_RECEIPT_JUMP = 1000;
 
 export type PosSaleResult =
   | { clientId: string; status: "recorded" | "duplicate"; saleId: string; receiptNumber: string; shortfall: boolean; priceDifference: boolean }
-  | { clientId: string; status: "rejected"; error: string };
+  | { clientId: string; status: "rejected"; error: string; reason?: PosRejectReason; lastReceiptSeq?: number };
 
-/** A sale the server will not record as sent; the till keeps it for a manager. */
-class PosSaleRejected extends Error {}
+/** Who is sending the sales. */
+export interface PosUploader {
+  id: string;
+  role: RoleCode;
+}
 
 const summarySelect = { id: true, receiptNumber: true, hasShortfall: true, hasPriceDifference: true } satisfies Prisma.PosSaleSelect;
 type SaleSummary = Prisma.PosSaleGetPayload<{ select: typeof summarySelect }>;
@@ -45,53 +51,90 @@ export async function recordPosSale(input: PosSaleUpload, now: Date = new Date()
     const sale = await prisma.$transaction((tx) => createSale(tx, input, now));
     return asResult(input.clientId, "recorded", sale);
   } catch (error) {
-    if (error instanceof PosSaleRejected) return { clientId: input.clientId, status: "rejected", error: error.message };
+    if (error instanceof PosRejected) return { clientId: input.clientId, status: "rejected", error: error.message, reason: error.reason };
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       // Two uploads of the same sale at once: the other one recorded it.
       const recorded = await prisma.posSale.findUnique({ where: { clientId: input.clientId }, select: summarySelect });
       if (recorded) return asResult(input.clientId, "duplicate", recorded);
-      return { clientId: input.clientId, status: "rejected", error: `Receipt ${input.receiptNumber} was already used by another sale.` };
+      // Another sale has this number: tell the till where numbering has got to so it can renumber.
+      const till = await prisma.posTill.findUnique({ where: { code: input.tillCode }, select: { lastReceiptSeq: true } });
+      return {
+        clientId: input.clientId,
+        status: "rejected",
+        error: `Receipt ${input.receiptNumber} was already used by another sale.`,
+        reason: "receipt-used",
+        lastReceiptSeq: till?.lastReceiptSeq,
+      };
     }
     throw error;
   }
 }
 
-/** Records a batch from one upload, oldest first, and refreshes the storefront once. */
-export async function recordPosSales(inputs: readonly PosSaleUpload[], now: Date = new Date()): Promise<PosSaleResult[]> {
+/**
+ * Records a batch from one upload, oldest first, and refreshes the storefront
+ * once. A cashier sends only their own sales; a manager may send anyone's.
+ */
+export async function recordPosSales(inputs: readonly PosSaleUpload[], uploader: PosUploader, now: Date = new Date()): Promise<PosSaleResult[]> {
   const ordered = inputs.toSorted((a, b) => Date.parse(a.soldAt) - Date.parse(b.soldAt));
+  const mayUploadAny = hasPermission(uploader.role, "pos:manage");
   const results: PosSaleResult[] = [];
-  for (const input of ordered) results.push(await recordPosSale(input, now));
+  for (const input of ordered) {
+    if (input.cashierId !== uploader.id && !mayUploadAny) {
+      results.push({
+        clientId: input.clientId,
+        status: "rejected",
+        error: "This sale was made by another cashier. They need to sign in on the till to send it.",
+        reason: "other-cashier",
+      });
+    } else {
+      results.push(await recordPosSale(input, now));
+    }
+  }
   // Stock shown in the shop changed.
   if (results.some((r) => r.status === "recorded")) invalidateStorefront();
   return results;
 }
 
+/** The shift a sale belongs to: on this till, the same cashier's, and open when the sale was made. */
+async function saleShift(tx: Tx, input: PosSaleUpload, tillId: string, soldAt: Date): Promise<{ id: string } | null> {
+  if (!input.shiftClientId) return null;
+  const shift = await tx.posShift.findUnique({
+    where: { clientId: input.shiftClientId },
+    select: { id: true, tillId: true, cashierId: true, closedAt: true },
+  });
+  if (!shift || shift.tillId !== tillId) throw new PosRejected("The shift for this sale was not found on this till.");
+  if (shift.cashierId !== input.cashierId) throw new PosRejected("This sale belongs to another cashier's shift.");
+  if (shift.closedAt && soldAt > shift.closedAt) {
+    throw new PosRejected("This shift was closed before the sale was made. Open a new shift and take the payment again.", "shift-closed");
+  }
+  return { id: shift.id };
+}
+
 async function createSale(tx: Tx, input: PosSaleUpload, now: Date): Promise<SaleSummary> {
   const soldAt = new Date(input.soldAt);
-  if (soldAt.getTime() > now.getTime() + CLOCK_SKEW_MS) throw new PosSaleRejected("The till's clock is ahead of the server. Check the date and time on the till.");
-  if (soldAt.getTime() < now.getTime() - MAX_OFFLINE_MS) throw new PosSaleRejected("This sale is more than 90 days old.");
+  checkTillClock(soldAt, now, "sale");
 
   const receipt = parseReceiptNumber(input.receiptNumber);
-  if (!receipt || receipt.tillCode !== input.tillCode) throw new PosSaleRejected("The receipt number does not belong to this till.");
+  if (!receipt || receipt.tillCode !== input.tillCode) throw new PosRejected("The receipt number does not belong to this till.");
 
-  const till = await tx.posTill.findUnique({ where: { code: input.tillCode }, select: { id: true, isActive: true } });
-  if (!till?.isActive) throw new PosSaleRejected(`Till ${input.tillCode} is not set up or has been switched off.`);
+  const till = await activeTill(tx, input.tillCode);
+  if (receipt.sequence > till.lastReceiptSeq + MAX_RECEIPT_JUMP) throw new PosRejected("The receipt number is far ahead of this till's last receipt.");
 
-  const cashier = await tx.user.findUnique({ where: { id: input.cashierId }, select: { role: true } });
-  if (!cashier || !hasPermission(cashier.role, "pos:sell")) throw new PosSaleRejected("The cashier on this sale is not allowed to use the till.");
+  const cashier = await tx.user.findUnique({ where: { id: input.cashierId }, select: { role: true, status: true } });
+  if (!cashier || cashier.status !== "ACTIVE" || !hasPermission(cashier.role, "pos:sell")) {
+    throw new PosRejected("The cashier on this sale is not allowed to use the till.");
+  }
 
-  const shift = input.shiftClientId
-    ? await tx.posShift.findFirst({ where: { clientId: input.shiftClientId, tillId: till.id }, select: { id: true } })
-    : null;
+  const shift = await saleShift(tx, input, till.id, soldAt);
 
   const variantIds = input.items.map((item) => item.variantId);
-  if (new Set(variantIds).size !== variantIds.length) throw new PosSaleRejected("The same item appears twice in this sale.");
+  if (new Set(variantIds).size !== variantIds.length) throw new PosRejected("The same item appears twice in this sale.");
   const variants = await tx.productVariant.findMany({
     where: { id: { in: variantIds } },
     include: { product: { select: { name: true } }, priceTiers: { select: { minQtyMilli: true, unitPriceMinor: true } } },
   });
   const byId = new Map(variants.map((v) => [v.id, v]));
-  if (byId.size !== variantIds.length) throw new PosSaleRejected("An item in this sale is no longer in the catalogue.");
+  if (byId.size !== variantIds.length) throw new PosRejected("An item in this sale is no longer in the catalogue.");
 
   // Lock stock rows in a fixed order so concurrent checkouts cannot deadlock.
   const lines = input.items
@@ -108,7 +151,7 @@ async function createSale(tx: Tx, input: PosSaleUpload, now: Date): Promise<Sale
 
   const totalMinor = lines.reduce((sum, line) => sum + line.lineTotalMinor, 0);
   const settlement = settleTender(totalMinor, input.payments);
-  if (!settlement.ok) throw new PosSaleRejected(settlement.error);
+  if (!settlement.ok) throw new PosRejected(settlement.error);
 
   const stock: { before: number; after: number }[] = [];
   for (const line of lines) {
