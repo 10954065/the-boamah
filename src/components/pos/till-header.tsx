@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition, type ComponentProps, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { LogOut, Wifi, WifiOff } from "lucide-react";
+import { CloudOff, LogOut, Wifi, WifiOff } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { clearTillCaches } from "./till-offline";
+import { saveLastReceipt } from "./till-storage";
+import { useOutbox, useSyncState } from "./till-sync";
 
 const timeFormatter = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Accra" });
 
@@ -27,16 +31,42 @@ export function useOnline(): boolean {
   return useSyncExternalStore(subscribeToConnection, () => navigator.onLine, () => true);
 }
 
+function subscribeToMinutes(onChange: () => void): () => void {
+  const timer = window.setInterval(onChange, 60_000);
+  return () => window.clearInterval(timer);
+}
+
+/** The current minute (milliseconds since 1970 divided by 60,000), for screens that change with the time. */
+export function useMinuteClock(): number {
+  return useSyncExternalStore(subscribeToMinutes, () => Math.floor(Date.now() / 60_000), () => 0);
+}
+
+const CONNECTION = {
+  online: { icon: Wifi, label: "Online", className: "bg-leaf-500/20 text-leaf-100" },
+  unreachable: { icon: CloudOff, label: "No connection", className: "bg-gold-500 text-brand-900" },
+  offline: { icon: WifiOff, label: "Offline", className: "bg-danger text-white" },
+};
+
+/** Online, offline, or connected to a network that cannot reach the shop's system. */
+function useConnection(): keyof typeof CONNECTION {
+  const online = useOnline();
+  const { failure } = useSyncState();
+  if (!online) return "offline";
+  return failure?.kind === "offline" ? "unreachable" : "online";
+}
+
 interface TillHeaderProps {
   till: { code: string; name: string };
   cashierName: string;
   shiftOpenedAt?: string | null;
+  /** What is waiting to be sent, next to the connection. */
+  status?: ReactNode;
   children?: ReactNode;
 }
 
 /** The till's top bar: which till, who is signed in, the connection, and the actions on the right. */
-export function TillHeader({ till, cashierName, shiftOpenedAt, children }: TillHeaderProps) {
-  const online = useOnline();
+export function TillHeader({ till, cashierName, shiftOpenedAt, status, children }: TillHeaderProps) {
+  const connection = CONNECTION[useConnection()];
   return (
     <header className="flex items-center gap-3 bg-brand-900 px-3 py-2 text-white">
       <LogoMark className="hidden h-8 w-8 shrink-0 sm:block" />
@@ -49,15 +79,11 @@ export function TillHeader({ till, cashierName, shiftOpenedAt, children }: TillH
           {shiftOpenedAt ? ` · Shift since ${formatTime(shiftOpenedAt)}` : ""}
         </p>
       </div>
-      <span
-        className={cn(
-          "ml-1 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-          online ? "bg-leaf-500/20 text-leaf-100" : "bg-danger text-white",
-        )}
-      >
-        {online ? <Wifi className="h-3.5 w-3.5" aria-hidden="true" /> : <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />}
-        <span className="sr-only sm:not-sr-only">{online ? "Online" : "Offline"}</span>
+      <span className={cn("ml-1 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", connection.className)}>
+        <connection.icon className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="sr-only sm:not-sr-only">{connection.label}</span>
       </span>
+      {status}
       <div className="ml-auto flex items-center gap-1">{children}</div>
     </header>
   );
@@ -86,24 +112,58 @@ export function HeaderAction({ icon: Icon, label, className, ...props }: HeaderA
   );
 }
 
-/** Signs out and returns to the till's sign in page. */
-export function TillSignOut({ disabled }: { disabled?: boolean }) {
-  const router = useRouter();
+interface TillSignOutProps {
+  tillCode: string;
+  cashierId: string;
+  disabled?: boolean;
+}
+
+/**
+ * Signs out and returns to the till's sign in page. Needs the internet. If
+ * the cashier still has entries waiting, they are asked first: those wait on
+ * the till until the same cashier signs in here again.
+ */
+export function TillSignOut({ tillCode, cashierId, disabled }: TillSignOutProps) {
+  const online = useOnline();
+  const waiting = useOutbox(tillCode).filter((entry) => entry.cashierId === cashierId).length;
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  function signOut() {
+    setConfirming(false);
+    startTransition(async () => {
+      const { error } = await authClient.signOut();
+      if (error) return setFailed(true);
+      await clearTillCaches();
+      saveLastReceipt(tillCode, null);
+      // A full page load, so the offline helper sees the sign in page and forgets the saved till.
+      window.location.replace("/pos/login");
+    });
+  }
+
+  const label = !online ? "Signing out needs the internet" : failed ? "Sign out failed, try again" : "Sign out";
   return (
-    <HeaderAction
-      icon={LogOut}
-      label={failed ? "Sign out failed, try again" : "Sign out"}
-      disabled={disabled || pending}
-      onClick={() =>
-        startTransition(async () => {
-          const { error } = await authClient.signOut();
-          if (error) return setFailed(true);
-          router.replace("/pos/login");
-          router.refresh();
-        })
-      }
-    />
+    <>
+      <HeaderAction icon={LogOut} label={label} disabled={disabled || pending || !online} onClick={() => (waiting > 0 ? setConfirming(true) : signOut())} />
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        {confirming ? (
+          <DialogContent title="Sign out with sales still to send?" className="max-w-md">
+            <p className="text-sm leading-6 text-ink-muted">
+              {waiting} {waiting === 1 ? "item has" : "items have"} not reached the shop&apos;s system yet. They stay safely on this till and are sent next time you sign
+              in here.
+            </p>
+            <div className="mt-5 flex gap-2">
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => setConfirming(false)} autoFocus>
+                Stay signed in
+              </Button>
+              <Button variant="danger" size="lg" className="flex-1" onClick={signOut}>
+                Sign out
+              </Button>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+    </>
   );
 }

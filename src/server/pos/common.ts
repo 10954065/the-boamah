@@ -1,8 +1,6 @@
 import "server-only";
 import type { Tx } from "@/lib/db";
-
-/** Why a sale was refused, when the till can act on it (for example by renumbering the receipt). */
-export type PosRejectReason = "shift-closed" | "receipt-used" | "other-cashier";
+import type { PosRejectReason } from "@/lib/pos";
 
 /** Something the till sent that the server will not record; the till shows the reason. */
 export class PosRejected extends Error {

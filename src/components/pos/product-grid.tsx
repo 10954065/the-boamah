@@ -10,6 +10,7 @@ import type { PosCatalogItem } from "@/lib/pos-till";
 import { effectiveUnitPrice } from "@/lib/pricing";
 import { formatQuantity, UNIT_INFO } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
+import { TILE_IMAGE_SIZES } from "./till-offline";
 
 /** Enough to fill a large screen; searching narrows the rest down. */
 export const MAX_TILES = 120;
@@ -122,7 +123,7 @@ function ProductTile({ item, now, onPick }: { item: PosCatalogItem; now: Date; o
     >
       <span className="relative block aspect-square overflow-hidden rounded-md bg-soft">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt="" fill sizes="(min-width: 1280px) 180px, (min-width: 640px) 25vw, 45vw" className="object-cover" />
+          <Image src={item.imageUrl} alt="" fill sizes={TILE_IMAGE_SIZES} className="object-cover" />
         ) : (
           <span className="flex h-full items-center justify-center text-ink-subtle">
             <ImageOff className="h-7 w-7" aria-hidden="true" />

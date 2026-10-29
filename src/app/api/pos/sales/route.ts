@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { posSyncSchema } from "@/lib/pos";
-import { noStore, tillBody, tillError, tillRequestUser } from "@/server/pos/request";
+import { tillBody, tillError, tillJson, tillRequestUser } from "@/server/pos/request";
 import { recordPosSales } from "@/server/pos/sales";
 
 /**
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const results = await recordPosSales(upload.sales, user);
-    return NextResponse.json({ results }, { headers: noStore });
+    return tillJson({ results });
   } catch (error) {
     console.error("[api/pos/sales]", error);
     return tillError("The sales could not be saved. They stay on the till and will be sent again.", 500);

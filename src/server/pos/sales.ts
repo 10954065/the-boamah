@@ -2,11 +2,11 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma, type Tx } from "@/lib/db";
 import { hasPermission, type RoleCode } from "@/lib/permissions";
-import { parseReceiptNumber, settleTender, type PosSaleUpload } from "@/lib/pos";
+import { parseReceiptNumber, settleTender, type PosSaleResult, type PosSaleUpload } from "@/lib/pos";
 import { unitPriceForQuantity } from "@/lib/pricing";
 import { formatQuantity, lineTotalMinor, type SellingUnitCode } from "@/lib/quantity";
 import { invalidateStorefront } from "@/server/storefront-cache";
-import { activeTill, checkTillClock, PosRejected, type PosRejectReason } from "./common";
+import { activeTill, checkTillClock, PosRejected } from "./common";
 
 /**
  * Receipts are numbered on the till, so the server only accepts a number a
@@ -14,10 +14,6 @@ import { activeTill, checkTillClock, PosRejected, type PosRejectReason } from ".
  * offline is recorded oldest first, so each sale stays within reach.
  */
 const MAX_RECEIPT_JUMP = 1000;
-
-export type PosSaleResult =
-  | { clientId: string; status: "recorded" | "duplicate"; saleId: string; receiptNumber: string; shortfall: boolean; priceDifference: boolean }
-  | { clientId: string; status: "rejected"; error: string; reason?: PosRejectReason; lastReceiptSeq?: number };
 
 /** Who is sending the sales. */
 export interface PosUploader {

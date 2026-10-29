@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
-import { formatReceiptNumber, parseReceiptNumber, type TenderLine } from "@/lib/pos";
+import { formatReceiptNumber, parseReceiptNumber, type PosShiftView, type TenderLine } from "@/lib/pos";
+import { journalSaleOf, newEntryState, type SaleEntry } from "@/lib/pos-outbox";
 import {
   addToSale,
   buildSaleUpload,
@@ -23,32 +24,29 @@ import {
   type TillLine,
 } from "@/lib/pos-till";
 import { MILLI } from "@/lib/quantity";
-import type { PosShiftView } from "@/server/pos/shifts";
-import { CloseShiftDialog } from "./close-shift-dialog";
 import { ProductGrid } from "./product-grid";
 import { QuantityDialog, type QuantityTarget } from "./quantity-dialog";
 import type { ShopDetails } from "./receipt";
 import { SalePanel } from "./sale-panel";
-import { PendingSaleDialog, ReceiptDialog, type SendState } from "./sale-status";
+import { ReceiptDialog, SendingDialog, type SendState } from "./sale-status";
+import { SyncStatus, TillBanner } from "./sync-status";
 import { TenderDialog } from "./tender-dialog";
-import { failureOf, tillApi } from "./till-api";
-import { HeaderAction, TillHeader, TillSignOut, useOnline } from "./till-header";
+import { HeaderAction, TillHeader, TillSignOut } from "./till-header";
 import { TillSettingsDialog } from "./till-settings-dialog";
 import {
+  addToJournal,
+  addToOutbox,
   issueReceiptSequence,
   loadLastReceipt,
-  loadPendingSale,
-  otherCashiersPendingSales,
+  loadOutbox,
   releaseReceiptSequence,
+  removeFromJournal,
+  removeFromOutbox,
   saveLastReceipt,
-  savePendingSale,
-  type PendingSale,
   type TillPrefs,
 } from "./till-storage";
+import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL } from "./till-sync";
 import { useTillCatalog } from "./use-till-catalog";
-
-/** Times a sale is renumbered when another device has used its receipt number. */
-const MAX_RENUMBER_ATTEMPTS = 3;
 
 export interface TillInfo {
   code: string;
@@ -69,14 +67,15 @@ interface SellScreenProps {
   shop: ShopDetails;
   prefs: TillPrefs;
   onPrefsChange: (prefs: TillPrefs) => void;
-  onShiftClosed: () => void;
+  onCloseShift: () => void;
+  /** A manager closed this shift; the server said so at serverTime. */
+  onShiftClosedElsewhere: (serverTime: string) => void;
 }
 
 /** The selling screen: products on the left, the sale on the right, payment and receipt in dialogs. */
-export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, onShiftClosed }: SellScreenProps) {
-  const catalog = useTillCatalog();
+export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, onCloseShift, onShiftClosedElsewhere }: SellScreenProps) {
+  const catalog = useTillCatalog(till.code);
   const refreshCatalog = catalog.refresh;
-  const online = useOnline();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [lines, setLines] = useState<TillLine[]>([]);
@@ -87,16 +86,14 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const [now, setNow] = useState(() => new Date());
   const [quantityTarget, setQuantityTarget] = useState<QuantityTarget | null>(null);
   const [tendering, setTendering] = useState(false);
-  const [pending, setPending] = useState<PendingSale | null>(() => loadPendingSale(till.code, cashier.id));
-  const [othersUnsent] = useState(() => otherCashiersPendingSales(till.code, cashier.id));
-  const [sendState, setSendState] = useState<SendState | null>(() => (pending ? { status: "sending" } : null));
-  const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean } | null>(null);
-  const [panel, setPanel] = useState<"sale" | "close" | "settings" | null>(null);
+  const [sending, setSending] = useState<SendState | null>(null);
+  const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean; waiting: boolean } | null>(null);
+  const [panel, setPanel] = useState<"sale" | "settings" | null>(null);
 
   const sale = useMemo(() => priceSale(lines, now), [lines, now]);
   const results = useMemo(() => searchCatalog(catalog.items, query, categoryId), [catalog.items, query, categoryId]);
   const categories = useMemo(() => catalogCategories(catalog.items), [catalog.items]);
-  const busy = lines.length > 0 || pending !== null;
+  const busy = lines.length > 0 || sending !== null;
 
   useEffect(() => {
     // The amount due must not change while the customer is paying.
@@ -104,54 +101,6 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, [tendering]);
-
-  const deliver = useCallback(
-    async (first: PendingSale) => {
-      let unsent = first;
-      for (let attempt = 0; ; attempt++) {
-        let result;
-        try {
-          result = await tillApi.sendSale(unsent.upload);
-        } catch (error) {
-          setSendState({ status: "failed", ...failureOf(error) });
-          return;
-        }
-        if (result.status === "rejected" && result.reason === "receipt-used" && attempt < MAX_RENUMBER_ATTEMPTS) {
-          // Another device used this number: take the next free one. Nothing has been printed yet.
-          const receiptNumber = formatReceiptNumber(till.code, issueReceiptSequence(till.code, result.lastReceiptSeq ?? 0));
-          unsent = { upload: { ...unsent.upload, receiptNumber }, receipt: { ...unsent.receipt, receiptNumber } };
-          savePendingSale(till.code, cashier.id, unsent);
-          setPending(unsent);
-          continue;
-        }
-        if (result.status === "rejected") {
-          setSendState({ status: "rejected", message: result.error, shiftClosed: result.reason === "shift-closed" });
-          return;
-        }
-        savePendingSale(till.code, cashier.id, null);
-        saveLastReceipt(till.code, unsent.receipt);
-        setPending(null);
-        setSendState(null);
-        setLines([]);
-        setHighlightId(null);
-        setReceipt({ data: unsent.receipt, copy: false });
-        void refreshCatalog(); // stock has changed
-        return;
-      }
-    },
-    [till.code, cashier.id, refreshCatalog],
-  );
-
-  function send(unsent: PendingSale) {
-    setSendState({ status: "sending" });
-    void deliver(unsent);
-  }
-
-  // A paid sale left unsent (connection lost, page reloaded) goes again when the till opens.
-  const unsentAtStart = useRef(pending);
-  useEffect(() => {
-    if (unsentAtStart.current) void deliver(unsentAtStart.current);
-  }, [deliver]);
 
   const pick = useCallback((item: PosCatalogItem) => {
     if (isWeighed(item.unit)) return setQuantityTarget({ item, quantityMilli: null });
@@ -194,45 +143,77 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   }
 
   function charge() {
-    if (lines.length === 0 || pending) return;
+    if (lines.length === 0 || sending) return;
     setNow(new Date());
     setPanel(null);
     setTendering(true);
   }
 
-  function complete(tenders: TenderLine[]) {
+  /** The sale is done at the counter: clear it and show the receipt. */
+  function finishSale(data: ReceiptData, waiting: boolean) {
+    saveLastReceipt(till.code, data);
+    setSending(null);
+    setLines([]);
+    setHighlightId(null);
+    setReceipt({ data, copy: false, waiting });
+    if (!waiting) void refreshCatalog(); // stock has changed
+  }
+
+  /**
+   * Saves the paid sale on the till first, then sends it. Without an answer
+   * in a few seconds the receipt shows anyway and the sale waits on the till.
+   */
+  async function complete(tenders: TenderLine[]) {
     const sequence = issueReceiptSequence(till.code, till.lastReceiptSeq);
     const upload = buildSaleUpload(
       { clientId: crypto.randomUUID(), receiptNumber: formatReceiptNumber(till.code, sequence), tillCode: till.code, shiftClientId: shift.clientId, cashierId: cashier.id, soldAt: now },
       sale,
       tenders,
     );
-    const unsent: PendingSale = { upload, receipt: receiptFor(upload, sale, cashier.name) };
-    savePendingSale(till.code, cashier.id, unsent);
-    setPending(unsent);
+    const data = receiptFor(upload, sale, cashier.name);
+    const entry: SaleEntry = { kind: "sale", id: upload.clientId, cashierId: cashier.id, cashierName: cashier.name, createdAt: new Date().toISOString(), ...newEntryState, upload, receipt: data, renumbered: 0 };
+    if (!addToOutbox(till.code, entry)) {
+      releaseReceiptSequence(till.code, sequence);
+      toast.error(STORAGE_FULL);
+      return;
+    }
+    addToJournal(till.code, shift.clientId, journalSaleOf(data, upload.clientId));
     setTendering(false);
-    send(unsent);
+    if (!navigator.onLine) return finishSale(data, true);
+
+    setSending({ status: "sending", receiptNumber: upload.receiptNumber });
+    const outcome = await sendNow(till.code, cashier.id, entry.id, ANSWER_WAIT_MS);
+    if (outcome?.kind === "sale") return finishSale(outcome.receipt, false);
+    if (outcome?.kind === "refused") {
+      setSending({
+        status: "rejected",
+        entryId: entry.id,
+        receiptNumber: upload.receiptNumber,
+        message: outcome.error,
+        shiftClosed: outcome.reason === "shift-closed",
+        serverTime: outcome.serverTime,
+      });
+      return;
+    }
+    // No answer yet: it may have been renumbered, or sent just after the wait.
+    const current = loadOutbox(till.code).find((e) => e.id === entry.id);
+    finishSale(current?.kind === "sale" ? current.receipt : data, current !== undefined);
   }
 
   /** The server refused the sale, so nothing was recorded and its receipt number is free again. */
-  function backToSale() {
-    const number = pending ? parseReceiptNumber(pending.upload.receiptNumber) : null;
+  function dropRefusedSale() {
+    if (sending?.status !== "rejected") return;
+    const current = loadOutbox(till.code).find((e) => e.id === sending.entryId);
+    const number = current?.kind === "sale" ? parseReceiptNumber(current.upload.receiptNumber) : null;
     if (number) releaseReceiptSequence(till.code, number.sequence);
-    savePendingSale(till.code, cashier.id, null);
-    setPending(null);
-    setSendState(null);
-  }
-
-  /** Gives up on a sale that could not be sent. It may still have arrived, so its number is not reused. */
-  function cancelPending() {
-    savePendingSale(till.code, cashier.id, null);
-    setPending(null);
-    setSendState(null);
+    removeFromOutbox(till.code, sending.entryId);
+    removeFromJournal(till.code, shift.clientId, sending.entryId);
+    setSending(null);
   }
 
   function showLastReceipt() {
     const last = loadLastReceipt(till.code);
-    if (last) setReceipt({ data: last, copy: true });
+    if (last) setReceipt({ data: last, copy: true, waiting: false });
     else toast.info("No receipt has been printed on this till yet.");
   }
 
@@ -269,34 +250,21 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
 
   return (
     <div className="flex h-dvh flex-col">
-      <TillHeader till={till} cashierName={cashier.name} shiftOpenedAt={shift.openedAt}>
+      <TillHeader till={till} cashierName={cashier.name} shiftOpenedAt={shift.openedAt} status={<SyncStatus tillCode={till.code} cashier={cashier} />}>
         <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
         <HeaderAction icon={ReceiptText} label="Last receipt" onClick={showLastReceipt} />
         <HeaderAction icon={Printer} label="Printer" onClick={() => setPanel("settings")} />
-        <HeaderAction
-          icon={DoorClosed}
-          label="Close shift"
-          title={busy ? "Finish or clear the sale first" : "Close shift"}
-          disabled={busy}
-          onClick={() => setPanel("close")}
-        />
-        <TillSignOut disabled={pending !== null} />
+        <HeaderAction icon={DoorClosed} label="Close shift" title={busy ? "Finish or clear the sale first" : "Close shift"} disabled={busy} onClick={onCloseShift} />
+        <TillSignOut tillCode={till.code} cashierId={cashier.id} disabled={sending !== null} />
       </TillHeader>
 
-      {!online ? (
-        <p role="status" className="bg-warning-soft px-4 py-2 text-sm font-medium text-warning">
-          No internet connection. A paid sale waits on this till and is sent as soon as the connection is back.
-        </p>
-      ) : othersUnsent.length > 0 ? (
-        <p role="status" className="bg-warning-soft px-4 py-2 text-sm text-warning">
-          {othersUnsent.map((other) => `Receipt ${other.receiptNumber} by ${other.cashierName}`).join(", ")} has not reached the shop&apos;s system yet. Only
-          that cashier can send it, by signing in on this till.
-        </p>
-      ) : catalog.status === "ready" && catalog.error ? (
-        <p role="status" className="bg-warning-soft px-4 py-2 text-sm text-warning">
-          Prices and stock could not be refreshed: {catalog.error}
-        </p>
-      ) : null}
+      <TillBanner tillCode={till.code} cashier={cashier} shift={shift} pricesAsOf={catalog.loadedAt} onShiftClosedElsewhere={onShiftClosedElsewhere}>
+        {catalog.status === "ready" && catalog.error ? (
+          <p role="status" className="bg-warning-soft px-4 py-2 text-sm text-warning">
+            Prices and stock could not be refreshed: {catalog.error}
+          </p>
+        ) : null}
+      </TillBanner>
 
       <div className="flex min-h-0 flex-1">
         <main id="main" className="flex min-w-0 flex-1 flex-col bg-soft">
@@ -343,20 +311,18 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
       </Dialog>
 
       <QuantityDialog target={quantityTarget} onClose={() => setQuantityTarget(null)} onConfirm={confirmQuantity} onRemove={removeLine} />
-      <TenderDialog open={tendering} totalMinor={sale.totalMinor} onOpenChange={setTendering} onComplete={complete} />
-      <PendingSaleDialog
-        pending={pending}
-        state={sendState}
-        onRetry={() => pending && send(pending)}
-        onBack={backToSale}
-        onCancel={cancelPending}
+      <TenderDialog open={tendering} totalMinor={sale.totalMinor} onOpenChange={setTendering} onComplete={(tenders) => void complete(tenders)} />
+      <SendingDialog
+        state={sending}
+        onBack={dropRefusedSale}
         onShiftEnded={() => {
-          backToSale();
-          saveLastReceipt(till.code, null);
-          onShiftClosed();
+          const serverTime = sending?.status === "rejected" ? sending.serverTime : new Date().toISOString();
+          dropRefusedSale();
+          setLines([]);
+          onShiftClosedElsewhere(serverTime);
         }}
       />
-      <ReceiptDialog receipt={receipt?.data ?? null} copy={receipt?.copy ?? false} shop={shop} prefs={prefs} onClose={() => setReceipt(null)} />
+      <ReceiptDialog receipt={receipt?.data ?? null} copy={receipt?.copy ?? false} waiting={receipt?.waiting ?? false} shop={shop} prefs={prefs} onClose={() => setReceipt(null)} />
       <TillSettingsDialog
         open={panel === "settings"}
         onOpenChange={(open) => setPanel(open ? "settings" : null)}
@@ -366,18 +332,6 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
         tillCode={till.code}
         cashierName={cashier.name}
         openedAt={shift.openedAt}
-      />
-      <CloseShiftDialog
-        open={panel === "close"}
-        onOpenChange={(open) => setPanel(open ? "close" : null)}
-        shift={shift}
-        shop={shop}
-        paper={prefs.paper}
-        onClosed={() => {
-          setPanel(null);
-          saveLastReceipt(till.code, null);
-          onShiftClosed();
-        }}
       />
     </div>
   );

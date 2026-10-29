@@ -24,6 +24,11 @@ export function tillError(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status, headers: noStore });
 }
 
+/** An answer to the till, stamped with the server's clock so the till can tell which answer is newest. */
+export function tillJson(body: object): NextResponse {
+  return NextResponse.json({ ...body, serverTime: new Date().toISOString() }, { headers: noStore });
+}
+
 /**
  * The signed-in till user for an API request, or the response to send
  * instead. Requests that change anything must also come from the till's own page.

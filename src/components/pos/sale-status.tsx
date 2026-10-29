@@ -1,56 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { CloudOff, Printer } from "lucide-react";
+import { useEffect } from "react";
+import { CloudUpload, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/feedback";
 import { formatMoney } from "@/lib/money";
 import type { ReceiptData } from "@/lib/pos-till";
 import { PrintArea, ReceiptDocument, type ShopDetails } from "./receipt";
-import type { TillFailure } from "./till-api";
-import type { PendingSale, TillPrefs } from "./till-storage";
+import type { TillPrefs } from "./till-storage";
 
+/** A sale just paid for, on its way to the shop's system while the customer is still there. */
 export type SendState =
-  | { status: "sending" }
-  | { status: "failed"; message: string; kind: TillFailure }
-  | { status: "rejected"; message: string; shiftClosed: boolean };
+  | { status: "sending"; receiptNumber: string }
+  | { status: "rejected"; entryId: string; receiptNumber: string; message: string; shiftClosed: boolean; serverTime: string };
 
 const blockClose = (event: Event) => event.preventDefault();
 
-interface PendingSaleDialogProps {
-  pending: PendingSale | null;
+interface SendingDialogProps {
   state: SendState | null;
-  onRetry: () => void;
   /** The server refused the sale: go back to it to put it right. */
   onBack: () => void;
-  /** Give up on a sale that could not be sent. */
-  onCancel: () => void;
   /** The shift was closed (by a manager, elsewhere): go back to opening one. */
   onShiftEnded: () => void;
 }
 
-/** A paid sale on its way to the shop's system. It cannot be dismissed while its fate is unknown. */
-export function PendingSaleDialog({ pending, state, onRetry, onBack, onCancel, onShiftEnded }: PendingSaleDialogProps) {
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const open = pending !== null && state !== null;
-  const number = pending?.upload.receiptNumber ?? "";
-  const waitingForConnection = state?.status === "failed" && state.kind === "offline";
-
-  // Sent again by itself as soon as the device is back online.
-  useEffect(() => {
-    if (!waitingForConnection) return;
-    window.addEventListener("online", onRetry);
-    return () => window.removeEventListener("online", onRetry);
-  }, [waitingForConnection, onRetry]);
-
+/**
+ * Shown for the few seconds a paid sale takes to reach the shop's system,
+ * and when the system refuses it while the customer is still at the counter.
+ * A sale that cannot be sent waits on the till instead (see the receipt).
+ */
+export function SendingDialog({ state, onBack, onShiftEnded }: SendingDialogProps) {
   return (
-    <Dialog open={open}>
-      {open ? (
+    <Dialog open={state !== null}>
+      {state ? (
         <DialogContent
           hideClose
-          title={state.status === "sending" ? "Saving the sale" : state.status === "rejected" ? "The sale was not accepted" : "The sale has not been saved yet"}
+          title={state.status === "sending" ? "Saving the sale" : "The sale was not accepted"}
           className="max-w-md"
           onEscapeKeyDown={blockClose}
           onPointerDownOutside={blockClose}
@@ -58,9 +44,9 @@ export function PendingSaleDialog({ pending, state, onRetry, onBack, onCancel, o
         >
           {state.status === "sending" ? (
             <p role="status" className="flex items-center gap-3 text-sm text-ink-muted">
-              <Spinner className="text-brand-700" label="Saving" /> Sending receipt {number} to the shop&apos;s system.
+              <Spinner className="text-brand-700" label="Saving" /> Sending receipt {state.receiptNumber} to the shop&apos;s system.
             </p>
-          ) : state.status === "rejected" ? (
+          ) : (
             <div className="space-y-4">
               <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {state.message}
@@ -81,36 +67,6 @@ export function PendingSaleDialog({ pending, state, onRetry, onBack, onCancel, o
                 </>
               )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div role="alert" className="flex gap-3 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
-                <CloudOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <p>{state.message}</p>
-              </div>
-              <p className="text-sm text-ink-muted">
-                Receipt {number} for {formatMoney(pending.receipt.totalMinor)} is kept on this till. The customer has paid, so keep trying until it goes through.
-              </p>
-              {state.kind === "signed-out" ? (
-                <Button asChild size="lg" className="w-full">
-                  <Link href="/pos/login">Sign in again</Link>
-                </Button>
-              ) : (
-                <Button size="lg" className="w-full" onClick={onRetry} autoFocus>
-                  Try again
-                </Button>
-              )}
-              <Button
-                variant={confirmCancel ? "danger" : "ghost"}
-                className="w-full"
-                onClick={() => {
-                  if (!confirmCancel) return setConfirmCancel(true);
-                  setConfirmCancel(false);
-                  onCancel();
-                }}
-              >
-                {confirmCancel ? "Cancel it: the customer did not pay" : "Cancel this sale"}
-              </Button>
-            </div>
           )}
         </DialogContent>
       ) : null}
@@ -122,12 +78,14 @@ interface ReceiptDialogProps {
   receipt: ReceiptData | null;
   /** A reprint of an earlier receipt, marked as a copy. */
   copy: boolean;
+  /** The sale is saved on the till and goes to the shop's system once the connection is back. */
+  waiting: boolean;
   shop: ShopDetails;
   prefs: TillPrefs;
   onClose: () => void;
 }
 
-export function ReceiptDialog({ receipt, copy, shop, prefs, onClose }: ReceiptDialogProps) {
+export function ReceiptDialog({ receipt, copy, waiting, shop, prefs, onClose }: ReceiptDialogProps) {
   const autoPrint = receipt !== null && !copy && prefs.autoPrint;
   useEffect(() => {
     if (!autoPrint) return;
@@ -146,6 +104,12 @@ export function ReceiptDialog({ receipt, copy, shop, prefs, onClose }: ReceiptDi
                 <p className="text-xs font-semibold uppercase tracking-wider text-gold-700">Change to give</p>
                 <p className="font-display text-4xl font-extrabold tabular-nums text-brand-900">{formatMoney(receipt.changeMinor)}</p>
               </div>
+            ) : null}
+            {!copy && waiting ? (
+              <p role="status" className="flex gap-2 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+                <CloudUpload className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                Saved on this till. It goes to the shop&apos;s system by itself once the connection is back.
+              </p>
             ) : null}
             <div className="max-h-[50dvh] overflow-y-auto">
               <ReceiptDocument receipt={receipt} shop={shop} paper={prefs.paper} copy={copy} />

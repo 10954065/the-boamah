@@ -110,6 +110,14 @@ export const posSaleUploadSchema = z.object({
 
 export type PosSaleUpload = z.infer<typeof posSaleUploadSchema>;
 
+/** Why the server refused something from the till, when the till can act on it (for example by renumbering the receipt). */
+export type PosRejectReason = "shift-closed" | "receipt-used" | "other-cashier";
+
+/** What the server did with one uploaded sale. */
+export type PosSaleResult =
+  | { clientId: string; status: "recorded" | "duplicate"; saleId: string; receiptNumber: string; shortfall: boolean; priceDifference: boolean }
+  | { clientId: string; status: "rejected"; error: string; reason?: PosRejectReason; lastReceiptSeq?: number };
+
 export const posSyncSchema = z.object({
   sales: z.array(posSaleUploadSchema).min(1).max(POS_MAX_SALES_PER_UPLOAD),
 });
@@ -144,6 +152,19 @@ export type PosShiftClose = z.infer<typeof posShiftCloseSchema>;
 
 export type TenderTotals = Record<PosTenderCode, number>;
 
+/** A shift as the till sees it. */
+export interface PosShiftView {
+  clientId: string;
+  tillCode: string;
+  cashierId: string;
+  cashierName: string;
+  openedAt: string;
+  openingFloatMinor: number;
+  closedAt: string | null;
+  countedMinor: TenderTotals | null;
+  notes: string | null;
+}
+
 export interface ShiftSaleTotals {
   changeMinor: number;
   totalMinor: number;
@@ -158,6 +179,14 @@ export interface ShiftSummary {
   /** What should be at the till at close: cash includes the opening float. */
   expectedMinor: TenderTotals;
 }
+
+export type ShiftOpenResult =
+  | { status: "opened" | "duplicate"; shift: PosShiftView }
+  | { status: "rejected"; error: string; openShift: PosShiftView | null };
+
+export type ShiftCloseResult =
+  | { status: "closed" | "duplicate"; shift: PosShiftView; summary: ShiftSummary }
+  | { status: "rejected"; error: string };
 
 export function summariseShift(openingFloatMinor: number, sales: readonly ShiftSaleTotals[]): ShiftSummary {
   const payments = sales.flatMap((sale) => sale.payments);

@@ -2,29 +2,16 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { hasPermission, type RoleCode } from "@/lib/permissions";
-import { summariseShift, type PosShiftClose, type PosShiftOpen, type ShiftSummary, type TenderTotals } from "@/lib/pos";
+import {
+  summariseShift,
+  type PosShiftClose,
+  type PosShiftOpen,
+  type PosShiftView,
+  type ShiftCloseResult,
+  type ShiftOpenResult,
+  type ShiftSummary,
+} from "@/lib/pos";
 import { activeTill, checkTillClock, PosRejected } from "./common";
-
-/** A shift as the till sees it. */
-export interface PosShiftView {
-  clientId: string;
-  tillCode: string;
-  cashierId: string;
-  cashierName: string;
-  openedAt: string;
-  openingFloatMinor: number;
-  closedAt: string | null;
-  countedMinor: TenderTotals | null;
-  notes: string | null;
-}
-
-export type ShiftOpenResult =
-  | { status: "opened" | "duplicate"; shift: PosShiftView }
-  | { status: "rejected"; error: string; openShift: PosShiftView | null };
-
-export type ShiftCloseResult =
-  | { status: "closed" | "duplicate"; shift: PosShiftView; summary: ShiftSummary }
-  | { status: "rejected"; error: string };
 
 interface TillUser {
   id: string;

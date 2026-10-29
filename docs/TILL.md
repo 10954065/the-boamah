@@ -12,6 +12,19 @@ tablet.
 and Super Admins. A Super Admin gives someone the role in *Admin → Staff* after
 they have registered a normal account.
 
+## Set up the counter device once
+
+1. Open the till address in Chrome or Edge and sign in.
+2. Install it as an app: on a PC, press the install icon at the right of the
+   address bar (or *Menu → Install The Boamah's till*); on an Android tablet,
+   *Menu → Add to Home screen*. It then opens full screen from its own icon.
+3. Keep the till open for a minute while online. It saves the till, the
+   product list and the product photos on the device, so it keeps working when
+   the internet drops.
+
+Do not clear the browser's data for the till's address: sales waiting to be
+sent are kept there.
+
 ## Start of the day: open a shift
 
 1. Sign in with your own account.
@@ -64,10 +77,42 @@ Any receipt printer that Windows or Android can print to works.
 
 ## If the internet drops
 
-The top bar shows **Online** or **Offline**. A sale that has been paid but has
-not reached the shop's system stays on the till and is sent by itself when the
-connection returns (or press **Try again**). Do not cancel it: the customer has
-paid. Selling fully offline, with many sales waiting, comes in the next update.
+Carry on selling. The top bar shows **Online**, **Offline**, or **No
+connection** (the device has a network but cannot reach the shop's system).
+
+- **Sales:** each paid sale is saved on the till first. With no connection the
+  receipt shows straight away with *Saved on this till*, and the sale goes to
+  the shop's system by itself once the connection is back, oldest first.
+- **What is waiting:** the top bar shows a count such as **3 to send**. Press
+  it to see the list, when it last tried, and **Send now**.
+- **Prices and stock:** the till uses the product list it saved last; the
+  banner says what time that list is from. Stock on the website catches up as
+  soon as the sales are sent.
+- **Reloading or restarting the device** is fine: the till opens from the
+  device with the same shift and the sales still waiting.
+- **Opening and closing shifts** also work offline. A shift closed offline
+  shows a report worked out from the sales made on this till, marked *Worked
+  out on the till while offline*; the shop's system checks it once the close
+  is sent.
+- **Signing in and out needs the internet.** If a cashier signs out with sales
+  still waiting, those sales stay on the till and are sent the next time that
+  cashier signs in here.
+- **Three days at most.** A till that has not reached the shop's system for 3
+  days stops selling and asks to be connected. Nothing waiting on it is lost.
+- **One window.** The till runs in one window or tab at a time on a device. If
+  it is opened twice, the second window offers to take over.
+
+**Not accepted:** if the shop's system refuses something sent later (for
+example the till was switched off, or a manager closed the shift while the till
+was offline), it shows in red as **not accepted** with the reason. The money
+was taken, so it stays on the till for a manager: put the reason right, then
+press **Try again**. Only a manager can remove it.
+
+**Receipt number changed:** if two devices were ever used as the same till, a
+sale sent later can find its receipt number already taken. It is then saved
+under the next free number and the till says so (for example *Receipt
+T1-000123 was saved as T1-000130*). Give each device its own till to avoid
+this.
 
 ## End of the day: close the shift
 

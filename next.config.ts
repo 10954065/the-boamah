@@ -76,6 +76,8 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // The till is for staff only and must never appear in search results.
       ...(posHost ? [{ source: "/:path*", has: onPosHost, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : []),
+      // The till's offline helper is checked for updates on every visit.
+      { source: "/pos-sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }] },
     ];
   },
   async redirects() {
@@ -93,6 +95,8 @@ const nextConfig: NextConfig = {
             { source: "/pos/:path*", has: [{ type: "host" as const, value: siteHost }], destination: `https://${posHost}/pos/:path*`, permanent: false },
           ]
         : []),
+      // On its own address the till lives at /pos, the part of the site that works offline.
+      ...(posHost ? [{ source: "/", has: onPosHost, destination: "/pos", permanent: false }] : []),
     ];
   },
   async rewrites() {
@@ -100,9 +104,8 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: "/robots.txt", has: onPosHost, destination: "/pos-robots.txt" },
-        { source: "/", has: onPosHost, destination: "/pos" },
         {
-          source: "/:path((?!_next/|api/|images/|uploads/|pos/|pos$|pos-robots\\.txt$|icon\\.svg$).+)",
+          source: "/:path((?!_next/|api/|images/|uploads/|pos/|pos$|pos-robots\\.txt$|pos-sw\\.js$|pos-manifest\\.webmanifest$|icon\\.svg$).+)",
           has: onPosHost,
           destination: "/pos/:path",
         },

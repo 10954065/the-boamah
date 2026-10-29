@@ -7,7 +7,7 @@ import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode, t
 import { isWeighed, type ReceiptData, type ReceiptLine } from "@/lib/pos-till";
 import { formatQuantity, milliToDecimalString } from "@/lib/quantity";
 import { cn, formatDateTime } from "@/lib/utils";
-import type { PosShiftView } from "@/server/pos/shifts";
+import type { PosShiftView } from "@/lib/pos";
 import type { PaperWidth } from "./till-storage";
 
 /** The shop as printed on receipts and shift reports. */
@@ -139,8 +139,17 @@ export function differenceLabel(differenceMinor: number): string {
   return differenceMinor > 0 ? "Over by" : "Short by";
 }
 
+interface ShiftReportDocumentProps {
+  shift: PosShiftView;
+  summary: ShiftSummary;
+  shop: ShopDetails;
+  paper: PaperWidth;
+  /** Worked out on the till while offline, before the shop's system confirmed it. */
+  provisional?: boolean;
+}
+
 /** The end of shift report: what the sales took against what was counted. */
-export function ShiftReportDocument({ shift, summary, shop, paper }: { shift: PosShiftView; summary: ShiftSummary; shop: ShopDetails; paper: PaperWidth }) {
+export function ShiftReportDocument({ shift, summary, shop, paper, provisional }: ShiftReportDocumentProps) {
   const counted = shift.countedMinor ?? { CASH: 0, MOMO: 0, CARD: 0 };
   const difference = countDifferences(summary.expectedMinor, counted);
   return (
@@ -148,6 +157,7 @@ export function ShiftReportDocument({ shift, summary, shop, paper }: { shift: Po
       <ShopHeader shop={shop} />
       <Rule />
       <p className="text-center text-[1.1em] font-bold">Shift report</p>
+      {provisional ? <p className="text-center">Worked out on the till while offline</p> : null}
       <p>
         Till {shift.tillCode} · {shift.cashierName}
       </p>

@@ -233,9 +233,10 @@ Railway address instead:
 
 1. Shop service → *Variables*: `POS_HOST` = `the-boamah-production.up.railway.app`,
    and that address must **not** be in `REDIRECT_HOSTS`. Redeploy.
-2. The till is then at `https://the-boamah-production.up.railway.app`, and
-   `/pos` on the shop's domain forwards there. Sign-in on the till address is
-   trusted automatically, and the till is hidden from search engines.
+2. The till is then at `https://the-boamah-production.up.railway.app` (which
+   opens `/pos`), and `/pos` on the shop's domain forwards there. Sign-in on
+   the till address is trusted automatically, and the till is hidden from
+   search engines.
 
 **To move it to `pos.thebonlinegroceryshop.com` later** (Pro plan, or a second
 service running the same code): add that custom domain, set `POS_HOST` to it,
@@ -253,6 +254,14 @@ sell while offline; each sale carries an ID made on the till, so uploading it
 again never records it twice. A sale is never refused for stock (the goods
 have already left the shop): stock goes down to zero at most, and the missing
 quantity is kept on the sale as a shortfall for a manager to check.
+
+**Offline:** the till installs as an app (`public/pos-manifest.webmanifest`)
+and a service worker (`public/pos-sw.js`, production builds only) keeps the
+till page, its build files and product photos on the device. Sales, shift
+openings and closings wait in the browser's storage on that device and are
+sent in order when the connection is back. Nothing needs setting up on the
+server for this; clearing the browser's data for the till address deletes
+anything still waiting, so staff are told not to.
 
 ## What production needs
 

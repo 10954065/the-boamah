@@ -25,12 +25,15 @@ export default async function PosHomePage() {
     );
   }
 
+  // Read before the shift, so the till never takes this answer for newer than it is.
+  const renderedAt = new Date().toISOString();
   const [initialShift, settings] = await Promise.all([openShiftForTill(till.code), getStoreSettings()]);
   return (
     <TillApp
       till={till}
       cashier={{ id: user.id, name: user.name, canManage: hasPermission(user.role, "pos:manage") }}
       initialShift={initialShift}
+      renderedAt={renderedAt}
       shop={{ name: settings.storeName, address: settings.address, phone: settings.contactPhone }}
     />
   );

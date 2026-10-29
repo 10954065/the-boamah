@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Printer } from "lucide-react";
+import { CloudUpload, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input, Textarea } from "@/components/ui/input";
 import { formatMoney, parseDecimalToMinor } from "@/lib/money";
-import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode, type ShiftSummary } from "@/lib/pos";
+import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosShiftView, type PosTenderCode } from "@/lib/pos";
+import type { ShiftReport } from "@/lib/pos-outbox";
 import { cn } from "@/lib/utils";
-import type { PosShiftView } from "@/server/pos/shifts";
 import { differenceLabel, PrintArea, ShiftReportDocument, type ShopDetails } from "./receipt";
-import { failureOf, tillApi } from "./till-api";
 import type { PaperWidth } from "./till-storage";
 
 const COUNT_FIELDS: { method: PosTenderCode; label: string; hint: string }[] = [
@@ -19,40 +18,67 @@ const COUNT_FIELDS: { method: PosTenderCode; label: string; hint: string }[] = [
   { method: "CARD", label: "Card payments", hint: "The total on the card machine's end of day slip." },
 ];
 
+/** What the cashier counted at the end of the shift. */
+export interface ShiftCount {
+  countedCashMinor: number;
+  countedMomoMinor: number;
+  countedCardMinor: number;
+  notes: string | null;
+}
+
+/** A closed shift's report, and whether the shop's system has confirmed it yet. */
+export type CloseOutcome = { report: ShiftReport; confirmed: boolean } | { error: string };
+
 interface CloseShiftDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  shift: PosShiftView;
+  /** The shift being counted; the dialog is open while there is one. */
+  shift: PosShiftView | null;
   shop: ShopDetails;
   paper: PaperWidth;
-  /** Called once the shift is closed and the cashier has finished with the report. */
-  onClosed: () => void;
+  onSubmit: (shift: PosShiftView, count: ShiftCount) => Promise<CloseOutcome>;
+  /** Called when the cashier backs out or has finished with the report. */
+  onDone: () => void;
 }
 
 /**
  * Closing a shift: the cashier counts first (without seeing what is
- * expected), then sees the report of expected against counted.
+ * expected), then sees the report of expected against counted. With no
+ * connection the report comes from the sales made on this till, and the close
+ * is sent once the connection is back.
  */
-export function CloseShiftDialog({ open, onOpenChange, shift, shop, paper, onClosed }: CloseShiftDialogProps) {
-  const [report, setReport] = useState<{ shift: PosShiftView; summary: ShiftSummary } | null>(null);
+export function CloseShiftDialog({ shift, shop, paper, onSubmit, onDone }: CloseShiftDialogProps) {
+  const [result, setResult] = useState<{ report: ShiftReport; confirmed: boolean } | null>(null);
 
   function finish() {
-    setReport(null);
-    onClosed();
+    setResult(null);
+    onDone();
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (report && !next ? finish() : onOpenChange(next))}>
-      {open ? (
-        <DialogContent title={report ? "Shift closed" : "Close the shift"} description={report ? undefined : `${shift.cashierName}'s shift on till ${shift.tillCode}`} className="max-w-lg">
-          {report ? <ShiftReport report={report} shop={shop} paper={paper} onDone={finish} /> : <CountForm shift={shift} onClosed={setReport} />}
+    <Dialog open={shift !== null} onOpenChange={(open) => !open && finish()}>
+      {shift ? (
+        <DialogContent
+          title={result ? "Shift closed" : "Close the shift"}
+          description={result ? undefined : `${shift.cashierName}'s shift on till ${shift.tillCode}`}
+          className="max-w-lg"
+        >
+          {result ? (
+            <ShiftReportView report={result.report} confirmed={result.confirmed} shop={shop} paper={paper} onDone={finish} />
+          ) : (
+            <CountForm shift={shift} onSubmit={onSubmit} onClosed={setResult} />
+          )}
         </DialogContent>
       ) : null}
     </Dialog>
   );
 }
 
-function CountForm({ shift, onClosed }: { shift: PosShiftView; onClosed: (report: { shift: PosShiftView; summary: ShiftSummary }) => void }) {
+interface CountFormProps {
+  shift: PosShiftView;
+  onSubmit: CloseShiftDialogProps["onSubmit"];
+  onClosed: (result: { report: ShiftReport; confirmed: boolean }) => void;
+}
+
+function CountForm({ shift, onSubmit, onClosed }: CountFormProps) {
   const [counts, setCounts] = useState<Record<PosTenderCode, string>>({ CASH: "", MOMO: "", CARD: "" });
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,23 +91,11 @@ function CountForm({ shift, onClosed }: { shift: PosShiftView; onClosed: (report
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    try {
-      const [cash, momo, card] = parsed as number[];
-      const result = await tillApi.closeShift({
-        clientId: shift.clientId,
-        closedAt: new Date().toISOString(),
-        countedCashMinor: cash!,
-        countedMomoMinor: momo!,
-        countedCardMinor: card!,
-        notes: notes.trim() || null,
-      });
-      if (result.status === "rejected") setError(result.error);
-      else onClosed({ shift: result.shift, summary: result.summary });
-    } catch (failure) {
-      setError(failureOf(failure).message);
-    } finally {
-      setBusy(false);
-    }
+    const [cash, momo, card] = parsed as number[];
+    const outcome = await onSubmit(shift, { countedCashMinor: cash!, countedMomoMinor: momo!, countedCardMinor: card!, notes: notes.trim() || null });
+    setBusy(false);
+    if ("error" in outcome) setError(outcome.error);
+    else onClosed(outcome);
   }
 
   return (
@@ -127,12 +141,26 @@ function CountForm({ shift, onClosed }: { shift: PosShiftView; onClosed: (report
   );
 }
 
-function ShiftReport({ report, shop, paper, onDone }: { report: { shift: PosShiftView; summary: ShiftSummary }; shop: ShopDetails; paper: PaperWidth; onDone: () => void }) {
+interface ShiftReportViewProps {
+  report: ShiftReport;
+  confirmed: boolean;
+  shop: ShopDetails;
+  paper: PaperWidth;
+  onDone: () => void;
+}
+
+function ShiftReportView({ report, confirmed, shop, paper, onDone }: ShiftReportViewProps) {
   const { shift, summary } = report;
   const counted = shift.countedMinor ?? { CASH: 0, MOMO: 0, CARD: 0 };
   const difference = countDifferences(summary.expectedMinor, counted);
   return (
     <div className="space-y-4">
+      {confirmed ? null : (
+        <p role="status" className="flex gap-2 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+          <CloudUpload className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          Worked out on this till from the sales made here. The close is sent to the shop&apos;s system, which checks it, once the connection is back.
+        </p>
+      )}
       <p className="text-sm text-ink-muted">
         {summary.salesCount} {summary.salesCount === 1 ? "sale" : "sales"} for <strong className="text-ink">{formatMoney(summary.salesTotalMinor)}</strong>. Opening float{" "}
         {formatMoney(shift.openingFloatMinor)}.
@@ -173,7 +201,7 @@ function ShiftReport({ report, shop, paper, onDone }: { report: { shift: PosShif
         </Button>
       </div>
       <PrintArea>
-        <ShiftReportDocument shift={shift} summary={summary} shop={shop} paper={paper} />
+        <ShiftReportDocument shift={shift} summary={summary} shop={shop} paper={paper} provisional={!confirmed} />
       </PrintArea>
     </div>
   );
