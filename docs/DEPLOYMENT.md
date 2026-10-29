@@ -43,7 +43,7 @@ only works while the app is running, not while it is being built.
 2. In the same project: *Create → Database → PostgreSQL*.
 3. Shop service → *Settings → Networking → Generate Domain*. This gives an
    address like `https://the-boamah-production.up.railway.app`. A custom domain
-   can be added there later.
+   can be added there later (see *Custom domain* below).
 
 ### R2. Variables
 
@@ -66,6 +66,19 @@ follows the database if its password changes.
   pooler, so the one URL serves both the app and migrations.
 - `NEXT_PUBLIC_SITE_URL` is built into the pages. After changing it (for
   example when adding a custom domain), redeploy.
+- **Custom domain** (the shop uses `thebonlinegroceryshop.com`):
+  1. Shop service → *Settings → Networking → Custom Domain*: add the domain and
+     `www.` the domain. Railway shows one DNS record for each.
+  2. At the DNS provider (Name.com here), add them: for `www` a CNAME; for the
+     root domain an ANAME/ALIAS record (or CNAME flattening), since a plain
+     CNAME is not allowed at the root. Railway issues the HTTPS certificates
+     once the records resolve.
+  3. Set `NEXT_PUBLIC_SITE_URL` and `BETTER_AUTH_URL` to `https://` the domain,
+     and `REDIRECT_HOSTS` to the old Railway address
+     (`the-boamah-production.up.railway.app`), then redeploy. `www.` and every
+     address in `REDIRECT_HOSTS` then redirect to the main domain (except
+     `/api`, so webhooks and the scheduled job keep working everywhere).
+  4. Update the Paystack webhook URL to the new domain.
 - Do **not** set `PAYMENTS_MOCK`.
 
 ### R3. Deploy settings

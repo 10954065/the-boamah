@@ -29,6 +29,23 @@ const securityHeaders = [
     : []),
 ];
 
+// Other names for the same site (www., plus REDIRECT_HOSTS such as the Railway
+// address) send visitors to the main address in NEXT_PUBLIC_SITE_URL: one
+// address for search engines, and sign-in only trusts its own origin. /api stays
+// reachable on every name so payment webhooks and the order-expiry job keep working.
+const siteHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "").host;
+  } catch {
+    return "";
+  }
+})();
+const aliasHosts = siteHost.startsWith("localhost")
+  ? []
+  : [siteHost.startsWith("www.") ? "" : `www.${siteHost}`, ...(process.env.REDIRECT_HOSTS ?? "").split(",")]
+      .map((host) => host.trim().toLowerCase())
+      .filter((host, index, all) => host && host !== siteHost && all.indexOf(host) === index);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   agentRules: false,
@@ -48,6 +65,14 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+  async redirects() {
+    return aliasHosts.map((host) => ({
+      source: "/:path((?!api/).*)",
+      has: [{ type: "host" as const, value: host }],
+      destination: `https://${siteHost}/:path`,
+      permanent: true,
+    }));
   },
 };
 
