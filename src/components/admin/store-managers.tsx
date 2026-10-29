@@ -311,6 +311,7 @@ export function StaffRoleForm() {
       </Field>
       <Field id="staff-role" label="Role">
         <Select id="staff-role" value={role} onChange={(e) => setRole(e.target.value)}>
+          <option value="CASHIER">Cashier (till only)</option>
           <option value="ORDER_MANAGER">Order Manager</option>
           <option value="INVENTORY_MANAGER">Inventory Manager</option>
           <option value="STORE_MANAGER">Store Manager</option>

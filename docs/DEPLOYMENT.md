@@ -219,6 +219,29 @@ If the Google password is changed or the access is removed in the Google
 account's security settings, runs fail with "the Google Drive copy failed"
 (the bucket copy is still made). Repeat steps 1 and 2 to reconnect.
 
+### R8. In-shop till (pos. subdomain)
+
+The till is part of the same app and database: it sells the same products,
+with the same photos, prices and stock. It lives at
+`https://pos.thebonlinegroceryshop.com` (the shop's domain with `pos.` in
+front; set `POS_HOST` only to use a different name).
+
+1. Shop service → *Settings → Networking → Custom Domain*: add
+   `pos.thebonlinegroceryshop.com`. For a domain bought through Railway the DNS
+   record is created automatically; otherwise add the CNAME Railway shows.
+2. No variables to change. Sign-in on the till address is trusted
+   automatically, and the till is hidden from search engines.
+3. Give staff the **Cashier** role in *Admin → Staff* (they register a normal
+   account first). Cashiers can only use the till; Store Managers and Super
+   Admins can use it too.
+
+The first till, **T1 "Front counter"**, is created by the database migration.
+Receipt numbers are issued on the till (T1-000001, T1-000002, …), so it can
+sell while offline; each sale carries an ID made on the till, so uploading it
+again never records it twice. A sale is never refused for stock (the goods
+have already left the shop): stock goes down to zero at most, and the missing
+quantity is kept on the sale as a shortfall for a manager to check.
+
 ## What production needs
 
 | Piece | Used for | Without it |

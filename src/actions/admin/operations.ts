@@ -6,6 +6,7 @@ import { fail, fromZod, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { parseDecimalToMinor } from "@/lib/money";
 import { ORDER_STATUSES } from "@/lib/order-status";
+import { ROLES } from "@/lib/permissions";
 import { parseDecimalToMilli } from "@/lib/quantity";
 import { recordAudit } from "@/server/audit";
 import { adjustStock, InsufficientStockError } from "@/server/inventory";
@@ -144,7 +145,7 @@ export async function setStaffRole(input: { email: string; role: string }): Prom
   return runAction("admin.staffRole", async () => {
     const actor = await authorize("staff:manage");
     const parsed = z
-      .object({ email: z.email().trim().toLowerCase(), role: z.enum(["CUSTOMER", "SUPER_ADMIN", "STORE_MANAGER", "INVENTORY_MANAGER", "ORDER_MANAGER"]) })
+      .object({ email: z.email().trim().toLowerCase(), role: z.enum(ROLES) })
       .safeParse(input);
     if (!parsed.success) return fail("Enter a valid email and role.");
     const target = await prisma.user.findUnique({ where: { email: parsed.data.email } });

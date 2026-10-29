@@ -9,6 +9,7 @@ export const ROLES = [
   "STORE_MANAGER",
   "INVENTORY_MANAGER",
   "ORDER_MANAGER",
+  "CASHIER",
 ] as const;
 
 export type RoleCode = (typeof ROLES)[number];
@@ -33,6 +34,9 @@ export const PERMISSIONS = [
   "staff:manage",
   "notifications:view",
   "audit:view",
+  // In-shop till (pos. subdomain): selling, and managing tills, shifts and voids.
+  "pos:sell",
+  "pos:manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -54,6 +58,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
     "customers:view",
     "notifications:view",
   ],
+  CASHIER: ["pos:sell"],
 };
 
 export const ROLE_LABELS: Record<RoleCode, string> = {
@@ -62,6 +67,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   STORE_MANAGER: "Store Manager",
   INVENTORY_MANAGER: "Inventory Manager",
   ORDER_MANAGER: "Order Manager",
+  CASHIER: "Cashier",
 };
 
 export function isRole(value: unknown): value is RoleCode {

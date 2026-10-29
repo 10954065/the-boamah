@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ChevronRight, Heart, LayoutDashboard, ShoppingBasket, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { CartLink } from "@/components/store/cart-drawer";
+import { hasPermission } from "@/lib/permissions";
+import { posUrl } from "@/lib/pos-host";
 import { getCartCount } from "@/server/cart";
 import { getActiveCategories } from "@/server/catalog";
 import { getCurrentUser } from "@/server/session";
@@ -47,12 +49,21 @@ async function AnnouncementBar() {
 export async function SiteHeader() {
   const [user, cartCount, categories] = await Promise.all([getCurrentUser(), getCartCount(), getActiveCategories()]);
 
+  // Staff who cannot open the admin (cashiers) get a link to the till instead.
+  const staffLink = !user?.isStaff
+    ? null
+    : hasPermission(user.role, "dashboard:view")
+      ? { href: "/admin", label: "Admin dashboard", short: "Admin" }
+      : hasPermission(user.role, "pos:sell")
+        ? { href: posUrl("/pos"), label: "Open the till", short: "Till" }
+        : null;
+
   const accountLinks = user
     ? [
         { href: "/account", label: "My account" },
         { href: "/account/orders", label: "My orders" },
         { href: "/account/wishlist", label: "Wishlist" },
-        ...(user.isStaff ? [{ href: "/admin", label: "Admin dashboard" }] : []),
+        ...(staffLink ? [{ href: staffLink.href, label: staffLink.label }] : []),
       ]
     : [
         { href: "/login", label: "Sign in" },
@@ -73,12 +84,12 @@ export async function SiteHeader() {
           <Logo compact />
           <SearchBox className="hidden min-w-0 flex-1 lg:block lg:max-w-2xl" />
           <nav aria-label="Account" className="ml-auto flex items-center gap-1 sm:gap-2">
-            {user?.isStaff ? (
+            {staffLink ? (
               <Link
-                href="/admin"
+                href={staffLink.href}
                 className="hidden h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink-muted hover:bg-soft hover:text-ink xl:flex"
               >
-                <LayoutDashboard className="h-4 w-4" aria-hidden="true" /> Admin
+                <LayoutDashboard className="h-4 w-4" aria-hidden="true" /> {staffLink.short}
               </Link>
             ) : null}
             <Link

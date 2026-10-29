@@ -37,6 +37,19 @@ describe("role permissions", () => {
     expect(hasPermission("ORDER_MANAGER", "reviews:manage")).toBe(false);
   });
 
+  test("cashiers can only sell at the till; managers can run it too", () => {
+    expect(isStaffRole("CASHIER")).toBe(true);
+    expect(hasPermission("CASHIER", "pos:sell")).toBe(true);
+    expect(hasPermission("CASHIER", "pos:manage")).toBe(false);
+    expect(hasPermission("CASHIER", "dashboard:view")).toBe(false);
+    expect(hasPermission("CASHIER", "inventory:adjust")).toBe(false);
+    expect(hasPermission("STORE_MANAGER", "pos:sell")).toBe(true);
+    expect(hasPermission("STORE_MANAGER", "pos:manage")).toBe(true);
+    expect(hasPermission("SUPER_ADMIN", "pos:manage")).toBe(true);
+    expect(hasPermission("ORDER_MANAGER", "pos:sell")).toBe(false);
+    expect(hasPermission("INVENTORY_MANAGER", "pos:sell")).toBe(false);
+  });
+
   test("unknown roles are denied", () => {
     expect(hasPermission("ADMIN", "dashboard:view")).toBe(false);
     expect(hasPermission(undefined, "dashboard:view")).toBe(false);

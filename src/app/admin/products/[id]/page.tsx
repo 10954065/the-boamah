@@ -59,6 +59,7 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
             id: v.id,
             name: v.name,
             sku: v.sku,
+            barcode: v.barcode ?? "",
             unit: v.unit as SellingUnitCode,
             price: minorToDecimalString(v.priceMinor),
             salePrice: v.salePriceMinor !== null ? minorToDecimalString(v.salePriceMinor) : "",

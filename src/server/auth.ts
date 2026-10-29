@@ -4,6 +4,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@/lib/db";
+import { posOrigin } from "@/lib/pos-host";
 import { sendPasswordResetEmail } from "@/server/notifications/account-emails";
 
 const ONE_DAY = 60 * 60 * 24;
@@ -11,6 +12,8 @@ const ONE_DAY = 60 * 60 * 24;
 export const auth = betterAuth({
   appName: "The Boamah's Online Grocery Shop",
   baseURL: process.env.BETTER_AUTH_URL,
+  // Cashiers sign in on the till subdomain; its session cookie stays on that host.
+  trustedOrigins: posOrigin() ? [posOrigin()] : [],
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {

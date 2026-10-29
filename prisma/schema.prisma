@@ -25,6 +25,7 @@ enum Role {
   STORE_MANAGER
   INVENTORY_MANAGER
   ORDER_MANAGER
+  CASHIER
 }
 
 enum UserStatus {
@@ -54,9 +55,11 @@ model User {
   statusChanges      OrderStatusHistory[]
   orderNotes         OrderNote[]
   auditLogs          AuditLog[]
-  cashPayments       Payment[]           @relation("PaymentRecordedBy")
+  cashPayments       Payment[]            @relation("PaymentRecordedBy")
   reviews            Review[]
   stockAlerts        StockAlert[]
+  posSales           PosSale[]            @relation("PosSaleCashier")
+  posShifts          PosShift[]           @relation("PosShiftCashier")
 
   @@index([role])
   @@index([createdAt])
@@ -226,6 +229,8 @@ model ProductVariant {
   product        Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   name           String
   sku            String              @unique
+  /// EAN/UPC (or the shop's own code) scanned at the till. Optional and unique.
+  barcode        String?             @unique
   unit           SellingUnit         @default(ITEM)
   priceMinor     Int
   salePriceMinor Int?
@@ -247,6 +252,7 @@ model ProductVariant {
   movements      InventoryMovement[]
   priceTiers     PriceTier[]
   stockAlerts    StockAlert[]
+  posSaleItems   PosSaleItem[]
 
   @@index([productId, sortOrder])
   @@index([stockMilli])
@@ -320,6 +326,7 @@ enum InventoryMovementType {
   CORRECTION
   ORDER_RESERVED
   ORDER_RELEASED
+  POS_SALE
 }
 
 model InventoryMovement {
@@ -332,15 +339,19 @@ model InventoryMovement {
   reason            String?
   orderId           String?
   order             Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  posSaleId         String?
+  posSale           PosSale?              @relation(fields: [posSaleId], references: [id], onDelete: SetNull)
   actorId           String?
   actor             User?                 @relation(fields: [actorId], references: [id], onDelete: SetNull)
   createdAt         DateTime              @default(now())
 
-  @@index([variantId, createdAt])
-  @@index([orderId])
   // One reservation and at most one release per order line: prevents stock
   // being deducted or restored twice on retries / duplicate webhooks.
   @@unique([orderId, variantId, type])
+  @@unique([posSaleId, variantId, type])
+  @@index([variantId, createdAt])
+  @@index([orderId])
+  @@index([posSaleId])
 }
 
 // ---------------------------------------------------------------------------
@@ -760,4 +771,131 @@ model NewsletterSubscriber {
   id        String   @id @default(cuid())
   email     String   @unique
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// In-shop point of sale (pos. subdomain)
+// ---------------------------------------------------------------------------
+// The till sells offline: sales, shifts and receipt numbers are created on
+// the device and uploaded later. Each carries a clientId generated on the
+// till, so an upload can be retried any number of times without duplicates.
+
+enum PosTender {
+  CASH
+  MOMO
+  CARD
+}
+
+enum PosSaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+model PosTill {
+  id             String   @id @default(cuid())
+  /// Printed in receipt numbers, e.g. "T1" in T1-000231.
+  code           String   @unique
+  name           String
+  isActive       Boolean  @default(true)
+  /// Highest receipt number seen from this till, so a reinstalled till
+  /// continues the sequence instead of reusing numbers.
+  lastReceiptSeq Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shifts PosShift[]
+  sales  PosSale[]
+}
+
+model PosShift {
+  id                String    @id @default(cuid())
+  clientId          String    @unique
+  tillId            String
+  till              PosTill   @relation(fields: [tillId], references: [id])
+  cashierId         String
+  cashier           User      @relation("PosShiftCashier", fields: [cashierId], references: [id])
+  openedAt          DateTime
+  openingFloatMinor Int
+  closedAt          DateTime?
+  // What the cashier counted at close. Expected amounts are worked out
+  // from the shift's sales when reporting, so they can never drift.
+  countedCashMinor  Int?
+  countedMomoMinor  Int?
+  countedCardMinor  Int?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sales PosSale[]
+
+  @@index([tillId, openedAt])
+  @@index([cashierId, openedAt])
+}
+
+model PosSale {
+  id                 String        @id @default(cuid())
+  clientId           String        @unique
+  /// Issued on the till, e.g. "T1-000231".
+  receiptNumber      String        @unique
+  tillId             String
+  till               PosTill       @relation(fields: [tillId], references: [id])
+  shiftId            String?
+  shift              PosShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  cashierId          String
+  cashier            User          @relation("PosSaleCashier", fields: [cashierId], references: [id])
+  status             PosSaleStatus @default(COMPLETED)
+  totalMinor         Int
+  paidMinor          Int
+  changeMinor        Int           @default(0)
+  /// More was sold than the recorded stock (usually while offline).
+  hasShortfall       Boolean       @default(false)
+  /// A line was charged at other than the shelf price for that time and quantity.
+  hasPriceDifference Boolean       @default(false)
+  /// The till's clock when the sale was made.
+  soldAt             DateTime
+  syncedAt           DateTime      @default(now())
+
+  items     PosSaleItem[]
+  payments  PosPayment[]
+  movements InventoryMovement[]
+
+  @@index([soldAt])
+  @@index([shiftId])
+  @@index([cashierId, soldAt])
+}
+
+model PosSaleItem {
+  id                 String          @id @default(cuid())
+  saleId             String
+  sale               PosSale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  variantId          String?
+  variant            ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  // Snapshot at the time of sale, like OrderItem.
+  productName        String
+  variantName        String
+  sku                String
+  unit               SellingUnit
+  quantityMilli      Int
+  /// What the customer was charged.
+  unitPriceMinor     Int
+  /// The shelf price for this quantity at soldAt, for comparison.
+  listUnitPriceMinor Int
+  lineTotalMinor     Int
+  /// Part of quantityMilli that was not in recorded stock.
+  shortfallMilli     Int             @default(0)
+
+  @@index([saleId])
+  @@index([variantId])
+}
+
+model PosPayment {
+  id          String    @id @default(cuid())
+  saleId      String
+  sale        PosSale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  method      PosTender
+  amountMinor Int
+  /// MoMo transaction ID or card approval code.
+  reference   String?
+
+  @@index([saleId])
 }

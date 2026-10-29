@@ -64,6 +64,14 @@ const variantSchema = z
     id: z.string().max(64).optional(),
     name: z.string().trim().min(1, "Enter a size or option name.").max(60),
     sku: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,40}$/, "SKU must be 3 to 40 letters, numbers or hyphens."),
+    // Scanned at the till. EAN/UPC numbers, or the shop's own code; blank means none.
+    barcode: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^(?:[A-Z0-9-]{4,40})?$/, "Barcode must be 4 to 40 letters, numbers or hyphens.")
+      .optional()
+      .transform((value) => value || null),
     unit: z.enum(SELLING_UNITS as [SellingUnitCode, ...SellingUnitCode[]]),
     price: money("Price"),
     salePrice: optionalMoney("Sale price"),
@@ -165,6 +173,7 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
           const fields = {
             name: variant.name,
             sku: variant.sku,
+            barcode: variant.barcode,
             unit: variant.unit,
             priceMinor: variant.price,
             salePriceMinor: variant.salePrice,
@@ -236,8 +245,16 @@ export async function saveProduct(input: ProductFormInput): Promise<ActionResult
       return ok({ id: productId }, "Product saved.");
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        const target = String(error.meta?.target ?? "");
-        return fail("Please check the highlighted fields.", target.includes("sku") ? { variants: "Each SKU must be unique." } : { slug: "Another product already uses this URL slug." });
+        // With the pg driver adapter the column name sits deeper in meta, so search all of it.
+        const detail = JSON.stringify(error.meta ?? {});
+        return fail(
+          "Please check the highlighted fields.",
+          detail.includes("barcode")
+            ? { variants: "Another product option already uses this barcode." }
+            : detail.includes("sku")
+              ? { variants: "Each SKU must be unique." }
+              : { slug: "Another product already uses this URL slug." },
+        );
       }
       throw error;
     }

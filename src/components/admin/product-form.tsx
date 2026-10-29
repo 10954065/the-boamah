@@ -23,6 +23,8 @@ export interface VariantDraft {
   id?: string;
   name: string;
   sku: string;
+  /** Scanned at the till; empty when the option has none. */
+  barcode: string;
   unit: SellingUnitCode;
   price: string;
   salePrice: string;
@@ -56,6 +58,7 @@ export interface ProductDraft {
 const emptyVariant = (): VariantDraft => ({
   name: "",
   sku: "",
+  barcode: "",
   unit: "ITEM",
   price: "",
   salePrice: "",
@@ -105,6 +108,7 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         id: v.id,
         name: v.name,
         sku: v.sku,
+        barcode: v.barcode,
         unit: v.unit,
         price: v.price,
         salePrice: v.salePrice || undefined,
@@ -199,6 +203,18 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
               </Field>
               <Field id={`${p}.sku`} label="SKU" required error={err(`${p}.sku`)}>
                 <Input {...fieldAria(`${p}.sku`, err(`${p}.sku`))} value={variant.sku} onChange={(e) => setVariant(index, { sku: e.target.value.toUpperCase() })} />
+              </Field>
+              <Field id={`${p}.barcode`} label="Barcode" hint="Scan the pack or type the number under the stripes." error={err(`${p}.barcode`)}>
+                <Input
+                  {...fieldAria(`${p}.barcode`, err(`${p}.barcode`))}
+                  autoComplete="off"
+                  value={variant.barcode}
+                  // A USB scanner types the code and presses Enter; keep that Enter from submitting the form.
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.preventDefault();
+                  }}
+                  onChange={(e) => setVariant(index, { barcode: e.target.value.toUpperCase() })}
+                />
               </Field>
               <Field id={`${p}.unit`} label="Sold by">
                 <Select id={`${p}.unit`} value={variant.unit} onChange={(e) => setVariant(index, { unit: e.target.value as SellingUnitCode })}>

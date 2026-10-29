@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { DEFAULT_SETTINGS } from "@/server/settings";
 
 const TABLES = [
+  "PosPayment", "PosSaleItem", "PosSale", "PosShift", "PosTill",
   "Review", "StockAlert", "PriceTier", "PaymentEvent", "Notification", "AuditLog", "InventoryMovement", "Payment", "CouponRedemption", "OrderNote",
   "OrderStatusHistory", "OrderItem", "Order", "CartItem", "Cart", "WishlistItem", "Address", "ProductImage",
   "ProductVariant", "_CouponProducts", "_CouponCategories", "Coupon", "Product", "Category", "DeliveryZone",
@@ -79,4 +80,13 @@ export function checkoutInput(overrides: Record<string, unknown> = {}) {
     expectedTotalMinor: 0,
     ...overrides,
   };
+}
+
+export async function createTill(code = "T1", isActive = true) {
+  return prisma.posTill.create({ data: { code, name: `Till ${code}`, isActive } });
+}
+
+export async function createStaff(role: "CASHIER" | "STORE_MANAGER" | "CUSTOMER" = "CASHIER") {
+  const id = randomUUID();
+  return prisma.user.create({ data: { id, name: `Staff ${id.slice(0, 6)}`, email: `${id.slice(0, 8)}@example.com`, role } });
 }

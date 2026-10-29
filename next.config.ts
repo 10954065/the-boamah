@@ -46,6 +46,14 @@ const aliasHosts = siteHost.startsWith("localhost")
       .map((host) => host.trim().toLowerCase())
       .filter((host, index, all) => host && host !== siteHost && all.indexOf(host) === index);
 
+// The in-shop till on its own subdomain (same rule as src/lib/pos-host.ts):
+// its pages are the app's /pos section, while /_next, /api, product images and
+// uploads are shared with the shop. Locally the till is simply at /pos.
+const posHost =
+  process.env.POS_HOST?.trim().toLowerCase() ||
+  (siteHost && !siteHost.startsWith("localhost") && !siteHost.startsWith("127.") ? `pos.${siteHost.replace(/^www\./, "")}` : "");
+const onPosHost = [{ type: "host" as const, value: posHost }];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   agentRules: false,
@@ -64,15 +72,42 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The till is for staff only and must never appear in search results.
+      ...(posHost ? [{ source: "/:path*", has: onPosHost, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : []),
+    ];
   },
   async redirects() {
-    return aliasHosts.map((host) => ({
-      source: "/:path((?!api/).*)",
-      has: [{ type: "host" as const, value: host }],
-      destination: `https://${siteHost}/:path`,
-      permanent: true,
-    }));
+    return [
+      ...aliasHosts.map((host) => ({
+        source: "/:path((?!api/).*)",
+        has: [{ type: "host" as const, value: host }],
+        destination: `https://${siteHost}/:path`,
+        permanent: true,
+      })),
+      // The till opens on its own address (its sign-in cookie lives there).
+      ...(posHost && siteHost
+        ? [
+            { source: "/pos", has: [{ type: "host" as const, value: siteHost }], destination: `https://${posHost}/pos`, permanent: false },
+            { source: "/pos/:path*", has: [{ type: "host" as const, value: siteHost }], destination: `https://${posHost}/pos/:path*`, permanent: false },
+          ]
+        : []),
+    ];
+  },
+  async rewrites() {
+    if (!posHost) return [];
+    return {
+      beforeFiles: [
+        { source: "/robots.txt", has: onPosHost, destination: "/pos-robots.txt" },
+        { source: "/", has: onPosHost, destination: "/pos" },
+        {
+          source: "/:path((?!_next/|api/|images/|uploads/|pos/|pos$|pos-robots\\.txt$|icon\\.svg$).+)",
+          has: onPosHost,
+          destination: "/pos/:path",
+        },
+      ],
+    };
   },
 };
 

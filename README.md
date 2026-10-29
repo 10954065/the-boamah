@@ -148,6 +148,7 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Yes | Public base URL, no trailing slash. Used in payment callbacks, canonical URLs, sitemap and emails. |
+| `POS_HOST` | No | Address of the in-shop till. Default: `pos.` plus the domain of `NEXT_PUBLIC_SITE_URL`; on localhost the till is at `/pos`. |
 | `REDIRECT_HOSTS` | No | Comma-separated other addresses of the same site (e.g. the Railway address) that redirect to `NEXT_PUBLIC_SITE_URL`. `www.` is redirected automatically. `/api` is never redirected. |
 | `DATABASE_URL` | Yes | PostgreSQL connection used by the app (pooled connection string in production). |
 | `DIRECT_DATABASE_URL` | Production | Direct (non-pooled) connection used only by Prisma migrations. Empty locally. |

@@ -51,8 +51,8 @@ export interface PriceTierRule {
  * Tiers that actually save money, cheapest-last, sorted by quantity. A tier
  * that is not below the regular/sale price is ignored.
  */
-export function usefulTiers(variant: PriceSource, tiers: readonly PriceTierRule[]): PriceTierRule[] {
-  const base = effectiveUnitPrice(variant);
+export function usefulTiers(variant: PriceSource, tiers: readonly PriceTierRule[], now: Date = new Date()): PriceTierRule[] {
+  const base = effectiveUnitPrice(variant, now);
   const sorted = tiers.filter((t) => t.minQtyMilli > 0 && t.unitPriceMinor > 0 && t.unitPriceMinor < base).toSorted((a, b) => a.minQtyMilli - b.minQtyMilli);
   // Drop tiers that ask for more but do not cost less than a smaller tier.
   const result: PriceTierRule[] = [];
@@ -63,9 +63,13 @@ export function usefulTiers(variant: PriceSource, tiers: readonly PriceTierRule[
   return result;
 }
 
-/** Unit price for a quantity: the best of the regular/sale price and any tier reached. */
-export function unitPriceForQuantity(variant: PriceSource, tiers: readonly PriceTierRule[], quantityMilli: number): number {
-  let price = effectiveUnitPrice(variant);
+/**
+ * Unit price for a quantity: the best of the regular/sale price and any tier
+ * reached. `now` decides whether a sale price applies (the till passes the
+ * time of the sale, which may be before an offline upload).
+ */
+export function unitPriceForQuantity(variant: PriceSource, tiers: readonly PriceTierRule[], quantityMilli: number, now: Date = new Date()): number {
+  let price = effectiveUnitPrice(variant, now);
   for (const tier of tiers) {
     if (quantityMilli >= tier.minQtyMilli && tier.unitPriceMinor > 0 && tier.unitPriceMinor < price) price = tier.unitPriceMinor;
   }
