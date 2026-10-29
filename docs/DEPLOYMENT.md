@@ -69,15 +69,17 @@ follows the database if its password changes.
 - **Custom domain** (the shop uses `thebonlinegroceryshop.com`):
   1. Shop service → *Settings → Networking → Custom Domain*: add the domain and
      `www.` the domain. Railway shows one DNS record for each.
-  2. At the DNS provider (Name.com here), add them: for `www` a CNAME; for the
-     root domain an ANAME/ALIAS record (or CNAME flattening), since a plain
-     CNAME is not allowed at the root. Railway issues the HTTPS certificates
-     once the records resolve.
+  2. DNS: this domain was bought through Railway, so Railway creates the
+     records itself (manage them at railway.com/workspace/domains). For a domain
+     bought elsewhere, add the records Railway shows at that DNS provider: a
+     CNAME for `www`, and an ANAME/ALIAS (or CNAME flattening) for the root,
+     since a plain CNAME is not allowed there. Railway issues the HTTPS
+     certificates once the records resolve.
   3. Set `NEXT_PUBLIC_SITE_URL` and `BETTER_AUTH_URL` to `https://` the domain,
-     and `REDIRECT_HOSTS` to the old Railway address
-     (`the-boamah-production.up.railway.app`), then redeploy. `www.` and every
-     address in `REDIRECT_HOSTS` then redirect to the main domain (except
-     `/api`, so webhooks and the scheduled job keep working everywhere).
+     then redeploy. `www.` and any address in `REDIRECT_HOSTS` then redirect to
+     the main domain (except `/api`, so webhooks and the scheduled job keep
+     working everywhere). The Railway address is not redirected here because it
+     is the till's address (R8).
   4. Update the Paystack webhook URL to the new domain.
 - Do **not** set `PAYMENTS_MOCK`.
 
@@ -222,15 +224,23 @@ account's security settings, runs fail with "the Google Drive copy failed"
 ### R8. In-shop till (pos. subdomain)
 
 The till is part of the same app and database: it sells the same products,
-with the same photos, prices and stock. It lives at
-`https://pos.thebonlinegroceryshop.com` (the shop's domain with `pos.` in
-front; set `POS_HOST` only to use a different name).
+with the same photos, prices and stock. Its address is `POS_HOST`; by default
+that is the shop's domain with `pos.` in front.
 
-1. Shop service → *Settings → Networking → Custom Domain*: add
-   `pos.thebonlinegroceryshop.com`. For a domain bought through Railway the DNS
-   record is created automatically; otherwise add the CNAME Railway shows.
-2. No variables to change. Sign-in on the till address is trusted
-   automatically, and the till is hidden from search engines.
+**Current set-up:** the Hobby plan allows 2 custom domains per service, and the
+shop uses both (the domain and `www.`). So the till uses the service's free
+Railway address instead:
+
+1. Shop service → *Variables*: `POS_HOST` = `the-boamah-production.up.railway.app`,
+   and that address must **not** be in `REDIRECT_HOSTS`. Redeploy.
+2. The till is then at `https://the-boamah-production.up.railway.app`, and
+   `/pos` on the shop's domain forwards there. Sign-in on the till address is
+   trusted automatically, and the till is hidden from search engines.
+
+**To move it to `pos.thebonlinegroceryshop.com` later** (Pro plan, or a second
+service running the same code): add that custom domain, set `POS_HOST` to it,
+and put the Railway address back in `REDIRECT_HOSTS`. Cashiers then sign in
+again once on the new address.
 3. Give staff the **Cashier** role in *Admin → Staff* (they register a normal
    account first). Cashiers can only use the till; Store Managers and Super
    Admins can use it too.
