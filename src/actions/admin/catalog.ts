@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { fail, fromZod, ok, type ActionResult } from "@/lib/action-result";
@@ -11,6 +10,7 @@ import { slugify } from "@/lib/utils";
 import { recordAudit } from "@/server/audit";
 import { authorize, runAction } from "@/server/session";
 import { isAllowedImageUrl, storeImage, UploadError } from "@/server/storage";
+import { refreshStorefront } from "@/server/storefront-cache";
 
 const money = (label: string) =>
   z.string().trim().refine((v) => parseDecimalToMinor(v) !== null, `${label} must be an amount like 12.50.`).transform((v) => parseDecimalToMinor(v)!);
@@ -120,9 +120,7 @@ const productSchema = z.object({
 
 export type ProductFormInput = z.input<typeof productSchema>;
 
-function refresh(): void {
-  revalidatePath("/", "layout");
-}
+const refresh = refreshStorefront;
 
 export async function saveProduct(input: ProductFormInput): Promise<ActionResult<{ id: string }>> {
   return runAction("admin.saveProduct", async () => {

@@ -398,6 +398,12 @@ are left out.
   must be lower than the shelf price; a sale price lower than a bulk price wins.
 - **Stock** changes only through orders and recorded adjustments (receipts,
   corrections, damage), each kept in the movement history with who made it.
+- **What shoppers see**: changes made in the admin (products, prices, stock
+  adjustments, categories, banners, settings, approved reviews) show on the
+  storefront straight away. Stock sold through orders can take up to a minute
+  to show on product pages, because the storefront reuses catalogue data for 60
+  seconds (`STOREFRONT_CACHE_SECONDS`). Checkout always checks live stock and
+  prices, so nothing can be oversold.
 - **Notifications** shows any failed email or SMS so the customer can be
   contacted another way.
 - **Audit log** records staff actions such as price changes, stock

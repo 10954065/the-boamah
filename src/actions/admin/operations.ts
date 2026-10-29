@@ -11,6 +11,7 @@ import { recordAudit } from "@/server/audit";
 import { adjustStock, InsufficientStockError } from "@/server/inventory";
 import { cancelOrder, OrderActionError, recordCashPayment, updateOrderStatus } from "@/server/orders/lifecycle";
 import { notifyBackInStock } from "@/server/stock-alerts";
+import { refreshStorefront } from "@/server/storefront-cache";
 import { authorize, runAction } from "@/server/session";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +42,7 @@ export async function changeStock(input: z.input<typeof stockSchema>): Promise<A
         return newBalance;
       });
       revalidatePath("/admin/inventory");
-      revalidatePath("/", "layout");
+      refreshStorefront();
       const told = delta > 0 ? await notifyBackInStock([parsed.data.variantId]) : 0;
       const message = told > 0 ? `Stock updated. ${told} waiting shopper${told === 1 ? " was" : "s were"} told it is back.` : "Stock updated.";
       return ok({ balanceMilli: balance }, message);
@@ -304,7 +305,7 @@ export async function saveBanner(input: z.input<typeof bannerSchema>): Promise<A
     const data = { ...d, eyebrow: d.eyebrow || null, subtitle: d.subtitle || null, ctaLabel: d.ctaLabel || null, ctaHref: d.ctaHref || null };
     const banner = id ? await prisma.promoBanner.update({ where: { id }, data }) : await prisma.promoBanner.create({ data });
     await recordAudit({ actorId: user.id, action: id ? "banner.update" : "banner.create", entityType: "PromoBanner", entityId: banner.id });
-    revalidatePath("/", "layout");
+    refreshStorefront();
     return ok(undefined, "Banner saved.");
   });
 }
@@ -315,7 +316,7 @@ export async function deleteBanner(input: { id: string }): Promise<ActionResult>
     const id = z.string().max(64).parse(input.id);
     await prisma.promoBanner.delete({ where: { id } });
     await recordAudit({ actorId: user.id, action: "banner.delete", entityType: "PromoBanner", entityId: id });
-    revalidatePath("/", "layout");
+    refreshStorefront();
     return ok(undefined, "Banner deleted.");
   });
 }
@@ -432,7 +433,7 @@ export async function saveSettings(input: SettingsInput): Promise<ActionResult> 
     }
     await prisma.storeSettings.upsert({ where: { id: "default" }, update: blankToNull, create: { id: "default", ...blankToNull } });
     await recordAudit({ actorId: user.id, action: "settings.update", entityType: "StoreSettings", entityId: "default", details: { fields: Object.keys(parsed.data) } });
-    revalidatePath("/", "layout");
+    refreshStorefront();
     return ok(undefined, "Settings saved.");
   });
 }

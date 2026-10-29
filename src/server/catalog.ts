@@ -5,6 +5,7 @@ import type { HeroProduct, ProductCardView, ProductDetailView, SortOption, Varia
 import { prisma } from "@/lib/db";
 import { effectiveUnitPrice, isSaleActive, usefulTiers } from "@/lib/pricing";
 import { clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
+import { storefrontCached } from "@/server/storefront-cache";
 
 export const PAGE_SIZE = 20;
 
@@ -116,7 +117,9 @@ export interface CategoryView {
   productCount: number;
 }
 
-export const getActiveCategories = cache(async (): Promise<CategoryView[]> => {
+export const getActiveCategories = cache((): Promise<CategoryView[]> => storefrontCached("categories", loadActiveCategories));
+
+async function loadActiveCategories(): Promise<CategoryView[]> {
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -130,7 +133,7 @@ export const getActiveCategories = cache(async (): Promise<CategoryView[]> => {
     imageUrl: c.imageUrl,
     productCount: c._count.products,
   }));
-});
+}
 
 export async function getCategoryBySlug(slug: string): Promise<CategoryView | null> {
   const categories = await getActiveCategories();
@@ -168,11 +171,17 @@ function escapeLike(value: string): string {
  * Lists published products using the default (or first active) variant's
  * effective price for price filters and sorting. Fully parameterised SQL.
  */
-export async function listProducts(query: ProductQuery): Promise<ProductPage> {
+export function listProducts(query: ProductQuery): Promise<ProductPage> {
   const pageSize = Math.min(Math.max(query.pageSize ?? PAGE_SIZE, 1), 60);
   const page = Math.max(1, Math.floor(query.page ?? 1));
-  const conditions: Prisma.Sql[] = [Prisma.sql`p.status = 'PUBLISHED'`];
   const term = query.q?.trim().slice(0, 100);
+  // The search is case-insensitive, so "Rice" and "rice" share one entry.
+  const key = JSON.stringify([term?.toLowerCase(), query.categorySlug, query.minPriceMinor, query.maxPriceMinor, query.inStockOnly, query.onSaleOnly, query.sort, page, pageSize]);
+  return storefrontCached(`list:${key}`, () => queryProducts(query, term, page, pageSize));
+}
+
+async function queryProducts(query: ProductQuery, term: string | undefined, page: number, pageSize: number): Promise<ProductPage> {
+  const conditions: Prisma.Sql[] = [Prisma.sql`p.status = 'PUBLISHED'`];
 
   if (term) {
     const pattern = `%${escapeLike(term.toLowerCase())}%`;
@@ -242,24 +251,28 @@ export async function listProducts(query: ProductQuery): Promise<ProductPage> {
 // Curated collections
 // ---------------------------------------------------------------------------
 
-export async function getFeaturedProducts(limit = 10): Promise<ProductCardView[]> {
-  const products = await prisma.product.findMany({
-    where: { ...publishedWhere, isFeatured: true },
-    include: cardInclude,
-    orderBy: { publishedAt: "desc" },
-    take: limit,
+export function getFeaturedProducts(limit = 10): Promise<ProductCardView[]> {
+  return storefrontCached(`featured:${limit}`, async () => {
+    const products = await prisma.product.findMany({
+      where: { ...publishedWhere, isFeatured: true },
+      include: cardInclude,
+      orderBy: { publishedAt: "desc" },
+      take: limit,
+    });
+    return withRatings(products.map(toCardView));
   });
-  return withRatings(products.map(toCardView));
 }
 
-export async function getNewArrivals(limit = 10): Promise<ProductCardView[]> {
-  const products = await prisma.product.findMany({
-    where: publishedWhere,
-    include: cardInclude,
-    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-    take: limit,
+export function getNewArrivals(limit = 10): Promise<ProductCardView[]> {
+  return storefrontCached(`new:${limit}`, async () => {
+    const products = await prisma.product.findMany({
+      where: publishedWhere,
+      include: cardInclude,
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: limit,
+    });
+    return withRatings(products.map(toCardView));
   });
-  return withRatings(products.map(toCardView));
 }
 
 const NEW_FOR_DAYS = 21;
@@ -269,7 +282,11 @@ const NEW_FOR_DAYS = 21;
  * newest first. A product added in the admin joins the rotation on the next
  * page load and starts in the opening grid because it is the newest.
  */
-export async function getHeroProducts(limit = 24): Promise<HeroProduct[]> {
+export function getHeroProducts(limit = 24): Promise<HeroProduct[]> {
+  return storefrontCached(`hero:${limit}`, () => loadHeroProducts(limit));
+}
+
+async function loadHeroProducts(limit: number): Promise<HeroProduct[]> {
   const products = await prisma.product.findMany({
     where: {
       status: "PUBLISHED",
@@ -298,7 +315,11 @@ export async function getOnSaleProducts(limit = 10): Promise<ProductCardView[]> 
 }
 
 /** Best sellers by quantity sold in non-cancelled orders over the last 90 days. */
-export async function getBestSellers(limit = 10): Promise<ProductCardView[]> {
+export function getBestSellers(limit = 10): Promise<ProductCardView[]> {
+  return storefrontCached(`bestsellers:${limit}`, () => loadBestSellers(limit));
+}
+
+async function loadBestSellers(limit: number): Promise<ProductCardView[]> {
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const rows = await prisma.$queryRaw<{ productId: string }[]>`
     SELECT oi."productId"
@@ -319,7 +340,9 @@ export async function getBestSellers(limit = 10): Promise<ProductCardView[]> {
 // Product detail
 // ---------------------------------------------------------------------------
 
-export const getProductBySlug = cache(async (slug: string): Promise<ProductDetailView | null> => {
+export const getProductBySlug = cache((slug: string): Promise<ProductDetailView | null> => storefrontCached(`product:${slug}`, () => loadProduct(slug)));
+
+async function loadProduct(slug: string): Promise<ProductDetailView | null> {
   const product = await prisma.product.findFirst({
     where: { slug, ...publishedWhere },
     include: {
@@ -351,23 +374,29 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     publishedAt: product.publishedAt?.toISOString() ?? null,
     updatedAt: product.updatedAt.toISOString(),
   };
-});
+}
 
-export async function getRelatedProducts(product: { id: string; categoryId: string }, limit = 6): Promise<ProductCardView[]> {
-  const products = await prisma.product.findMany({
-    where: { ...publishedWhere, categoryId: product.categoryId, id: { not: product.id } },
-    include: cardInclude,
-    orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-    take: limit,
+export function getRelatedProducts(product: { id: string; categoryId: string }, limit = 6): Promise<ProductCardView[]> {
+  return storefrontCached(`related:${product.id}:${product.categoryId}:${limit}`, async () => {
+    const products = await prisma.product.findMany({
+      where: { ...publishedWhere, categoryId: product.categoryId, id: { not: product.id } },
+      include: cardInclude,
+      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+      take: limit,
+    });
+    return withRatings(products.map(toCardView));
   });
-  return withRatings(products.map(toCardView));
 }
 
 /**
  * Products most often in the same order as this one (completed and active
  * orders only), most frequent first. Empty until there is order history.
  */
-export async function getBoughtTogether(productId: string, limit = 3): Promise<ProductCardView[]> {
+export function getBoughtTogether(productId: string, limit = 3): Promise<ProductCardView[]> {
+  return storefrontCached(`together:${productId}:${limit}`, () => loadBoughtTogether(productId, limit));
+}
+
+async function loadBoughtTogether(productId: string, limit: number): Promise<ProductCardView[]> {
   const rows = await prisma.$queryRaw<{ productId: string }[]>`
     SELECT other."productId"
     FROM "OrderItem" mine

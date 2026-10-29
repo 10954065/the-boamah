@@ -11,7 +11,7 @@ import { CheckoutError, checkoutSchema, createOrder, quoteCart } from "@/server/
 import { PaymentStartError, startPayment } from "@/server/payments/service";
 import { clientIp, rateLimit } from "@/server/rate-limit";
 import { getCurrentUser, runAction } from "@/server/session";
-import { getStoreSettings } from "@/server/settings";
+import { loadStoreSettings } from "@/server/settings";
 import { statusLabel } from "@/lib/order-status";
 import { formatDateTime } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ export async function quoteCheckout(input: z.input<typeof quoteInput>): Promise<
   return runAction("checkout.quote", async () => {
     const parsed = quoteInput.safeParse(input);
     if (!parsed.success) return fail("Invalid checkout details.");
-    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), getStoreSettings()]);
+    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), loadStoreSettings()]);
     if (!cart) return fail("Your cart is empty.");
     try {
       const quote = await quoteCart(
@@ -68,7 +68,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ redirec
     const parsed = checkoutSchema.safeParse(input);
     if (!parsed.success) return fromZod(parsed.error);
 
-    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), getStoreSettings()]);
+    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), loadStoreSettings()]);
     if (!cart) return fail("Your cart is empty.");
 
     let created;

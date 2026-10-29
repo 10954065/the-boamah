@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { recordAudit } from "@/server/audit";
 import { clientIp, rateLimit } from "@/server/rate-limit";
 import { findDeliveredOrderForProduct, reviewAuthorName } from "@/server/reviews";
+import { invalidateStorefront } from "@/server/storefront-cache";
 import { authorize, authorizeCustomer, runAction } from "@/server/session";
 
 const reviewSchema = z.object({
@@ -75,6 +76,8 @@ export async function moderateReview(input: z.input<typeof moderationSchema>): P
       entityType: "Review",
       entityId: review.id,
     });
+    // Approving or rejecting changes the stars shoppers see straight away.
+    invalidateStorefront();
     revalidatePath(`/products/${review.product.slug}`);
     revalidatePath("/admin/reviews");
     return ok(undefined, parsed.data.status === "APPROVED" ? "Review published." : "Review rejected.");

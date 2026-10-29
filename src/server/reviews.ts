@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { ReviewStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { storefrontCached } from "@/server/storefront-cache";
 import type { CurrentUser } from "@/server/session";
 
 export const REVIEWS_SHOWN = 10;
@@ -25,7 +26,9 @@ export interface ReviewSummary {
 }
 
 /** Approved reviews only: pending and rejected reviews are never shown publicly. */
-export const getReviewSummary = cache(async (productId: string): Promise<ReviewSummary> => {
+export const getReviewSummary = cache((productId: string): Promise<ReviewSummary> => storefrontCached(`reviews:${productId}`, () => loadReviewSummary(productId)));
+
+async function loadReviewSummary(productId: string): Promise<ReviewSummary> {
   const [groups, reviews] = await Promise.all([
     prisma.review.groupBy({ by: ["rating"], where: { productId, status: "APPROVED" }, _count: { _all: true } }),
     prisma.review.findMany({
@@ -42,7 +45,7 @@ export const getReviewSummary = cache(async (productId: string): Promise<ReviewS
   const count = distribution.reduce((sum, n) => sum + n, 0);
   const total = distribution.reduce((sum, n, i) => sum + n * (i + 1), 0);
   return { count, average: count ? Math.round((total / count) * 10) / 10 : 0, distribution, reviews };
-});
+}
 
 /** The customer's most recent delivered order that contained this product, if any. */
 export async function findDeliveredOrderForProduct(userId: string, productId: string): Promise<{ id: string } | null> {

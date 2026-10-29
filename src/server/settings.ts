@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { StoreSettings } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { storefrontCached } from "@/server/storefront-cache";
 
 export const SETTINGS_ID = "default";
 
@@ -41,11 +42,14 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   updatedAt: new Date(0),
 };
 
-/** Store settings for the current request (deduplicated per render). */
-export const getStoreSettings = cache(async (): Promise<StoreSettings> => {
+/** Store settings for pages: deduplicated per render and shared between shoppers for a short while. */
+export const getStoreSettings = cache((): Promise<StoreSettings> => storefrontCached("settings", loadStoreSettings));
+
+/** Store settings straight from the database, for checkout, which must act on the latest save. */
+export async function loadStoreSettings(): Promise<StoreSettings> {
   const settings = await prisma.storeSettings.findUnique({ where: { id: SETTINGS_ID } });
   return settings ?? DEFAULT_SETTINGS;
-});
+}
 
 export function adminNotificationEmails(settings: StoreSettings): string[] {
   return (settings.notifyAdminEmails ?? "")

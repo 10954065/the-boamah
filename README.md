@@ -162,6 +162,7 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 | `BLOB_READ_WRITE_TOKEN` | Production uploads (or `UPLOAD_DIR`) | Vercel Blob token. Takes priority over `UPLOAD_DIR`. |
 | `UPLOAD_DIR` | Production uploads (or Blob) | Folder on a persistent disk, e.g. `/data/uploads` on a Railway volume. With neither set, production image uploads are refused. |
 | `CRON_SECRET` | Yes | Bearer token for `/api/cron/expire-orders`, sent by Vercel Cron or `scripts/expire-orders.mjs`. |
+| `STOREFRONT_CACHE_SECONDS` | No | How long shared storefront data (catalogue, categories, banners, settings, reviews) is reused between shoppers. Default 60 in production, 0 (off) in development. Admin changes clear it at once. |
 
 ## Scripts
 
@@ -184,11 +185,11 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 ## Tests
 
 ```bash
-npm test                  # 57 unit tests: money, quantities, pricing, coupons, order states,
-                          # permissions, security helpers
-npm run test:integration  # 17 tests against a real Postgres: order creation, overselling, idempotency,
+npm test                  # 91 unit tests: money, quantities, pricing, coupons, order states,
+                          # permissions, security helpers, storefront cache
+npm run test:integration  # 22 tests against a real Postgres: order creation, overselling, idempotency,
                           # coupon limits, cancellation, cash, expiry, payment verification, webhooks
-npm run test:e2e          # 34 browser tests: storefront, search, cart, checkout (cash and mock online
+npm run test:e2e          # 52 browser tests: storefront, search, cart, checkout (cash and mock online
                           # payment), access control, layout at 320–1440 px on desktop and mobile
 ```
 
@@ -197,8 +198,10 @@ npm run test:e2e          # 34 browser tests: storefront, search, cart, checkout
 - E2E tests need a seeded database (`npm run db:seed`). Playwright starts its
   own dev server on port 3217 with mock payments enabled. To test an already
   running server instead, set `E2E_BASE_URL` (the checkout payment test then
-  needs `PAYMENTS_MOCK=true` on that server). Install the browser once with
-  `npx playwright install chromium`.
+  needs `PAYMENTS_MOCK=true` on that server). A production build reuses
+  storefront data for 60 seconds and several tests change the database
+  directly, so start such a server with `STOREFRONT_CACHE_SECONDS=0`. Install
+  the browser once with `npx playwright install chromium`.
 
 ## Staff roles
 
