@@ -186,9 +186,25 @@ storage costs a few cents a month.
 4. Point the shop's `DATABASE_URL` at the new database and redeploy.
 
 Test a restore once a month the same way, into a scratch database, so you know
-the backups work before you need them. Bucket storage is on Railway too; for
-protection against losing the Railway account itself, also download a monthly
-backup and keep it somewhere else.
+the backups work before you need them.
+
+**Off-site copy in Google Drive.** Bucket storage is on Railway too, so the job
+can also copy every backup to a Google Drive folder (default `boamah`, with
+`daily/` and `monthly/` inside). Copies older than the retention above are moved
+to the Drive bin. It uses rclone with the `drive.file` permission, which only
+lets it see the files it created, nothing else in the Drive.
+
+1. On a computer with a browser and rclone (or Docker), run
+   `rclone authorize drive eyJzY29wZSI6ImRyaXZlLmZpbGUifQ`
+   (the argument means `{"scope":"drive.file"}`), sign in with the Google
+   account that should hold the backups and allow access.
+2. Copy the token JSON it prints (between the paste markers) into a
+   `GDRIVE_TOKEN` variable on `db-backup`. Optionally set `GDRIVE_FOLDER`.
+3. Run the job once and check its log ends with `Copied to Google Drive: …`.
+
+If the Google password is changed or the access is removed in the Google
+account's security settings, runs fail with "the Google Drive copy failed"
+(the bucket copy is still made). Repeat steps 1 and 2 to reconnect.
 
 ## What production needs
 

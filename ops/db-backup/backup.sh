@@ -4,6 +4,8 @@
 #
 # Required: DATABASE_URL, BUCKET, ENDPOINT, ACCESS_KEY_ID, SECRET_ACCESS_KEY
 # Optional: REGION (default auto), KEEP_DAILY (default 14), KEEP_MONTHLY (default 12)
+# Optional off-site copy: GDRIVE_TOKEN (rclone OAuth token JSON, drive.file scope) copies each
+# backup into the Google Drive folder GDRIVE_FOLDER (default boamah) with the same retention.
 set -eu
 set -o pipefail
 
@@ -51,6 +53,25 @@ prune() {
 }
 prune daily "$KEEP_DAILY"
 prune monthly "$KEEP_MONTHLY"
+echo "Backup stored: daily/boamah-$stamp.sql.gz ($size bytes gzip, $tables tables)."
+
+# Off-site copy to Google Drive, so a backup survives even if the Railway account does not.
+# The drive.file scope lets rclone see only the files it created, nothing else in the Drive.
+if [ -n "${GDRIVE_TOKEN:-}" ]; then
+  # The remote is configured entirely from the environment; no config file is used.
+  export RCLONE_CONFIG=/dev/null RCLONE_CONFIG_GDRIVE_TYPE=drive RCLONE_CONFIG_GDRIVE_SCOPE=drive.file RCLONE_CONFIG_GDRIVE_TOKEN="$GDRIVE_TOKEN"
+  folder="gdrive:${GDRIVE_FOLDER:-boamah}"
+  if ! {
+    rclone copyto "$file" "$folder/daily/boamah-$stamp.sql.gz" &&
+    { rclone lsf "$folder/monthly/boamah-$month.sql.gz" 2>/dev/null | grep -q . ||
+      rclone copyto "$file" "$folder/monthly/boamah-$month.sql.gz"; } &&
+    rclone delete "$folder/daily" --min-age "$((KEEP_DAILY + 1))d" &&
+    rclone delete "$folder/monthly" --min-age "$((KEEP_MONTHLY * 31 + 1))d"
+  }; then
+    echo "Stored in the bucket, but the Google Drive copy failed (is GDRIVE_TOKEN still valid?)." >&2
+    exit 1
+  fi
+  echo "Copied to Google Drive: ${GDRIVE_FOLDER:-boamah}/daily/boamah-$stamp.sql.gz"
+fi
 
 rm -f "$file"
-echo "Backup stored: daily/boamah-$stamp.sql.gz ($size bytes gzip, $tables tables)."
