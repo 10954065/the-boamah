@@ -32,6 +32,12 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
+// Every page is rendered on request, never at build time. Pages read the
+// catalogue and store settings, and hosts such as Railway only reach the
+// database once the app is running. Admin changes already refresh pages
+// through revalidatePath, so nothing relied on build-time pages.
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   themeColor: "#174d33",
   width: "device-width",

@@ -1,6 +1,7 @@
 import { sitemapIndex } from "@/server/sitemaps";
 
-export const revalidate = 3600;
+// Rendered on request: the build has no database access (see docs/DEPLOYMENT.md).
+export const dynamic = "force-dynamic";
 
 const escapeXml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
