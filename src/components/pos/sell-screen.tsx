@@ -56,6 +56,8 @@ import {
 } from "./till-storage";
 import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL, useHeldSales } from "./till-sync";
 import { useTillCatalog } from "./use-till-catalog";
+import { useWebsiteOrders } from "./use-website-orders";
+import { WebsiteOrdersBoard, WebsiteOrdersButton } from "./website-orders";
 
 export interface TillInfo {
   code: string;
@@ -91,6 +93,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [showOrders, setShowOrders] = useState(false);
   // Prices depend on the time (sale prices end), so the clock ticks and is fixed when payment starts.
   const [now, setNow] = useState(() => new Date());
   const [quantityTarget, setQuantityTarget] = useState<QuantityTarget | null>(null);
@@ -99,6 +102,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean; waiting: boolean } | null>(null);
   const [panel, setPanel] = useState<"sale" | "settings" | "hold" | "held" | "history" | null>(null);
   const heldCount = useHeldSales(till.code).length;
+  const websiteOrders = useWebsiteOrders();
 
   const sale = useMemo(() => priceSale(lines, now), [lines, now]);
   const results = useMemo(() => searchCatalog(catalog.items, query, categoryId), [catalog.items, query, categoryId]);
@@ -116,6 +120,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const endLookup = useCallback(() => {
     setQuery("");
     setCategoryId(null);
+    setShowOrders(false);
   }, []);
 
   const pick = useCallback(
@@ -330,7 +335,24 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
             onRetry={() => void refreshCatalog()}
             onPick={pick}
             now={now}
-            idle={<SaleCheck sale={sale} highlightId={highlightId} ready={catalog.status === "ready"} onEdit={editLine} />}
+            idle={
+              showOrders ? (
+                <WebsiteOrdersBoard queue={websiteOrders} paper={prefs.paper} />
+              ) : (
+                <SaleCheck sale={sale} highlightId={highlightId} ready={catalog.status === "ready"} onEdit={editLine} />
+              )
+            }
+            action={
+              <WebsiteOrdersButton
+                waiting={websiteOrders.waiting}
+                active={showOrders}
+                onClick={() => {
+                  setQuery("");
+                  setCategoryId(null);
+                  setShowOrders((showing) => !showing);
+                }}
+              />
+            }
           />
         </main>
         <aside className="hidden w-[clamp(17.5rem,30vw,22rem)] shrink-0 border-l border-line md:flex">

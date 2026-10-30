@@ -59,6 +59,32 @@ screen.
   barcode in *Admin → Products → (product) → Barcode*; a USB scanner can type
   it in.
 
+## Website orders
+
+Everything bought on the website lands on the till by itself, so it can be
+packed without opening the admin. The till needs an open shift and the internet
+for this; new orders appear within about 15 seconds and pop up a message.
+
+- **Website orders**, beside the search box, shows how many are waiting and
+  turns gold when there are any. Press it to see them; press it again to go back
+  to the sale.
+- Orders sit in four columns, longest waiting first: **To pack**, **Packing**,
+  **Ready** and **With the rider**. Each carries a green **Website** tag and its order number
+  (BMH...), so it is never taken for a till sale.
+- Press an order to open its pick list. Press **Start packing**, tick each item
+  as it goes in the bag, then press **Packed**. Packed stays off until every item
+  is ticked.
+- **Print packing slip** gives a slip marked WEBSITE ORDER to put with the bag.
+- When it leaves, press **Given to the rider** or **Customer has collected it**.
+  A delivery stays under **With the rider** until you press **Delivered to the
+  customer**. The steps along the top of the pick list show how far it has got.
+  The customer is told at each step, and the order's history shows who did it.
+- If the order says **Customer pays**, take that money when you hand it over.
+  Website money is not part of the till's cash count, so record it in
+  *Admin → Orders → (order) → Record cash* and keep it apart from the drawer.
+- An item is missing, or the customer changes their mind? Cancelling and refunds
+  are in *Admin → Orders*. Ask a manager.
+
 ## Taking payment
 
 Press **Charge** (or **F4**).

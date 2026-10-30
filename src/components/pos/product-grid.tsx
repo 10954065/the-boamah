@@ -33,11 +33,13 @@ interface ProductGridProps {
   now: Date;
   /** Shown while nothing is being looked up, so the whole shop is not piled on the screen. */
   idle: ReactNode;
+  /** Sits beside the search box. */
+  action: ReactNode;
 }
 
 /** The search box and, once something is typed or a category is opened, the matching products. */
 export function ProductGrid(props: ProductGridProps) {
-  const { results, categories, categoryId, onCategory, query, onQuery, onSubmitSearch, searchRef, status, error, onRetry, onPick, now, idle } = props;
+  const { results, categories, categoryId, onCategory, query, onQuery, onSubmitSearch, searchRef, status, error, onRetry, onPick, now, idle, action } = props;
   const lookingUp = query.trim() !== "" || categoryId !== null;
 
   function submit(event: FormEvent) {
@@ -48,21 +50,24 @@ export function ProductGrid(props: ProductGridProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="space-y-1.5 border-b border-line bg-surface p-2">
-        <form onSubmit={submit} role="search" className="relative">
-          <ScanBarcode className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
-          <input
-            ref={searchRef}
-            type="search"
-            autoFocus
-            autoComplete="off"
-            enterKeyHint="enter"
-            aria-label="Search products or scan a barcode"
-            placeholder="Search products or scan a barcode (F2)"
-            value={query}
-            onChange={(event) => onQuery(event.target.value)}
-            className="h-10 w-full rounded-md border border-line-strong bg-surface pl-9 pr-3 text-base text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-          />
-        </form>
+        <div className="flex gap-1.5">
+          <form onSubmit={submit} role="search" className="relative min-w-0 flex-1">
+            <ScanBarcode className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+            <input
+              ref={searchRef}
+              type="search"
+              autoFocus
+              autoComplete="off"
+              enterKeyHint="enter"
+              aria-label="Search products or scan a barcode"
+              placeholder="Search products or scan a barcode (F2)"
+              value={query}
+              onChange={(event) => onQuery(event.target.value)}
+              className="h-10 w-full rounded-md border border-line-strong bg-surface pl-9 pr-3 text-base text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </form>
+          {action}
+        </div>
         {/* Swiped sideways on a phone; a mouse cannot do that, so larger screens show every category. */}
         <div className="scrollbar-none -mx-2 flex gap-1 overflow-x-auto px-2 md:flex-wrap" role="group" aria-label="Categories">
           {categories.map((category) => (

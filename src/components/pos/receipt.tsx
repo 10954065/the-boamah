@@ -37,7 +37,7 @@ function Rule() {
   return <div className="my-[1.5mm] border-t border-dashed border-black" />;
 }
 
-function Paper({ paper, children }: { paper: PaperWidth; children: ReactNode }) {
+export function Paper({ paper, children }: { paper: PaperWidth; children: ReactNode }) {
   return (
     <div className="mx-auto bg-white leading-snug text-black" style={PAPER[paper]}>
       {children}

@@ -11,6 +11,8 @@ import type {
 } from "@/lib/pos-returns";
 import type { OutboxApi, SyncFailure, TillFailure } from "@/lib/pos-sync";
 import type { PosCatalogItem } from "@/lib/pos-till";
+import type { OrderStatusCode } from "@/lib/order-status";
+import type { TillOrder } from "@/lib/pos-orders";
 
 export type { TillFailure } from "@/lib/pos-sync";
 
@@ -71,6 +73,8 @@ export const tillOnlineApi = {
   voidSale: (input: PosVoidInput) => request<Stamped<PosVoidResult>>("/api/pos/voids", input),
   returnItems: (input: PosReturnInput) => request<Stamped<PosReturnResult>>("/api/pos/returns", input),
   recordRemoval: (input: PosRemovalInput) => request<Stamped<PosRemovalResult>>("/api/pos/removals", input),
+  websiteOrders: () => request<Stamped<{ orders: TillOrder[] }>>("/api/pos/orders"),
+  moveWebsiteOrder: (input: { orderId: string; to: OrderStatusCode }) => request<Stamped<{ orders: TillOrder[] }>>("/api/pos/orders", input),
 };
 
 export function failureOf(error: unknown): SyncFailure {
