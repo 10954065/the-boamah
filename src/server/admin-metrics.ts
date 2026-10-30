@@ -3,11 +3,23 @@ import type { FulfilmentMethod, OrderStatus, PaymentMethod, PaymentStatus } from
 import { prisma } from "@/lib/db";
 import { countCustomers } from "@/server/customers";
 
+const DAY_MS = 86_400_000;
+
+/** Website orders still being worked on, by where they are. */
+export const PIPELINE_STATUSES = ["PENDING_PAYMENT", "CONFIRMED", "PROCESSING", "READY", "OUT_FOR_DELIVERY"] as const;
+export type PipelineStatus = (typeof PIPELINE_STATUSES)[number];
+
 export interface DashboardMetrics {
   totalOrders: number;
-  awaitingProcessing: number;
   completedOrders: number;
   paidRevenueMinor: number;
+  paidOrders: number;
+  /** The same figures for the same length of time just before. */
+  previous: { totalOrders: number; paidRevenueMinor: number; paidOrders: number };
+  /** All open website orders by status, whenever they were placed. */
+  pipeline: Record<PipelineStatus, number>;
+  /** Paid revenue in the period: paid online, or cash on delivery collected. */
+  paidByMethod: { onlineMinor: number; cashOnDeliveryMinor: number };
   pendingOnline: { count: number; amountMinor: number };
   codOutstanding: { count: number; amountMinor: number };
   customers: number;
@@ -32,16 +44,20 @@ export interface DashboardMetrics {
  * orders; pending online payments and unpaid cash-on-delivery orders are
  * reported separately and never mixed into revenue.
  */
-export async function getDashboardMetrics(days: number): Promise<DashboardMetrics> {
-  const since = new Date(Date.now() - days * 86_400_000);
+export async function getDashboardMetrics(days: number, now = new Date()): Promise<DashboardMetrics> {
+  const since = new Date(now.getTime() - days * DAY_MS);
   const inRange = { createdAt: { gte: since } };
+  const before = { createdAt: { gte: new Date(since.getTime() - days * DAY_MS), lt: since } };
 
-  const [totalOrders, awaitingProcessing, completedOrders, paid, pendingOnline, codOutstanding, customers, lowStockRows, recentOrders, bestSellerRows, dailyRows] =
+  const [totalOrders, completedOrders, paid, previousOrders, previousPaid, pipelineRows, paidByMethodRows, pendingOnline, codOutstanding, customers, lowStockRows, recentOrders, bestSellerRows, dailyRows] =
     await Promise.all([
       prisma.order.count({ where: inRange }),
-      prisma.order.count({ where: { status: { in: ["CONFIRMED", "PROCESSING", "READY"] } } }),
       prisma.order.count({ where: { ...inRange, status: "DELIVERED" } }),
-      prisma.order.aggregate({ where: { ...inRange, paymentStatus: "PAID" }, _sum: { totalMinor: true } }),
+      prisma.order.aggregate({ where: { ...inRange, paymentStatus: "PAID" }, _sum: { totalMinor: true }, _count: true }),
+      prisma.order.count({ where: before }),
+      prisma.order.aggregate({ where: { ...before, paymentStatus: "PAID" }, _sum: { totalMinor: true }, _count: true }),
+      prisma.order.groupBy({ by: ["status"], where: { status: { in: [...PIPELINE_STATUSES] } }, _count: true }),
+      prisma.order.groupBy({ by: ["paymentMethod"], where: { ...inRange, paymentStatus: "PAID" }, _sum: { totalMinor: true } }),
       prisma.order.aggregate({ where: { status: "PENDING_PAYMENT" }, _sum: { totalMinor: true }, _count: true }),
       prisma.order.aggregate({
         where: { paymentMethod: "CASH_ON_DELIVERY", paymentStatus: "UNPAID", status: { not: "CANCELLED" } },
@@ -75,16 +91,24 @@ export async function getDashboardMetrics(days: number): Promise<DashboardMetric
   const byDay = new Map(dailyRows.map((r) => [r.day.toISOString().slice(0, 10), r]));
   const daily: DashboardMetrics["daily"] = [];
   for (let i = days - 1; i >= 0; i -= 1) {
-    const day = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+    const day = new Date(now.getTime() - i * DAY_MS).toISOString().slice(0, 10);
     const row = byDay.get(day);
     daily.push({ day, paidMinor: Number(row?.paidMinor ?? 0), orders: Number(row?.orders ?? 0) });
   }
 
+  const pipeline = Object.fromEntries(PIPELINE_STATUSES.map((status) => [status, 0])) as Record<PipelineStatus, number>;
+  for (const row of pipelineRows) pipeline[row.status as PipelineStatus] = row._count;
+  const paidWith = (method: PaymentMethod) => paidByMethodRows.find((row) => row.paymentMethod === method)?._sum.totalMinor ?? 0;
+  const paidRevenueMinor = paid._sum.totalMinor ?? 0;
+
   return {
     totalOrders,
-    awaitingProcessing,
     completedOrders,
-    paidRevenueMinor: paid._sum.totalMinor ?? 0,
+    paidRevenueMinor,
+    paidOrders: paid._count,
+    previous: { totalOrders: previousOrders, paidRevenueMinor: previousPaid._sum.totalMinor ?? 0, paidOrders: previousPaid._count },
+    pipeline,
+    paidByMethod: { cashOnDeliveryMinor: paidWith("CASH_ON_DELIVERY"), onlineMinor: paidRevenueMinor - paidWith("CASH_ON_DELIVERY") },
     pendingOnline: { count: pendingOnline._count, amountMinor: pendingOnline._sum.totalMinor ?? 0 },
     codOutstanding: { count: codOutstanding._count, amountMinor: codOutstanding._sum.totalMinor ?? 0 },
     customers,

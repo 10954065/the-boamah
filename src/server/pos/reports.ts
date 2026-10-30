@@ -121,13 +121,28 @@ export async function tillReport(period: ReportPeriod): Promise<TillReport> {
   };
 }
 
-/** Till sales and refunds since a moment, for the dashboard. */
-export async function tillTakingsSince(since: Date): Promise<{ salesCount: number; salesTotalMinor: number; refundedMinor: number }> {
+/** Till sales and refunds from a moment (up to another, when given), for the dashboard. */
+export async function tillTakingsSince(since: Date, until?: Date): Promise<{ salesCount: number; salesTotalMinor: number; refundedMinor: number }> {
+  const period = { gte: since, ...(until ? { lt: until } : {}) };
   const [sales, refunds] = await Promise.all([
-    prisma.posSale.aggregate({ where: { status: "COMPLETED", soldAt: { gte: since } }, _count: { _all: true }, _sum: { totalMinor: true } }),
-    prisma.posReturn.aggregate({ where: { createdAt: { gte: since } }, _sum: { refundMinor: true } }),
+    prisma.posSale.aggregate({ where: { status: "COMPLETED", soldAt: period }, _count: { _all: true }, _sum: { totalMinor: true } }),
+    prisma.posReturn.aggregate({ where: { createdAt: period }, _sum: { refundMinor: true } }),
   ]);
   return { salesCount: sales._count._all, salesTotalMinor: sales._sum.totalMinor ?? 0, refundedMinor: refunds._sum.refundMinor ?? 0 };
+}
+
+/** Completed till sales per day (UTC, which is the shop's time) since a moment, before refunds, keyed "YYYY-MM-DD". */
+export async function tillSalesByDay(since: Date): Promise<Map<string, number>> {
+  const rows = await prisma.$queryRaw<{ day: string; total: bigint }[]>`
+    SELECT to_char("soldAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, sum("totalMinor")::bigint AS total
+    FROM "PosSale" WHERE status = 'COMPLETED' AND "soldAt" >= ${since}
+    GROUP BY 1`;
+  return new Map(rows.map((row) => [row.day, Number(row.total)]));
+}
+
+/** How many till sales, refunds and shifts are waiting for a manager to look at them. */
+export async function tillReviewCount(): Promise<number> {
+  return (await tillReviewQueue()).count;
 }
 
 // ---------------------------------------------------------------------------

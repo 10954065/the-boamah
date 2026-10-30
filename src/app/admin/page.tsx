@@ -1,17 +1,34 @@
 import Link from "next/link";
-import { AdminHeader, OrderStatusBadge, Panel, PaymentStatusBadge, StatCard, td, th } from "@/components/admin/ui";
+import { AlertTriangle, Banknote, ClipboardCheck, Clock, PackageOpen, ReceiptText, ShoppingBag, Store, TrendingUp, Users, Wallet } from "lucide-react";
+import { AttentionList, BestSellers, DashboardHero, KpiTile, LowStockList, MoneyMix, OrderPipeline, type AttentionItem } from "@/components/admin/dashboard/parts";
+import { SalesChart } from "@/components/admin/dashboard/sales-chart";
+import { OrderStatusBadge, Panel, PaymentStatusBadge, td, th } from "@/components/admin/ui";
+import { greeting, longDay, periodChange } from "@/lib/dashboard";
 import { formatMoney } from "@/lib/money";
-import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
-import { cn, formatDate, formatDateTime } from "@/lib/utils";
-import { getDashboardMetrics } from "@/server/admin-metrics";
 import { hasPermission } from "@/lib/permissions";
 import { dayString } from "@/lib/pos-report";
-import { tillTakingsSince } from "@/server/pos/reports";
+import { cn, formatDateTime } from "@/lib/utils";
+import { getDashboardMetrics } from "@/server/admin-metrics";
+import { tillReviewCount, tillSalesByDay, tillTakingsSince } from "@/server/pos/reports";
 import { requireStaffPage } from "@/server/session";
 
 export const metadata = { title: "Dashboard" };
 
 const RANGES = [7, 30, 90] as const;
+const DAY_MS = 86_400_000;
+
+async function tillFigures(since: Date, now: Date, days: number) {
+  const before = new Date(since.getTime() - days * DAY_MS);
+  const [current, previous, byDay, toReview] = await Promise.all([tillTakingsSince(since), tillTakingsSince(before, since), tillSalesByDay(since), tillReviewCount()]);
+  return {
+    takingsMinor: current.salesTotalMinor - current.refundedMinor,
+    previousMinor: previous.salesTotalMinor - previous.refundedMinor,
+    salesCount: current.salesCount,
+    byDay,
+    toReview,
+    period: new URLSearchParams({ from: dayString(since), to: dayString(now) }),
+  };
+}
 
 export default async function AdminDashboard({ searchParams }: PageProps<"/admin">) {
   const user = await requireStaffPage("dashboard:view");
@@ -19,148 +36,216 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
   const days = RANGES.find((r) => String(r) === params.days) ?? 30;
   const showTill = hasPermission(user.role, "pos:manage");
   const now = new Date();
-  const since = new Date(now.getTime() - days * 86_400_000);
-  const [m, till] = await Promise.all([getDashboardMetrics(days), showTill ? tillTakingsSince(since) : null]);
-  const tillPeriod = new URLSearchParams({ from: dayString(since), to: dayString(now) });
-  const maxDaily = Math.max(1, ...m.daily.map((d) => d.paidMinor));
+  const since = new Date(now.getTime() - days * DAY_MS);
+  const [m, till] = await Promise.all([getDashboardMetrics(days, now), showTill ? tillFigures(since, now, days) : null]);
+
+  const daily = m.daily.map((day) => ({ day: day.day, websiteMinor: day.paidMinor, tillMinor: till?.byDay.get(day.day) ?? 0, orders: day.orders }));
+  const today = daily.at(-1);
+  const salesMinor = m.paidRevenueMinor + (till?.takingsMinor ?? 0);
+  const previousSalesMinor = m.previous.paidRevenueMinor + (till?.previousMinor ?? 0);
+  const averageMinor = m.paidOrders ? Math.round(m.paidRevenueMinor / m.paidOrders) : 0;
+  const previousAverageMinor = m.previous.paidOrders ? Math.round(m.previous.paidRevenueMinor / m.previous.paidOrders) : 0;
+  const compared = `vs the ${days} days before`;
+  const toPack = m.pipeline.CONFIRMED + m.pipeline.PROCESSING;
+
+  const attention: AttentionItem[] = [
+    { label: "Orders to pack", detail: `${m.pipeline.CONFIRMED} new, ${m.pipeline.PROCESSING} being packed`, count: toPack, tone: "warning", icon: PackageOpen, href: "/admin/orders?status=CONFIRMED" },
+    {
+      label: "Cash on delivery to collect",
+      detail: `${formatMoney(m.codOutstanding.amountMinor)} still to come in`,
+      count: m.codOutstanding.count,
+      tone: "warning",
+      icon: Banknote,
+      href: "/admin/orders?payment=UNPAID",
+    },
+    {
+      label: "Waiting for online payment",
+      detail: `${formatMoney(m.pendingOnline.amountMinor)}, not counted as sales`,
+      count: m.pendingOnline.count,
+      tone: "info",
+      icon: Clock,
+      href: "/admin/orders?status=PENDING_PAYMENT",
+    },
+    { label: "Low stock", detail: "At or below their alert level", count: m.lowStock.length, tone: "danger", icon: AlertTriangle, href: "/admin/inventory?low=1" },
+    ...(till ? [{ label: "Till to review", detail: "Voids, refunds and counts that differ", count: till.toReview, tone: "info" as const, icon: ClipboardCheck, href: "/admin/till/review" }] : []),
+  ];
 
   return (
-    <>
-      <AdminHeader
-        title="Dashboard"
-        description={`Figures for the last ${days} days unless stated. Revenue counts verified payments only.`}
-        actions={
-          <nav aria-label="Date range" className="flex rounded-md border border-line bg-surface p-0.5">
-            {RANGES.map((range) => (
-              <Link
-                key={range}
-                href={`/admin?days=${range}`}
-                aria-current={range === days ? "true" : undefined}
-                className={cn("rounded px-3 py-1.5 text-sm font-medium", range === days ? "bg-brand-700 text-white" : "text-ink-muted hover:bg-soft")}
-              >
-                {range} days
-              </Link>
-            ))}
-          </nav>
-        }
+    <div className="space-y-6">
+      <DashboardHero
+        greeting={`${greeting(now)}, ${user.name.split(" ")[0]}`}
+        day={longDay(now)}
+        today={[
+          { label: "Sold today", value: formatMoney((today?.websiteMinor ?? 0) + (today?.tillMinor ?? 0)) },
+          { label: "Orders today", value: String(today?.orders ?? 0) },
+          { label: "To pack now", value: String(toPack) },
+          till ? { label: "Till today", value: formatMoney(today?.tillMinor ?? 0) } : { label: "Low stock", value: String(m.lowStock.length) },
+        ]}
       />
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Date range" className="flex rounded-xl border border-line bg-surface p-1 shadow-[var(--shadow-card)]">
+          {RANGES.map((range) => (
+            <Link
+              key={range}
+              href={`/admin?days=${range}`}
+              aria-current={range === days ? "true" : undefined}
+              className={cn(
+                "rounded-lg px-3.5 py-1.5 text-[13px] font-bold transition-colors",
+                range === days ? "bg-brand-700 text-white shadow-sm" : "text-ink-muted hover:bg-soft hover:text-ink",
+              )}
+            >
+              Last {range} days
+            </Link>
+          ))}
+        </nav>
+        <p className="text-[13px] font-medium text-ink-muted">Sales count verified payments only. Unpaid orders are listed apart.</p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Paid revenue" value={formatMoney(m.paidRevenueMinor)} hint="Verified online + recorded cash" tone="brand" />
-        <StatCard label="Orders" value={String(m.totalOrders)} hint={`${m.completedOrders} delivered / collected`} href="/admin/orders" />
-        <StatCard label="Awaiting processing" value={String(m.awaitingProcessing)} hint="Confirmed, being prepared or ready (all time)" tone={m.awaitingProcessing ? "warning" : "neutral"} href="/admin/orders?status=CONFIRMED" />
-        <StatCard label="Customers" value={String(m.customers)} hint="From checkout details" href="/admin/customers" />
-        <StatCard label="Awaiting online payment" value={formatMoney(m.pendingOnline.amountMinor)} hint={`${m.pendingOnline.count} order(s), not counted as revenue`} href="/admin/orders?status=PENDING_PAYMENT" />
-        <StatCard label="Cash on delivery outstanding" value={formatMoney(m.codOutstanding.amountMinor)} hint={`${m.codOutstanding.count} order(s) to collect`} tone={m.codOutstanding.count ? "warning" : "neutral"} href="/admin/orders?payment=UNPAID" />
-        <StatCard label="Low stock options" value={String(m.lowStock.length)} hint="At or below their alert level" tone={m.lowStock.length ? "danger" : "neutral"} href="/admin/inventory?low=1" />
+        <KpiTile
+          label={till ? "Total sales" : "Paid sales"}
+          value={formatMoney(salesMinor)}
+          icon={TrendingUp}
+          accent="brand"
+          change={periodChange(salesMinor, previousSalesMinor)}
+          compared={compared}
+          trend={daily.map((day) => day.websiteMinor + day.tillMinor)}
+        />
+        <KpiTile
+          label="Website orders"
+          value={String(m.totalOrders)}
+          icon={ShoppingBag}
+          accent="info"
+          change={periodChange(m.totalOrders, m.previous.totalOrders)}
+          compared={compared}
+          trend={daily.map((day) => day.orders)}
+          href="/admin/orders"
+        />
+        <KpiTile
+          label="Average paid order"
+          value={formatMoney(averageMinor)}
+          icon={ReceiptText}
+          accent="leaf"
+          change={periodChange(averageMinor, previousAverageMinor)}
+          compared={compared}
+          hint={`${m.paidOrders} paid, ${m.completedOrders} delivered or collected`}
+        />
         {till ? (
-          <StatCard
-            label="Till takings"
-            value={formatMoney(till.salesTotalMinor - till.refundedMinor)}
-            hint={`${till.salesCount} sale${till.salesCount === 1 ? "" : "s"} in the shop, less refunds`}
-            href={`/admin/till?${tillPeriod}`}
+          <KpiTile
+            label="Shop till takings"
+            value={formatMoney(till.takingsMinor)}
+            icon={Store}
+            accent="gold"
+            change={periodChange(till.takingsMinor, till.previousMinor)}
+            compared={compared}
+            trend={daily.map((day) => day.tillMinor)}
+            href={`/admin/till?${till.period}`}
           />
-        ) : null}
+        ) : (
+          <KpiTile label="Customers" value={String(m.customers)} icon={Users} accent="gold" hint="People who have ordered, from checkout details" href="/admin/customers" />
+        )}
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <Panel title="Paid revenue per day">
-          <figure>
-            <div className="flex h-44 items-end gap-[3px]" role="img" aria-label={`Bar chart of paid revenue per day for the last ${days} days`}>
-              {m.daily.map((d) => (
-                <div key={d.day} className="group relative flex h-full flex-1 items-end">
-                  <div
-                    className="w-full rounded-t-sm bg-brand-500 transition-colors group-hover:bg-brand-700"
-                    style={{ height: `${Math.max(d.paidMinor ? 4 : 1, (d.paidMinor / maxDaily) * 100)}%`, opacity: d.paidMinor ? 1 : 0.25 }}
-                  />
-                  <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 text-[11px] text-white group-hover:block">
-                    {formatDate(d.day)}: {formatMoney(d.paidMinor)} · {d.orders} order(s)
-                  </span>
-                </div>
-              ))}
-            </div>
-            <figcaption className="mt-2 flex justify-between text-xs text-ink-subtle">
-              <span>{formatDate(m.daily[0]?.day ?? new Date())}</span>
-              <span>Today</span>
-            </figcaption>
-          </figure>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Panel
+          title="Sales per day"
+          icon={TrendingUp}
+          description={till ? "Website orders paid and till sales, before refunds" : "Website orders paid"}
+          className="xl:col-span-2"
+        >
+          <SalesChart days={daily} showTill={Boolean(till)} />
         </Panel>
-
-        <Panel title="Best sellers">
-          {m.bestSellers.length === 0 ? (
-            <p className="text-sm text-ink-muted">No completed sales in this period yet.</p>
-          ) : (
-            <ol className="space-y-3 text-sm">
-              {m.bestSellers.map((item, index) => (
-                <li key={item.productId} className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-soft text-xs font-bold">{index + 1}</span>
-                  <Link href={`/admin/products/${item.productId}`} className="flex-1 truncate font-medium hover:text-brand-700">
-                    {item.name}
-                  </Link>
-                  <span className="tabular-nums text-ink-muted">{formatMoney(item.revenueMinor)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+        <Panel title="Needs your attention" icon={AlertTriangle}>
+          <AttentionList items={attention} />
         </Panel>
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <Panel title="Recent orders" actions={<Link href="/admin/orders" className="text-sm font-semibold text-brand-700 hover:underline">All orders</Link>}>
-          <div className="-m-5 overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm">
-              <thead className="border-b border-line">
-                <tr>
-                  <th scope="col" className={th}>Order</th>
-                  <th scope="col" className={th}>Customer</th>
-                  <th scope="col" className={th}>Status</th>
-                  <th scope="col" className={th}>Payment</th>
-                  <th scope="col" className={cn(th, "text-right")}>Total</th>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Panel
+          title="Website orders in the shop"
+          icon={PackageOpen}
+          description="Every open order, whenever it was placed"
+          className="xl:col-span-2"
+          actions={<PanelLink href="/admin/orders">All orders</PanelLink>}
+        >
+          <OrderPipeline
+            stages={[
+              { label: "To pack", detail: "Paid or cash on delivery", count: m.pipeline.CONFIRMED, href: "/admin/orders?status=CONFIRMED" },
+              { label: "Packing", detail: "Being put together", count: m.pipeline.PROCESSING, href: "/admin/orders?status=PROCESSING" },
+              { label: "Ready", detail: "For pickup or a rider", count: m.pipeline.READY, href: "/admin/orders?status=READY" },
+              { label: "On the road", detail: "With the rider", count: m.pipeline.OUT_FOR_DELIVERY, href: "/admin/orders?status=OUT_FOR_DELIVERY" },
+            ]}
+            footnote={
+              m.pipeline.PENDING_PAYMENT
+                ? `${m.pipeline.PENDING_PAYMENT} more ${m.pipeline.PENDING_PAYMENT === 1 ? "is" : "are"} waiting for online payment before packing.`
+                : undefined
+            }
+          />
+        </Panel>
+        <Panel title="Where the money came from" icon={Wallet} description={till ? `Last ${days} days, till after refunds` : `Last ${days} days`}>
+          <MoneyMix
+            parts={[
+              { label: "Paid online", minor: m.paidByMethod.onlineMinor, swatch: "bg-brand-500" },
+              ...(till ? [{ label: "Shop till", minor: till.takingsMinor, swatch: "bg-gold-500" }] : []),
+              { label: "Cash on delivery", minor: m.paidByMethod.cashOnDeliveryMinor, swatch: "bg-info" },
+            ]}
+          />
+        </Panel>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Best sellers" icon={TrendingUp} description={`Website orders, last ${days} days`}>
+          <BestSellers items={m.bestSellers} />
+        </Panel>
+        <Panel title="Low stock" icon={AlertTriangle} actions={<PanelLink href="/admin/inventory?low=1">Inventory</PanelLink>}>
+          <LowStockList items={m.lowStock} />
+        </Panel>
+      </div>
+
+      <Panel title="Recent orders" icon={ShoppingBag} actions={<PanelLink href="/admin/orders">All orders</PanelLink>} flush>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead className="border-b border-line bg-soft/60">
+              <tr>
+                <th scope="col" className={th}>Order</th>
+                <th scope="col" className={th}>Customer</th>
+                <th scope="col" className={th}>Status</th>
+                <th scope="col" className={th}>Payment</th>
+                <th scope="col" className={cn(th, "text-right")}>Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {m.recentOrders.map((order) => (
+                <tr key={order.id} className="transition-colors hover:bg-soft/50">
+                  <td className={td}>
+                    <Link href={`/admin/orders/${order.id}`} className="font-mono text-[13px] font-bold text-brand-700 hover:underline">
+                      {order.reference}
+                    </Link>
+                    <p className="text-xs font-medium text-ink-subtle">{formatDateTime(order.createdAt)}</p>
+                  </td>
+                  <td className={cn(td, "font-semibold")}>{order.customerName}</td>
+                  <td className={td}>
+                    <OrderStatusBadge status={order.status} method={order.fulfilmentMethod} />
+                  </td>
+                  <td className={td}>
+                    <PaymentStatusBadge status={order.paymentStatus} method={order.paymentMethod} />
+                  </td>
+                  <td className={cn(td, "text-right font-extrabold tabular-nums")}>{formatMoney(order.totalMinor)}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {m.recentOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td className={td}>
-                      <Link href={`/admin/orders/${order.id}`} className="font-mono text-[13px] font-semibold text-brand-700 hover:underline">
-                        {order.reference}
-                      </Link>
-                      <p className="text-xs text-ink-subtle">{formatDateTime(order.createdAt)}</p>
-                    </td>
-                    <td className={td}>{order.customerName}</td>
-                    <td className={td}>
-                      <OrderStatusBadge status={order.status} method={order.fulfilmentMethod} />
-                    </td>
-                    <td className={td}>
-                      <PaymentStatusBadge status={order.paymentStatus} method={order.paymentMethod} />
-                    </td>
-                    <td className={cn(td, "text-right font-semibold tabular-nums")}>{formatMoney(order.totalMinor)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-
-        <Panel title="Low stock" actions={<Link href="/admin/inventory?low=1" className="text-sm font-semibold text-brand-700 hover:underline">Inventory</Link>}>
-          {m.lowStock.length === 0 ? (
-            <p className="text-sm text-ink-muted">All products are above their low stock levels.</p>
-          ) : (
-            <ul className="space-y-2.5 text-sm">
-              {m.lowStock.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate">
-                    {item.productName} <span className="text-ink-subtle">· {item.variantName}</span>
-                  </span>
-                  <span className={cn("shrink-0 font-semibold tabular-nums", item.stockMilli === 0 ? "text-danger" : "text-warning")}>
-                    {item.stockMilli === 0 ? "Out of stock" : formatQuantity(item.stockMilli, item.unit as SellingUnitCode)}
-                  </span>
-                </li>
               ))}
-            </ul>
-          )}
-        </Panel>
-      </div>
-    </>
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function PanelLink({ href, children }: { href: string; children: string }) {
+  return (
+    <Link href={href} className="rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-brand-700 transition-colors hover:bg-brand-50">
+      {children}
+    </Link>
   );
 }

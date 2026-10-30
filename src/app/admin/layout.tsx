@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { AdminMobileNav, AdminSidebarNav, type AdminNavItem } from "@/components/admin/admin-nav";
+import { AdminMobileNav, AdminSidebarNav, AdminWhere, type AdminNavItem } from "@/components/admin/admin-nav";
+import { Initials } from "@/components/admin/ui";
 import { SignOutButton } from "@/components/account/account-forms";
 import { LogoMark } from "@/components/brand/logo";
 import { Alert } from "@/components/ui/feedback";
@@ -37,32 +38,46 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const items = NAV.filter((item) => hasPermission(user.role, item.permission)).map(({ href, label, group }) => ({ href, label, group }));
 
   return (
-    <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[248px_1fr]">
-      <aside className="sticky top-0 hidden h-dvh flex-col overflow-y-auto bg-brand-900 px-3 py-5 lg:flex print:hidden">
-        <Link href="/admin" className="mb-6 flex items-center gap-2.5 px-2">
-          <LogoMark className="h-9 w-9 ring-1 ring-brand-700" />
-          <span className="leading-tight">
-            <span className="block font-display text-[15px] font-extrabold text-white">The Boamah&rsquo;s</span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-leaf-400">Admin</span>
+    <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_1fr]">
+      <aside className="sticky top-0 hidden h-dvh flex-col bg-[linear-gradient(180deg,var(--color-brand-900)_0%,#0a2419_100%)] lg:flex print:hidden">
+        <div className="relative overflow-hidden px-5 pb-6 pt-6">
+          <span aria-hidden="true" className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-leaf-400/20 blur-3xl" />
+          <Link href="/admin" className="relative flex items-center gap-3">
+            <LogoMark className="h-11 w-11 rounded-xl ring-2 ring-white/10" />
+            <span className="leading-tight">
+              <span className="block font-display text-[17px] font-extrabold text-white">The Boamah&rsquo;s</span>
+              <span className="block text-[10.5px] font-bold uppercase tracking-[0.2em] text-gold-300">Admin panel</span>
+            </span>
+          </Link>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+          <AdminSidebarNav items={items} />
+        </div>
+        <Link href="/admin/account" className="m-3 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/10">
+          <Initials name={user.name} />
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[14px] font-bold text-white">{user.name}</span>
+            <span className="block truncate text-[12px] font-semibold text-brand-200">{ROLE_LABELS[user.role]}</span>
           </span>
         </Link>
-        <AdminSidebarNav items={items} />
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6 print:hidden">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md sm:px-6 lg:px-8 print:hidden">
           <AdminMobileNav items={items} />
-          <Link href="/admin/account" className="text-sm text-ink-muted hover:text-ink">
-            <span className="font-semibold text-ink">{user.name}</span> · {ROLE_LABELS[user.role]}
-          </Link>
+          <AdminWhere items={items} />
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/" className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-soft hover:text-ink sm:flex">
+            <Link href="/" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-soft hover:text-ink sm:flex">
               View store <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+            <Link href="/admin/account" aria-label={`My account: ${user.name}, ${ROLE_LABELS[user.role]}`} className="flex items-center gap-2 rounded-full p-0.5 pr-3 transition-colors hover:bg-soft lg:hidden">
+              <Initials name={user.name} small />
+              <span className="hidden text-sm font-bold sm:inline">{user.name.split(" ")[0]}</span>
             </Link>
             <SignOutButton />
           </div>
         </header>
-        <main id="main" className="px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main" className="px-4 py-6 font-medium sm:px-6 lg:px-8 lg:py-8">
           {settings.isSampleData ? (
             <Alert tone="warning" title="This store contains sample data" className="mb-6">
               Products, prices, stock, delivery zones and policies were created for demonstration. Replace them with verified
