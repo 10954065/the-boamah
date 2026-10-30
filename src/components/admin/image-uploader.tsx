@@ -8,6 +8,7 @@ import { uploadImage } from "@/actions/admin/catalog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
+import { UPLOAD_SIZES } from "@/lib/upload-sizes";
 
 export interface UploadedImage {
   url: string;
@@ -26,6 +27,7 @@ interface ImageUploaderProps {
 export function ImageUploader({ images, onChange, folder, max = 8, label = "Images" }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const size = UPLOAD_SIZES[folder];
 
   const upload = (file: File) =>
     startTransition(async () => {
@@ -99,7 +101,9 @@ export function ImageUploader({ images, onChange, folder, max = 8, label = "Imag
           <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => inputRef.current?.click()}>
             {pending ? <Spinner label="Uploading" /> : <ImagePlus />} Upload image
           </Button>
-          <p className="text-xs text-ink-subtle">JPEG, PNG or WebP, up to 5 MB.</p>
+          <p className="text-xs text-ink-subtle">
+            JPEG, PNG or WebP, up to 5 MB. Saved at {size.width} by {size.height} pixels{size.fit === "contain" ? ", with the whole picture on white" : ", trimmed to fit"}.
+          </p>
         </>
       ) : null}
     </fieldset>

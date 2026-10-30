@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
+import sharp from "sharp";
+import { UPLOAD_SIZES } from "@/lib/upload-sizes";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -36,6 +38,20 @@ const UPLOADED_NAME = /^\d{10,}-[0-9a-f]{16}\.(jpg|png|webp)$/;
 const CONTENT_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
 /**
+ * Brings a picture to its standard size. Phone photos are stood upright first,
+ * and what the camera recorded (including where it was taken) is left behind.
+ */
+async function standardImage(bytes: Uint8Array, folder: UploadFolder): Promise<Buffer> {
+  const { width, height, fit } = UPLOAD_SIZES[folder];
+  try {
+    return await sharp(bytes).rotate().resize({ width, height, fit, background: "#ffffff" }).flatten({ background: "#ffffff" }).webp({ quality: 82 }).toBuffer();
+  } catch (error) {
+    console.error("[storage] an uploaded image could not be read", error);
+    throw new UploadError("This image could not be read. Save it again as a JPEG or PNG and try once more.");
+  }
+}
+
+/**
  * Checks a requested /uploads/<folder>/<file> path against the names
  * storeImage generates, so nothing else on the disk can be served.
  */
@@ -58,13 +74,13 @@ export async function storeImage(file: File, folder: UploadFolder): Promise<stri
   if (file.size === 0) throw new UploadError("The file is empty.");
   if (file.size > MAX_UPLOAD_BYTES) throw new UploadError("Images must be 5 MB or smaller.");
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const detected = detectImageType(bytes);
-  if (!detected) throw new UploadError("Please upload a JPEG, PNG or WebP image.");
+  if (!detectImageType(bytes)) throw new UploadError("Please upload a JPEG, PNG or WebP image.");
 
-  const name = `${folder}/${Date.now()}-${randomBytes(8).toString("hex")}.${detected.ext}`;
+  const image = await standardImage(bytes, folder);
+  const name = `${folder}/${Date.now()}-${randomBytes(8).toString("hex")}.webp`;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(name, Buffer.from(bytes), { access: "public", contentType: detected.type, addRandomSuffix: false });
+    const blob = await put(name, image, { access: "public", contentType: "image/webp", addRandomSuffix: false });
     return blob.url;
   }
   const uploadDir = process.env.UPLOAD_DIR;
@@ -73,7 +89,7 @@ export async function storeImage(file: File, folder: UploadFolder): Promise<stri
   }
   const target = path.join(uploadDir || path.join(process.cwd(), "public", "uploads"), name);
   await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, bytes);
+  await writeFile(target, image);
   return `/uploads/${name}`;
 }
 
