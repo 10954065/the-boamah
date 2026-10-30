@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 /**
  * Short-lived, in-memory cache for storefront reads that are the same for
  * every shopper: the catalogue, categories, banners, settings and ratings.
- * Pages are still rendered per request (the header and wishlist hearts are
- * personal), but they stop repeating the same database queries.
+ * Pages are still rendered per request (the cart count is personal), but they
+ * stop repeating the same database queries.
  *
  * - Entries live for STOREFRONT_CACHE_SECONDS (60 in production, off in
  *   development and tests, where data is changed outside the admin).

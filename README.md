@@ -46,18 +46,18 @@ on phones. Accepted payment methods are shown in the cart, at checkout and in
 the footer.
 Policy, contact and image-credit pages.
 
-**Cart and checkout**: database-backed cart for guests and signed-in customers.
-A guest cart merges into the account on sign-in. Prices and stock are checked
-again whenever the cart is shown and at checkout. Checkout offers delivery by
+**Cart and checkout**: database-backed cart kept per browser. Prices and stock
+are checked again whenever the cart is shown and at checkout. Checkout offers delivery by
 zone (fee, minimum order, free-delivery threshold) or pickup, coupons, and
-Paystack or cash on delivery. Guests can check out and track orders by
-reference.
+Paystack or cash on delivery.
 
-**Customer account**: profile, saved addresses, order history with a status
-timeline, "Buy again" to put a past order back in the cart, retrying an unpaid
-payment, wishlist, password change and reset.
+**No customer accounts**: shoppers check out with their name, email and phone,
+and that is all the shop needs. Each order has a private link with a status
+timeline, "Buy again" and retrying an unpaid payment, and orders can be tracked
+by reference plus email or phone. The admin's customer list is built from these
+checkout details.
 
-**Admin dashboard** (`/admin`): sales metrics that keep paid revenue, pending
+**Admin dashboard** (behind a private link): sales metrics that keep paid revenue, pending
 payments and cash-on-delivery outstanding apart. Products and variants with image
 upload and bulk prices, categories, inventory with an audited movement history,
 low-stock list and how many shoppers are waiting for each item, review
@@ -125,14 +125,22 @@ npm run admin:create -- --email owner@example.com --name "Owner Name"
 ```
 
 - With no `ADMIN_PASSWORD` set, the script generates a strong password and
-  prints it **once**. Sign in and change it under *Account → Settings*.
+  prints it **once**. Sign in and change it under *My account* in the admin.
 - To choose the password, set `ADMIN_PASSWORD` (12+ characters) for that one
   command.
 - If the email already belongs to an account, that account is promoted to
   Super Admin and keeps its password.
 
-After that, the Super Admin gives other staff their roles from *Admin → Staff*.
-Each person first registers a normal account.
+After that, the Super Admin adds other staff in *Admin → Staff*. Nobody can
+register for themselves.
+
+### Private links to the admin and the till
+
+Set `STAFF_GATE_KEY` and the admin, the till and staff sign-in answer like
+missing pages unless the device has opened its private link. `npm run staff:links`
+prints the links; Super Admins also see them in *Admin → Staff*. Locally the
+gate stays open until the key is set; in production a missing key keeps those
+pages closed. See [Private links](docs/DEPLOYMENT.md#private-links).
 
 ### Testing payments without Paystack
 
@@ -156,6 +164,7 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 | `TEST_DATABASE_URL` | Tests | Disposable database for integration tests. It is wiped and migrated on every run. |
 | `BETTER_AUTH_SECRET` | Yes | Long random secret for sessions (`openssl rand -base64 32`). |
 | `BETTER_AUTH_URL` | Yes | Same origin as the site. |
+| `STAFF_GATE_KEY` | Production | At least 32 random characters (`openssl rand -base64 48`). Makes the private links to the admin and the till. |
 | `PAYSTACK_SECRET_KEY` | For online payment | `sk_test_…` while testing, `sk_live_…` when live. Without it, online payment is hidden. |
 | `PAYMENTS_MOCK` | No | `true` enables the local mock gateway (development only). |
 | `RESEND_API_KEY` | For email | Without it, emails are recorded as *Skipped* in *Admin → Notifications*. |
@@ -180,6 +189,7 @@ All variables are documented in [.env.example](.env.example). Never commit `.env
 | `npm run db:seed` | Load sample data (refuses to run in production unless `SEED_ALLOW_PRODUCTION=true`) |
 | `npm run db:reset` | Drop and recreate the local database. **Deletes all data** |
 | `npm run admin:create` | Create or promote a Super Admin |
+| `npm run staff:links` | Print the private links to the admin and the till |
 | `npm test` | Unit tests |
 | `npm run test:integration` | Integration tests against `TEST_DATABASE_URL` |
 | `npm run test:all` | Unit + integration |
@@ -213,11 +223,11 @@ button is never the only protection.
 
 | Role | Can do |
 | --- | --- |
-| Super Admin | Everything, including giving and removing staff roles |
+| Super Admin | Everything, including adding staff and changing roles |
 | Store Manager | Everything except managing staff (including approving reviews) |
 | Order Manager | Dashboard, view catalogue, manage orders (status, cancel, record cash), view customers and notifications |
 | Inventory Manager | Dashboard, view catalogue, adjust stock, view orders |
-| Customer | Storefront and own account only |
+| Cashier | The till only |
 
 Suspended accounts cannot sign in, and their existing sessions stop working.
 

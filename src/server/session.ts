@@ -5,6 +5,7 @@ import { cache } from "react";
 import { ActionError, fail, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { hasPermission, isRole, isStaffRole, type Permission, type RoleCode } from "@/lib/permissions";
+import { posUrl } from "@/lib/pos-host";
 import { auth } from "@/server/auth";
 
 export interface CurrentUser {
@@ -38,19 +39,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   };
 });
 
-/** For pages: redirects to login when signed out. */
-export async function requireUser(returnTo: string): Promise<CurrentUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
-  return user;
-}
-
-/** For admin pages: customers are sent to login; staff without the permission see a no-access page. */
+/** For admin pages: visitors are sent to the staff sign-in; staff without the permission see a no-access page. */
 export async function requireStaffPage(permission: Permission, returnTo = "/admin"): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   if (!user.isStaff) redirect("/");
-  if (!hasPermission(user.role, permission)) redirect("/admin/no-access");
+  // Cashiers cannot open the admin at all, so their place is the till, not the admin's no-access page.
+  if (!hasPermission(user.role, permission)) redirect(hasPermission(user.role, "dashboard:view") ? "/admin/no-access" : posUrl("/pos"));
   return user;
 }
 
@@ -64,9 +59,10 @@ export async function authorize(permission: Permission): Promise<CurrentUser> {
   return user;
 }
 
-export async function authorizeCustomer(): Promise<CurrentUser> {
+/** For server actions on the signed-in person's own account. */
+export async function authorizeSignedIn(): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) throw new ActionError("Please sign in to continue.", "UNAUTHENTICATED");
+  if (!user) throw new ActionError("Please sign in again.", "UNAUTHENTICATED");
   return user;
 }
 

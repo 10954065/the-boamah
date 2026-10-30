@@ -26,7 +26,7 @@ export default async function PosLoginPage() {
         {user ? (
           <div className="mt-6 space-y-4">
             <Alert tone="warning">
-              {user.email} cannot use the till. Ask a manager to give this account the Cashier role, or sign in with another account.
+              {user.email} cannot use the till. Ask the Super Admin to give this account the Cashier role, or sign in with another account.
             </Alert>
             <SignOutButton className="w-full" />
           </div>

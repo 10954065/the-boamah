@@ -8,6 +8,7 @@ import { allowedNextStatuses, statusLabel } from "@/lib/order-status";
 import { hasPermission } from "@/lib/permissions";
 import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { formatDateTime } from "@/lib/utils";
+import { customerKey } from "@/server/customers";
 import { requireStaffPage } from "@/server/session";
 
 export const metadata = { title: "Order" };
@@ -22,7 +23,6 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
       payments: { orderBy: { createdAt: "desc" }, include: { recordedBy: { select: { name: true } } } },
       statusHistory: { orderBy: { createdAt: "asc" }, include: { actor: { select: { name: true } } } },
       notes: { orderBy: { createdAt: "desc" }, include: { author: { select: { name: true } } } },
-      user: { select: { id: true, name: true } },
     },
   });
   if (!order) notFound();
@@ -136,8 +136,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <Panel title="Customer & delivery">
             <div className="space-y-1 text-sm text-ink-muted">
               <p className="font-semibold text-ink">
-                {order.user ? <Link href={`/admin/customers/${order.user.id}`} className="hover:text-brand-700">{order.customerName}</Link> : order.customerName}
-                {!order.user ? <span className="ml-1 text-xs font-normal text-ink-subtle">(guest)</span> : null}
+                <Link href={`/admin/customers/${encodeURIComponent(customerKey(order.phone))}`} className="hover:text-brand-700">{order.customerName}</Link>
               </p>
               <p>{order.phone}</p>
               {order.email ? <p>{order.email}</p> : null}

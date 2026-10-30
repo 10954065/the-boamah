@@ -15,10 +15,10 @@ interface NavLink {
 interface MobileNavProps {
   links: NavLink[];
   categories: NavLink[];
-  accountLinks: NavLink[];
+  orderLinks: NavLink[];
 }
 
-export function MobileNav({ links, categories, accountLinks }: MobileNavProps) {
+export function MobileNav({ links, categories, orderLinks }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -59,8 +59,8 @@ export function MobileNav({ links, categories, accountLinks }: MobileNavProps) {
             </div>
           ) : null}
           <div>
-            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-subtle">Account</p>
-            <ul className="space-y-0.5">{accountLinks.map(item)}</ul>
+            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-subtle">Your order</p>
+            <ul className="space-y-0.5">{orderLinks.map(item)}</ul>
           </div>
         </nav>
       </SheetContent>

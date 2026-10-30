@@ -15,7 +15,7 @@ afterEach(() => vi.unstubAllGlobals());
 async function onlineOrderWithPayment(total = 3000) {
   const { variant } = await createVariant({ price: total, stock: 5000 });
   const cart = await createCart([{ variantId: variant.id, quantityMilli: 1000, seen: total }]);
-  const order = await createOrder(checkoutInput({ paymentMethod: "PAYSTACK", expectedTotalMinor: total }), { cartId: cart.id, user: null, settings: settings() });
+  const order = await createOrder(checkoutInput({ paymentMethod: "PAYSTACK", expectedTotalMinor: total }), { cartId: cart.id, settings: settings() });
   const reference = `${order.reference}-TEST`;
   await prisma.payment.create({ data: { orderId: order.orderId, provider: "PAYSTACK", reference, amountMinor: total, status: "INITIALIZED" } });
   return { orderId: order.orderId, reference };

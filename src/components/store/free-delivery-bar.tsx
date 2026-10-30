@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils";
 export interface FreeDeliveryBarProps {
   /** Goods total after coupon discounts, which is what the free-delivery amount is checked against. */
   goodsTotalMinor: number;
-  target: { thresholdMinor: number; zoneName: string; isYourArea: boolean };
+  target: { thresholdMinor: number; zoneName: string };
   className?: string;
 }
 
 /** "Add GH₵X more for free delivery" with a progress bar. */
 export function FreeDeliveryBar({ goodsTotalMinor, target, className }: FreeDeliveryBarProps) {
   const progress = freeDeliveryProgress(goodsTotalMinor, target.thresholdMinor);
-  const where = target.isYourArea ? `to ${target.zoneName}` : `in ${target.zoneName}`;
+  const where = `in ${target.zoneName}`;
   return (
     <div className={cn("rounded-lg border border-line bg-soft/60 p-3", className)}>
       <p className="flex items-start gap-2 text-sm" aria-live="polite">
@@ -47,7 +47,7 @@ export function FreeDeliveryBar({ goodsTotalMinor, target, className }: FreeDeli
           style={{ width: `${progress.percent}%` }}
         />
       </div>
-      {!target.isYourArea && !progress.reached ? (
+      {!progress.reached ? (
         <p className="mt-1.5 text-xs text-ink-muted">Other areas have their own amounts, shown at checkout.</p>
       ) : null}
     </div>

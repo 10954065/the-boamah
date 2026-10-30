@@ -9,7 +9,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { listingQuery, type ListingParams } from "@/lib/listing-params";
 import { cn } from "@/lib/utils";
 import { getActiveCategories, listProducts, PAGE_SIZE, type CategoryView } from "@/server/catalog";
-import { getWishlistIds } from "@/server/wishlist";
 import { ProductGrid } from "./product-card";
 import { SortSelect } from "./sort-select";
 
@@ -187,7 +186,7 @@ function FiltersForm({ basePath, params, fixedCategory, fixedOnSale }: ProductLi
 }
 
 export async function ProductListing({ basePath, params, fixedCategory, fixedOnSale }: ProductListingProps) {
-  const [page, categories, savedIds] = await Promise.all([
+  const [page, categories] = await Promise.all([
     listProducts({
       q: params.q || undefined,
       categorySlug: fixedCategory ?? (params.category || undefined),
@@ -199,7 +198,6 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
       page: params.page,
     }),
     getActiveCategories(),
-    getWishlistIds(),
   ]);
 
   const filterProps = { basePath, params, fixedCategory, fixedOnSale };
@@ -270,7 +268,7 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
           </div>
         ) : (
           <>
-            <ProductGrid products={page.items} savedIds={savedIds} priorityCount={4} className={cn("xl:grid-cols-4")} />
+            <ProductGrid products={page.items} priorityCount={4} className={cn("xl:grid-cols-4")} />
             <Pagination
               className="mt-10"
               page={page.page}

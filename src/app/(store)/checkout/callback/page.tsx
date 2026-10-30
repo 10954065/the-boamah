@@ -18,7 +18,7 @@ export default async function PaymentCallbackPage({ searchParams }: PageProps<"/
   const params = await searchParams;
   const reference = typeof params.reference === "string" ? params.reference.slice(0, 64) : "";
   const payment = reference
-    ? await prisma.payment.findUnique({ where: { reference }, select: { order: { select: { reference: true, userId: true } } } })
+    ? await prisma.payment.findUnique({ where: { reference }, select: { order: { select: { reference: true } } } })
     : null;
 
   if (!payment) {
@@ -42,7 +42,7 @@ export default async function PaymentCallbackPage({ searchParams }: PageProps<"/
     outcome = "VERIFY_ERROR";
   }
 
-  const base = payment.order.userId ? `/account/orders/${payment.order.reference}` : `/orders/${payment.order.reference}`;
+  const base = `/orders/${payment.order.reference}`;
   if (outcome === "PAID" || outcome === "ALREADY_PAID") redirect(`${base}?placed=1`);
   if (outcome === "FAILED") redirect(`${base}?payment=failed`);
 

@@ -4,18 +4,12 @@ import { SITEMAPS, sitemapUrl } from "@/server/sitemaps";
 
 /** Private and per-visitor pages. They also carry a noindex robots tag. */
 const PRIVATE_PATHS = [
-  "/admin",
-  "/account",
   "/cart",
   "/checkout",
   "/orders",
   "/track-order",
   "/api",
   "/dev",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
 ];
 
 /**

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ClientForm } from "@/components/ui/client-form";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, fieldAria } from "@/components/ui/field";
-import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
+import { Input, Select, Textarea } from "@/components/ui/input";
 import { formatMoney } from "@/lib/money";
 import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
@@ -31,19 +31,6 @@ export interface CheckoutZone {
   estimatedDelivery: string | null;
 }
 
-export interface CheckoutAddress {
-  id: string;
-  label: string | null;
-  recipientName: string;
-  phone: string;
-  city: string;
-  area: string;
-  addressLine: string;
-  details: string | null;
-  zoneId: string | null;
-  isDefault: boolean;
-}
-
 export interface CheckoutLine {
   itemId: string;
   productName: string;
@@ -57,8 +44,6 @@ export interface CheckoutLine {
 interface CheckoutFormProps {
   lines: CheckoutLine[];
   zones: CheckoutZone[];
-  addresses: CheckoutAddress[];
-  user: { name: string; email: string; phone: string | null } | null;
   pickup: { enabled: boolean; address: string | null; instructions: string | null };
   payment: { online: boolean; cod: boolean; testMode: boolean };
   initialQuote: QuoteView | null;
@@ -69,7 +54,7 @@ const NOT_LISTED = "__not_listed__";
 const formSchema = z
   .object({
     customerName: z.string().trim().min(2, "Enter your full name.").max(80),
-    email: z.union([z.literal(""), emailField]),
+    email: emailField,
     phone: ghanaPhone,
     fulfilmentMethod: z.enum(["DELIVERY", "PICKUP"]),
     zoneId: z.string(),
@@ -79,7 +64,6 @@ const formSchema = z
     addressDetails: z.string().trim().max(200),
     deliveryInstructions: z.string().trim().max(500),
     paymentMethod: z.enum(["PAYSTACK", "CASH_ON_DELIVERY"]),
-    saveAddress: z.boolean(),
   })
   .superRefine((data, ctx) => {
     if (data.fulfilmentMethod !== "DELIVERY") return;
@@ -130,9 +114,8 @@ function RadioCard({
   );
 }
 
-export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, initialQuote }: CheckoutFormProps) {
+export function CheckoutForm({ lines, zones, pickup, payment, initialQuote }: CheckoutFormProps) {
   const router = useRouter();
-  const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
   const deliveryAvailable = zones.length > 0;
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [quote, setQuote] = useState<QuoteView | null>(initialQuote);
@@ -143,18 +126,17 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerName: defaultAddress?.recipientName ?? user?.name ?? "",
-      email: user?.email ?? "",
-      phone: defaultAddress?.phone ?? user?.phone ?? "",
+      customerName: "",
+      email: "",
+      phone: "",
       fulfilmentMethod: deliveryAvailable ? "DELIVERY" : "PICKUP",
-      zoneId: defaultAddress?.zoneId && zones.some((z) => z.id === defaultAddress.zoneId) ? defaultAddress.zoneId : "",
-      city: defaultAddress?.city ?? "",
-      area: defaultAddress?.area ?? "",
-      addressLine: defaultAddress?.addressLine ?? "",
-      addressDetails: defaultAddress?.details ?? "",
+      zoneId: "",
+      city: "",
+      area: "",
+      addressLine: "",
+      addressDetails: "",
       deliveryInstructions: "",
       paymentMethod: payment.online ? "PAYSTACK" : "CASH_ON_DELIVERY",
-      saveAddress: Boolean(user) && addresses.length === 0,
     },
   });
   const { errors, isSubmitting } = form.formState;
@@ -182,18 +164,6 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
   useEffect(() => {
     refreshQuote(fulfilmentMethod, zoneId);
   }, [fulfilmentMethod, zoneId, refreshQuote]);
-
-  const applyAddress = (id: string) => {
-    const address = addresses.find((a) => a.id === id);
-    if (!address) return;
-    form.setValue("customerName", address.recipientName);
-    form.setValue("phone", address.phone);
-    form.setValue("city", address.city);
-    form.setValue("area", address.area);
-    form.setValue("addressLine", address.addressLine);
-    form.setValue("addressDetails", address.details ?? "");
-    if (address.zoneId && zones.some((z) => z.id === address.zoneId)) form.setValue("zoneId", address.zoneId);
-  };
 
   const deliveryReady = fulfilmentMethod === "PICKUP" ? pickup.enabled : Boolean(selectedZone) && !quoteError;
   const canSubmit = Boolean(quote) && deliveryReady && !notListed && !quoting && (payment.online || payment.cod);
@@ -237,15 +207,6 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
           <h2 id="contact-title" className="text-lg font-extrabold">
             1. Contact details
           </h2>
-          {!user ? (
-            <p className="mt-1 text-sm text-ink-muted">
-              Checking out as a guest.{" "}
-              <Link href="/login?next=/checkout" className="font-semibold text-brand-700 hover:underline">
-                Sign in
-              </Link>{" "}
-              to use saved addresses.
-            </p>
-          ) : null}
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <Field id="customerName" label="Full name" required error={errors.customerName?.message} className="sm:col-span-2">
               <Input autoComplete="name" {...fieldAria("customerName", errors.customerName?.message)} {...form.register("customerName")} />
@@ -253,7 +214,7 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
             <Field
               id="email"
               label="Email address"
-              required={!user || paymentMethod === "PAYSTACK"}
+              required
               hint="For your order confirmation and receipt."
               error={errors.email?.message}
             >
@@ -294,18 +255,6 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
 
           {fulfilmentMethod === "DELIVERY" ? (
             <div className="mt-5 space-y-4">
-              {addresses.length > 0 ? (
-                <Field id="savedAddress" label="Use a saved address">
-                  <Select id="savedAddress" defaultValue={defaultAddress?.id ?? ""} onChange={(event) => applyAddress(event.target.value)}>
-                    {addresses.map((address) => (
-                      <option key={address.id} value={address.id}>
-                        {address.label ? `${address.label}: ` : ""}
-                        {address.addressLine}, {address.area}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              ) : null}
               <Field id="zoneId" label="Delivery area" required error={errors.zoneId?.message}>
                 <Select {...fieldAria("zoneId", errors.zoneId?.message)} {...form.register("zoneId")}>
                   <option value="">Select your area…</option>
@@ -351,11 +300,6 @@ export function CheckoutForm({ lines, zones, addresses, user, pickup, payment, i
               <Field id="addressDetails" label="Additional details" hint="Optional: apartment, gate colour, GhanaPost GPS address." error={errors.addressDetails?.message}>
                 <Input {...fieldAria("addressDetails", errors.addressDetails?.message, "hint")} {...form.register("addressDetails")} />
               </Field>
-              {user ? (
-                <label className="flex items-center gap-2 text-sm text-ink-muted">
-                  <Checkbox {...form.register("saveAddress")} /> Save this address to my account
-                </label>
-              ) : null}
             </div>
           ) : pickup.enabled ? (
             <div className="mt-5 rounded-md bg-soft p-4 text-sm text-ink-muted">

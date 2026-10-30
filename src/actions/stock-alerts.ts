@@ -5,7 +5,7 @@ import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { emailField, ghanaPhone } from "@/lib/validation";
 import { clientIp, rateLimit } from "@/server/rate-limit";
-import { getCurrentUser, runAction } from "@/server/session";
+import { runAction } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
 
 const inputSchema = z.object({
@@ -47,11 +47,10 @@ export async function requestStockAlert(input: z.input<typeof inputSchema>): Pro
     if (!variant) return fail("This product is no longer available.");
     if (variant.stockMilli >= variant.minQtyMilli) return fail("Good news: this is back in stock now. Refresh the page to order it.");
 
-    const user = await getCurrentUser();
     await prisma.stockAlert.upsert({
       where: { variantId_contact: { variantId: variant.id, contact: contact.contact } },
-      update: { notifiedAt: null, userId: user?.id },
-      create: { variantId: variant.id, channel: contact.channel, contact: contact.contact, userId: user?.id ?? null },
+      update: { notifiedAt: null },
+      create: { variantId: variant.id, channel: contact.channel, contact: contact.contact },
     });
     const how = contact.channel === "EMAIL" ? "email" : "text";
     return ok({ channel: contact.channel }, `Thanks. We will ${how} you as soon as it is back.`);

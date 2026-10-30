@@ -15,7 +15,7 @@ describe("createOrder", () => {
 
     const order = await createOrder(
       checkoutInput({ fulfilmentMethod: "DELIVERY", zoneId: zone.id, city: "Accra", area: "Osu", addressLine: "1 Test St", expectedTotalMinor: 3 * 2000 + 1500 }),
-      { cartId: cart.id, user: null, settings: settings() },
+      { cartId: cart.id, settings: settings() },
     );
 
     const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId }, include: { items: true, statusHistory: true } });
@@ -37,7 +37,7 @@ describe("createOrder", () => {
   test("rejects a stale total without creating an order or touching stock", async () => {
     const { variant } = await createVariant({ price: 1000, stock: 5000 });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 1000, seen: 1000 }]);
-    await expect(createOrder(checkoutInput({ expectedTotalMinor: 999 }), { cartId: cart.id, user: null, settings: settings() })).rejects.toMatchObject({
+    await expect(createOrder(checkoutInput({ expectedTotalMinor: 999 }), { cartId: cart.id, settings: settings() })).rejects.toMatchObject({
       code: "TOTAL_CHANGED",
     });
     expect(await prisma.order.count()).toBe(0);
@@ -48,8 +48,8 @@ describe("createOrder", () => {
     const { variant } = await createVariant({ price: 1000, stock: 5000 });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 1000, seen: 1000 }]);
     const input = checkoutInput({ expectedTotalMinor: 1000 });
-    const first = await createOrder(input, { cartId: cart.id, user: null, settings: settings() });
-    const second = await createOrder(input, { cartId: cart.id, user: null, settings: settings() });
+    const first = await createOrder(input, { cartId: cart.id, settings: settings() });
+    const second = await createOrder(input, { cartId: cart.id, settings: settings() });
     expect(second.duplicate).toBe(true);
     expect(second.orderId).toBe(first.orderId);
     expect(await prisma.order.count()).toBe(1);
@@ -60,7 +60,7 @@ describe("createOrder", () => {
     const { variant } = await createVariant({ price: 1000, stock: 1000 });
     const carts = await Promise.all([1, 2].map(() => createCart([{ variantId: variant.id, quantityMilli: 1000, seen: 1000 }])));
     const results = await Promise.allSettled(
-      carts.map((cart) => createOrder(checkoutInput({ expectedTotalMinor: 1000 }), { cartId: cart.id, user: null, settings: settings() })),
+      carts.map((cart) => createOrder(checkoutInput({ expectedTotalMinor: 1000 }), { cartId: cart.id, settings: settings() })),
     );
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const failure = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
@@ -76,11 +76,10 @@ describe("createOrder", () => {
     await expect(
       createOrder(checkoutInput({ fulfilmentMethod: "DELIVERY", zoneId: zone.id, city: "Accra", area: "Osu", addressLine: "1 Test St", expectedTotalMinor: 2000 }), {
         cartId: cart.id,
-        user: null,
         settings: settings(),
       }),
     ).rejects.toMatchObject({ code: "ZONE" });
-    await expect(createOrder(checkoutInput({ expectedTotalMinor: 1000 }), { cartId: cart.id, user: null, settings: settings({ codEnabled: false }) })).rejects.toMatchObject({
+    await expect(createOrder(checkoutInput({ expectedTotalMinor: 1000 }), { cartId: cart.id, settings: settings({ codEnabled: false }) })).rejects.toMatchObject({
       code: "PAYMENT_METHOD",
     });
   });
@@ -91,12 +90,12 @@ describe("createOrder", () => {
     const first = await createCart([{ variantId: variant.id, quantityMilli: 1000, seen: 10_000 }], "ONCE");
     const second = await createCart([{ variantId: variant.id, quantityMilli: 1000, seen: 10_000 }], "ONCE");
 
-    const order = await createOrder(checkoutInput({ email: "a@example.com", expectedTotalMinor: 9000 }), { cartId: first.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ email: "a@example.com", expectedTotalMinor: 9000 }), { cartId: first.id, settings: settings() });
     expect((await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } })).discountMinor).toBe(1000);
     expect((await prisma.coupon.findUniqueOrThrow({ where: { code: "ONCE" } })).usedCount).toBe(1);
 
     // The coupon is exhausted, so the discounted total the customer expected is no longer valid.
-    await expect(createOrder(checkoutInput({ email: "b@example.com", expectedTotalMinor: 9000 }), { cartId: second.id, user: null, settings: settings() })).rejects.toMatchObject({
+    await expect(createOrder(checkoutInput({ email: "b@example.com", expectedTotalMinor: 9000 }), { cartId: second.id, settings: settings() })).rejects.toMatchObject({
       code: "TOTAL_CHANGED",
     });
   });
@@ -106,7 +105,7 @@ describe("order lifecycle", () => {
   async function placeOrder(paymentMethod: "CASH_ON_DELIVERY" | "PAYSTACK" = "CASH_ON_DELIVERY") {
     const { variant } = await createVariant({ price: 1500, stock: 4000 });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 2000, seen: 1500 }]);
-    const order = await createOrder(checkoutInput({ paymentMethod, expectedTotalMinor: 3000 }), { cartId: cart.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ paymentMethod, expectedTotalMinor: 3000 }), { cartId: cart.id, settings: settings() });
     return { order, variant };
   }
 

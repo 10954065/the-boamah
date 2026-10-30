@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 
 interface BuyAgainButtonProps {
   reference: string;
+  /** The order's private token when it came in the link; otherwise the browser's cookie is used. */
+  token?: string;
   size?: "sm" | "md";
   className?: string;
 }
 
 /** Puts a past order's items back in the cart and opens the cart. */
-export function BuyAgainButton({ reference, size = "md", className }: BuyAgainButtonProps) {
+export function BuyAgainButton({ reference, token, size = "md", className }: BuyAgainButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
@@ -29,7 +31,7 @@ export function BuyAgainButton({ reference, size = "md", className }: BuyAgainBu
       aria-label={`Buy again: order ${reference}`}
       onClick={() =>
         startTransition(async () => {
-          const result = await buyAgain({ reference });
+          const result = await buyAgain({ reference, token });
           if (result.ok) {
             toast.success(result.message);
             router.push("/cart");

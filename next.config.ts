@@ -82,19 +82,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Order emails from before customer accounts were removed link here.
+      { source: "/account/orders/:reference", destination: "/track-order?reference=:reference", permanent: true },
       ...aliasHosts.map((host) => ({
         source: "/:path((?!api/).*)",
         has: [{ type: "host" as const, value: host }],
         destination: `https://${siteHost}/:path`,
         permanent: true,
       })),
-      // The till opens on its own address (its sign-in cookie lives there).
-      ...(posHost && siteHost
-        ? [
-            { source: "/pos", has: [{ type: "host" as const, value: siteHost }], destination: `https://${posHost}/pos`, permanent: false },
-            { source: "/pos/:path*", has: [{ type: "host" as const, value: siteHost }], destination: `https://${posHost}/pos/:path*`, permanent: false },
-          ]
-        : []),
       // On its own address the till lives at /pos, the part of the site that works offline.
       ...(posHost ? [{ source: "/", has: onPosHost, destination: "/pos", permanent: false }] : []),
     ];

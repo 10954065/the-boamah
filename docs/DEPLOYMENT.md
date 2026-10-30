@@ -56,6 +56,7 @@ follows the database if its password changes.
 | `NEXT_PUBLIC_SITE_URL` | The address from R1, e.g. `https://the-boamah-production.up.railway.app` (no trailing slash) |
 | `BETTER_AUTH_URL` | Same as above |
 | `BETTER_AUTH_SECRET` | New random value: `openssl rand -base64 32` |
+| `STAFF_GATE_KEY` | New random value: `openssl rand -base64 48`. Makes the private links to the admin and the till (see [Private links](#private-links)) |
 | `CRON_SECRET` | New random value |
 | `UPLOAD_DIR` | `/data/uploads` (see R4) |
 | `PAYSTACK_SECRET_KEY` | See [Paystack](#4-paystack) |
@@ -145,13 +146,16 @@ as described in [Scheduled job](#3-scheduled-job-unpaid-order-expiry).
 
 ### R6. First admin
 
-Run this from your own computer. Use the database's public address, found in
-Postgres service → *Variables* → `DATABASE_PUBLIC_URL`:
+The database has no public address, so run this on the server. From your own
+computer (with an SSH key added by `railway ssh keys add`):
 
 ```bash
-DATABASE_URL="<DATABASE_PUBLIC_URL>" \
-  npm run admin:create -- --email owner@your-domain --name "Owner Name"
+railway ssh --service the-boamah
+npm run admin:create -- --email owner@your-domain --name "Owner Name"
+npm run staff:links
 ```
+
+The last command prints the private links. Open the admin link to sign in.
 
 Then continue with [Paystack](#4-paystack), [Email](#5-email-resend),
 [First admin and store set-up](#8-first-admin-and-store-set-up) and
@@ -233,20 +237,54 @@ Railway address instead:
 
 1. Shop service → *Variables*: `POS_HOST` = `the-boamah-production.up.railway.app`,
    and that address must **not** be in `REDIRECT_HOSTS`. Redeploy.
-2. The till is then at `https://the-boamah-production.up.railway.app` (which
-   opens `/pos`), and `/pos` on the shop's domain forwards there. Sign-in on
-   the till address is trusted automatically, and the till is hidden from
-   search engines.
+2. The till then runs on that address, behind its private link. Nothing on the
+   shop's domain points to it. Sign-in on the till address is trusted
+   automatically, and the till is hidden from search engines.
 
 **To move it to `pos.thebonlinegroceryshop.com` later** (Pro plan, or a second
 service running the same code): add that custom domain, set `POS_HOST` to it,
-and put the Railway address back in `REDIRECT_HOSTS`. Cashiers then sign in
-again once on the new address.
+and put the Railway address back in `REDIRECT_HOSTS`. The till link changes with
+the address, so give staff the new one from *Admin → Staff*.
 
-**Staff:** give them the **Cashier** role in *Admin → Staff* (they register a
-normal account first). Cashiers can only use the till; Store Managers and Super
-Admins can use it too. How to sell, print receipts and close shifts is in
-[Using the till](TILL.md).
+**Staff:** the Super Admin adds them in *Admin → Staff* with a role, and gets a
+temporary password to pass on. Nobody can register. Cashiers can only use the
+till; Store Managers and Super Admins can use it too. How to sell, print
+receipts and close shifts is in [Using the till](TILL.md).
+
+#### Private links
+
+Shoppers have no accounts: they check out with their name, email and phone. So
+the only sign-in is for staff, and it is hidden. `/admin`, `/login`,
+`/forgot-password`, every till page and the sign-in API answer like a missing
+page unless the device holds a pass.
+
+- **The links** are an HMAC of `STAFF_GATE_KEY`, so they are not in the code.
+  The Super Admin sees them under *Admin → Staff → Private links*, and
+  `npm run staff:links` prints them wherever the key is set.
+- **The pass** is a signed, httpOnly cookie that opening a link puts on the
+  device, one for the admin and one for the till. It lasts 90 days from the
+  last visit.
+- **Changing the links:** set a new `STAFF_GATE_KEY`. Both links change, every
+  device needs the new link and old passes stop working. Do this if a link gets
+  out. Staff stay signed in, but cannot reach the pages until they open it.
+- **Without the key** in production, the admin, the till and staff sign-in stay
+  closed and the log says why. Locally the gate stays open until a key is set.
+- **It adds to sign-in, it does not replace it.** Pages and actions still check
+  the signed-in person and their role.
+
+Rate limits on staff access:
+
+| What | Limit |
+| --- | --- |
+| Wrong private links | 10 per 15 minutes per IP address, then wrong links get "too many requests". The right link always works (kept in memory, so a restart clears it) |
+| Sign-in attempts | 5 a minute per IP address |
+| Wrong passwords | 5 per 15 minutes and 20 a day per account. The pause is written to the audit log (`auth.sign_in.locked`); any password reset lifts it, by email or by the Super Admin |
+| Password reset requests | 3 per 5 minutes per IP address |
+| Manager approvals at the till | See the note on voids and returns below |
+
+Addresses come from `X-Real-IP`, which Railway's edge sets itself. The first
+`X-Forwarded-For` entry is whatever the caller sent, so it is not used when
+`X-Real-IP` is there.
 
 The first till, **T1 "Front counter"**, is created by the database migration.
 Receipt numbers are issued on the till (T1-000001, T1-000002, …), so it can
@@ -320,6 +358,7 @@ its environment, so Preview must never point at the production database.
    | `NEXT_PUBLIC_SITE_URL` | `https://your-domain` (no trailing slash) |
    | `BETTER_AUTH_URL` | Same as above |
    | `BETTER_AUTH_SECRET` | New random value: `openssl rand -base64 32` |
+   | `STAFF_GATE_KEY` | New random value: `openssl rand -base64 48` (see [Private links](#private-links)) |
    | `DATABASE_URL` | Pooled connection string |
    | `DIRECT_DATABASE_URL` | Direct connection string |
    | `PAYSTACK_SECRET_KEY` | `sk_test_…` first, `sk_live_…` at launch |
@@ -436,14 +475,14 @@ DATABASE_URL="<production direct connection string>" \
   npm run admin:create -- --email owner@your-domain --name "Owner Name"
 ```
 
-The command prints a generated password once. Sign in at `/login`, then change
-the password under *Account → Settings*. Then:
+The command prints a generated password once. Open the admin link
+(`npm run staff:links` prints it), sign in, then change the password under
+*My account*: select your name at the top of the admin. Then:
 
 - **Do not run the sample seed in production.** It refuses to unless
   `SEED_ALLOW_PRODUCTION=true` is set. Add real categories and products in the
   admin instead.
-- Other staff register normal accounts. The Super Admin then assigns their roles
-  in *Admin → Staff*.
+- The Super Admin adds other staff in *Admin → Staff*. Nobody can register.
 - Enter the shop's WhatsApp number in *Admin → Settings* (for example
   024 123 4567). The chat button appears on every page once it is set.
 
@@ -457,7 +496,7 @@ The site publishes these automatically:
 | `/sitemaps/pages/sitemap.xml` | Home, shop, offers, categories list, contact, credits, and each policy once its text is written |
 | `/sitemaps/categories/sitemap.xml` | Every active category, with its image |
 | `/sitemaps/products/sitemap.xml` | Every published product in an active category, with its images |
-| `/robots.txt` | Lists every sitemap, blocks the admin, account, cart, checkout, order and sign-in pages, and blocks search, sort and filter URLs |
+| `/robots.txt` | Lists every sitemap, blocks the cart, checkout and order pages, and blocks search, sort and filter URLs. It never names staff pages, because that would point people to them |
 
 Sitemaps are generated from the database each time they are requested, so a
 new product appears in them straight away. Their links use
@@ -503,6 +542,7 @@ are left out.
       contains sample data".
 
 **Accounts and services**
+- [ ] `STAFF_GATE_KEY` set, and the private links shared with staff only.
 - [ ] First Super Admin created. Staff accounts and roles assigned.
 - [ ] Resend domain verified and a test email received.
 - [ ] Custom domain connected, with `NEXT_PUBLIC_SITE_URL`/`BETTER_AUTH_URL`
@@ -539,10 +579,11 @@ are left out.
 - **Notifications** shows any failed email or SMS so the customer can be
   contacted another way.
 - **Audit log** records staff actions such as price changes, stock
-  adjustments, order status changes, cancellations, cash collection, customer
-  suspension, role changes, coupons, delivery zones and settings.
+  adjustments, order status changes, cancellations, cash collection, staff
+  accounts, role changes, coupons, delivery zones and settings.
 - **Secrets**: rotate `BETTER_AUTH_SECRET` (this signs everyone out),
-  `CRON_SECRET` and provider keys if they may have been exposed.
+  `STAFF_GATE_KEY` (this changes the private links), `CRON_SECRET` and provider
+  keys if they may have been exposed.
 
 ## Updates and rollbacks
 

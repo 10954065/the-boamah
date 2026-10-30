@@ -13,7 +13,7 @@ describe("bulk pricing at checkout", () => {
     // The browser's last seen price is irrelevant: the server prices from the database.
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 6000, seen: 2000 }]);
 
-    const order = await createOrder(checkoutInput({ expectedTotalMinor: 6 * 2000 }), { cartId: cart.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 6 * 2000 }), { cartId: cart.id, settings: settings() });
 
     const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId }, include: { items: true } });
     expect(saved.items[0]).toMatchObject({ unitPriceMinor: 2000, quantityMilli: 6000, lineTotalMinor: 12_000 });
@@ -25,7 +25,7 @@ describe("bulk pricing at checkout", () => {
     await prisma.priceTier.create({ data: { variantId: variant.id, minQtyMilli: 5000, unitPriceMinor: 2000 } });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 4000, seen: 2500 }]);
 
-    const order = await createOrder(checkoutInput({ expectedTotalMinor: 4 * 2500 }), { cartId: cart.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 4 * 2500 }), { cartId: cart.id, settings: settings() });
 
     const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } });
     expect(saved.totalMinor).toBe(10_000);
@@ -38,7 +38,7 @@ describe("sale end dates at checkout", () => {
     await prisma.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() - 60_000) } });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 2000, seen: 2500 }]);
 
-    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2500 }), { cartId: cart.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2500 }), { cartId: cart.id, settings: settings() });
 
     const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } });
     expect(saved.totalMinor).toBe(5000);
@@ -49,7 +49,7 @@ describe("sale end dates at checkout", () => {
     await prisma.productVariant.update({ where: { id: variant.id }, data: { saleEndsAt: new Date(Date.now() + 86_400_000) } });
     const cart = await createCart([{ variantId: variant.id, quantityMilli: 2000, seen: 2000 }]);
 
-    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2000 }), { cartId: cart.id, user: null, settings: settings() });
+    const order = await createOrder(checkoutInput({ expectedTotalMinor: 2 * 2000 }), { cartId: cart.id, settings: settings() });
 
     const saved = await prisma.order.findUniqueOrThrow({ where: { id: order.orderId } });
     expect(saved.totalMinor).toBe(4000);

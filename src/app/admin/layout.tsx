@@ -52,9 +52,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6 print:hidden">
           <AdminMobileNav items={items} />
-          <p className="text-sm text-ink-muted">
+          <Link href="/admin/account" className="text-sm text-ink-muted hover:text-ink">
             <span className="font-semibold text-ink">{user.name}</span> · {ROLE_LABELS[user.role]}
-          </p>
+          </Link>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/" className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-soft hover:text-ink sm:flex">
               View store <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

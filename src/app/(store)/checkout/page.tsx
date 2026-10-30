@@ -7,21 +7,14 @@ import { getCartView } from "@/server/cart";
 import { getActiveZones } from "@/server/delivery";
 import { CheckoutError, quoteCart } from "@/server/orders/checkout";
 import { isOnlinePaymentAvailable, isPaystackTestMode } from "@/server/payments/config";
-import { getCurrentUser } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false, follow: false } };
 
 export default async function CheckoutPage() {
-  const [cart, user, zones, settings] = await Promise.all([getCartView(), getCurrentUser(), getActiveZones(), getStoreSettings()]);
+  const [cart, zones, settings] = await Promise.all([getCartView(), getActiveZones(), getStoreSettings()]);
   if (!cart.id || cart.lines.length === 0 || cart.hasBlockingIssues) redirect("/cart");
 
-  const addresses = user
-    ? await prisma.address.findMany({ where: { userId: user.id }, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] })
-    : [];
-
-  const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
-  const initialZone = defaultAddress?.zoneId && zones.some((z) => z.id === defaultAddress.zoneId) ? defaultAddress.zoneId : undefined;
   const initialMethod = zones.length > 0 ? "DELIVERY" : "PICKUP";
 
   let initialQuote = null;
@@ -29,8 +22,7 @@ export default async function CheckoutPage() {
     const quote = await quoteCart(prisma, {
       cartId: cart.id,
       fulfilmentMethod: initialMethod,
-      zoneId: initialMethod === "DELIVERY" ? initialZone : undefined,
-      who: { userId: user?.id ?? null, email: user?.email ?? null },
+      email: null,
       settings: initialMethod === "PICKUP" ? { ...settings, pickupEnabled: true } : settings,
     });
     initialQuote = {
@@ -68,19 +60,6 @@ export default async function CheckoutPage() {
             freeDeliveryThresholdMinor: zone.freeDeliveryThresholdMinor,
             estimatedDelivery: zone.estimatedDelivery,
           }))}
-          addresses={addresses.map((address) => ({
-            id: address.id,
-            label: address.label,
-            recipientName: address.recipientName,
-            phone: address.phone,
-            city: address.city,
-            area: address.area,
-            addressLine: address.addressLine,
-            details: address.details,
-            zoneId: address.zoneId,
-            isDefault: address.isDefault,
-          }))}
-          user={user ? { name: user.name, email: user.email, phone: user.phone } : null}
           pickup={{ enabled: settings.pickupEnabled, address: settings.pickupAddress, instructions: settings.pickupInstructions }}
           payment={{ online: isOnlinePaymentAvailable(settings), cod: settings.codEnabled, testMode: isPaystackTestMode() }}
           initialQuote={initialQuote}

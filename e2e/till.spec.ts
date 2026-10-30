@@ -1,21 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { formatMoney, minorToDecimalString } from "../src/lib/money";
 import { db } from "./db";
-
-const PASSWORD = "e2e-password-123";
-
-/** Registers a shop account and gives it a staff role (Cashier unless said otherwise). */
-async function signUpCashier(page: Page, name: string, email: string, role: "CASHIER" | "STORE_MANAGER" = "CASHIER"): Promise<string> {
-  await page.goto("/register");
-  await page.getByLabel("Full name").fill(name);
-  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.locator("#confirmPassword").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/account$/);
-  const user = await db.user.update({ where: { email }, data: { role } });
-  return user.id;
-}
+import { createStaff, PASSWORD, signInToTill } from "./staff";
 
 /**
  * Whether the till's offline helper is running (only in production builds).
@@ -85,7 +71,8 @@ test.describe("in-shop till", () => {
   });
 
   test("a cashier opens a shift, sells by barcode, takes cash and mobile money, prints and closes the shift", async ({ page }) => {
-    await signUpCashier(page, "Ama Till", email);
+    await createStaff("Ama Till", email);
+    await signInToTill(page, email);
 
     // Open the shift with a GH₵200 float.
     await page.goto("/pos");
@@ -162,7 +149,8 @@ test.describe("in-shop till", () => {
   });
 
   test("the till keeps selling with no internet and sends everything once the connection is back", async ({ page, context }) => {
-    const cashierId = await signUpCashier(page, "Kofi Offline", offlineEmail);
+    const cashierId = await createStaff("Kofi Offline", offlineEmail);
+    await signInToTill(page, offlineEmail);
     await page.goto("/pos");
     await page.getByLabel("Cash in the drawer").fill("100");
     await page.getByRole("button", { name: `Open the till with ${formatMoney(10_000)}` }).click();
@@ -224,13 +212,12 @@ test.describe("in-shop till", () => {
     expect(recorded[0]?.shift?.countedCashMinor).toBe(10_000 + product.priceMinor * numbers.length);
   });
 
-  test("a sale is held and picked up again, and a manager approves a return and a void", async ({ page, browser }) => {
+  test("a sale is held and picked up again, and a manager approves a return and a void", async ({ page }) => {
     // A manager with their own account, who will approve on the cashier's till.
-    const managerContext = await browser.newContext();
-    await signUpCashier(await managerContext.newPage(), "Kwame Manager", managerEmail, "STORE_MANAGER");
-    await managerContext.close();
+    await createStaff("Kwame Manager", managerEmail, "STORE_MANAGER");
 
-    const cashierId = await signUpCashier(page, "Efua Returns", returnsEmail);
+    const cashierId = await createStaff("Efua Returns", returnsEmail);
+    await signInToTill(page, returnsEmail);
     await page.goto("/pos");
     await page.getByLabel("Cash in the drawer").fill("100");
     await page.getByRole("button", { name: `Open the till with ${formatMoney(10_000)}` }).click();

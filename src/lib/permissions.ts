@@ -26,7 +26,6 @@ export const PERMISSIONS = [
   "orders:cancel",
   "payments:record",
   "customers:view",
-  "customers:suspend",
   "promotions:manage",
   "reviews:manage",
   "delivery:manage",

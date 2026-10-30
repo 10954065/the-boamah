@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const PAGES = ["/", "/shop", "/categories", "/categories/juices-drinks", "/products/royal-basmati-rice", "/offers", "/cart", "/login", "/track-order", "/policies/delivery"];
+const PAGES = ["/", "/shop", "/categories", "/categories/juices-drinks", "/products/royal-basmati-rice", "/offers", "/cart", "/track-order", "/policies/delivery"];
 const WIDTHS = [320, 375, 412, 768, 1024, 1440];
 
 test.describe("responsive layout", () => {

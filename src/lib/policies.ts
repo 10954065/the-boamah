@@ -28,23 +28,22 @@ export function policyText(settings: Pick<StoreSettings, PolicyField>, slug: Pol
   return saved || DEFAULT_POLICIES[slug] || null;
 }
 
-const PRIVACY_POLICY = `Last updated: 25 October 2026
+const PRIVACY_POLICY = `Last updated: 30 October 2026
 
 The Boamah's Online Grocery Shop ("we", "us") runs this website. This policy explains what personal information we collect when you shop with us, why we collect it, who we share it with and the choices you have. We handle personal information in line with Ghana's Data Protection Act, 2012 (Act 843).
 
 ## Information we collect
-- Account details: your name, email address, an optional phone number and your password. Passwords are stored only in a scrambled (hashed) form that we cannot read.
+- Contact details: your name, phone number and email address, which you give at checkout. You do not need an account or a password to shop with us.
 - Delivery details: the recipient's name and phone number, town or city, area, street address or landmark, any extra directions such as a GhanaPost GPS address, and the delivery area you choose.
 - Order details: the products, quantities and prices in your orders, any coupon used, your delivery or pickup choice, delivery instructions and the progress of each order.
 - Payment details: the payment method, amount, status and payment reference. Card and Mobile Money details are entered on Paystack's secure pages. We never see or store them.
 - Marketing choices: your email address if you sign up for offers, and when you agreed.
-- Technical information: records our servers keep to run the site safely, such as your IP address, browser type and the time of requests. We use these to keep you signed in and to stop misuse, for example repeated failed sign in attempts.
+- Technical information: records our servers keep to run the site safely, such as your IP address, browser type and the time of requests. We use these to keep the site running and to stop misuse.
 
 ## How we use your information
-- To create and manage your account.
 - To take, prepare, deliver and track your orders, and to contact you about them.
 - To take payments and process refunds through our payment provider.
-- To send service messages by email or text, such as order confirmations, payment receipts, order updates and password resets.
+- To send service messages by email or text, such as order confirmations, payment receipts and order updates.
 - To send offers and news, only if you have agreed. You can stop these at any time.
 - To keep the site secure, prevent fraud and misuse, and meet our legal and accounting duties.
 
@@ -60,21 +59,19 @@ Some of these providers may store or process data outside Ghana. Where that happ
 
 ## Cookies and similar storage
 We use only the cookies the shop needs to work:
-- a sign in cookie that keeps you logged in;
-- a cart cookie that remembers your basket, including when you shop without an account;
-- an order cookie that lets you view an order you placed as a guest on the same device.
+- a cart cookie that remembers your basket;
+- an order cookie that lets you view an order you placed on the same device.
 
 Your browser also keeps a short list of products you viewed recently. It stays on your device and is not sent to us. We do not use advertising or tracking cookies.
 
 ## How long we keep it
-- Account details: for as long as your account is open.
 - Orders and payment records: for as long as the law requires us to keep business and tax records.
 - Marketing consent: until you ask us to stop.
 
 When we no longer need information, we delete it or make it anonymous.
 
 ## Keeping it safe
-Connections to the site are encrypted, passwords are hashed and staff can only see the information their role needs. No system is completely secure, so please keep your password private and tell us straight away if you think your account has been misused.
+Connections to the site are encrypted and staff can only see the information their role needs. No system is completely secure, so please tell us straight away if you think your information has been misused.
 
 ## Your rights
 Under the Data Protection Act you can ask us to:
@@ -83,7 +80,7 @@ Under the Data Protection Act you can ask us to:
 - delete information we no longer need to keep;
 - stop using your information for marketing.
 
-You can update your profile and saved addresses yourself in your account. For anything else, please [contact us](/contact). If you are not satisfied with how we handle your information, you can complain to the Data Protection Commission of Ghana.
+To do any of these, please [contact us](/contact). If you are not satisfied with how we handle your information, you can complain to the Data Protection Commission of Ghana.
 
 ## Children
 The shop is meant for adults. If you are under 18, please shop with a parent or guardian.
@@ -94,15 +91,14 @@ We may update this policy from time to time. The date at the top shows when it l
 ## Contact us
 For questions about this policy or your personal information, please [contact us](/contact).`;
 
-const TERMS = `Last updated: 25 October 2026
+const TERMS = `Last updated: 30 October 2026
 
-These terms apply when you use the website of The Boamah's Online Grocery Shop ("we", "us") and when you buy from us. By creating an account or placing an order, you agree to them. Our [Privacy policy](/policies/privacy), [Delivery information](/policies/delivery) and [Returns & refunds](/policies/returns) pages also form part of these terms.
+These terms apply when you use the website of The Boamah's Online Grocery Shop ("we", "us") and when you buy from us. By placing an order, you agree to them. Our [Privacy policy](/policies/privacy), [Delivery information](/policies/delivery) and [Returns & refunds](/policies/returns) pages also form part of these terms.
 
-## Your account
-- You can shop as a guest or create an account. Please give accurate details and keep them up to date.
-- Keep your password private. You are responsible for orders placed from your account.
-- You must be 18 or older to hold an account, or have permission from a parent or guardian.
-- We may suspend an account that is used for fraud or abuse, or in breach of these terms.
+## Your details
+- You do not need an account to shop with us. Please give accurate details at checkout.
+- You must be 18 or older to place an order, or have permission from a parent or guardian.
+- We may refuse or cancel an order that involves fraud or abuse, or breaks these terms.
 
 ## Products and prices
 - Prices are shown in Ghana cedis (GH₵). Before you place an order, checkout shows the full amount you will pay, including any delivery fee and discount.

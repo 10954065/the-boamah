@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ResetPasswordForm } from "@/components/auth/auth-forms";
 import { Alert } from "@/components/ui/feedback";
 
@@ -16,9 +15,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
       <div className="mt-6">
         {invalid ? (
           <Alert tone="danger" title="This reset link is invalid or has expired">
-            <Link href="/forgot-password" className="font-semibold underline">
-              Request a new reset link
-            </Link>
+            Request a new one from the staff sign in page.
           </Alert>
         ) : (
           <ResetPasswordForm token={token} />

@@ -19,19 +19,6 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Enter your password."),
 });
 
-export const registerSchema = z
-  .object({
-    name: z.string().trim().min(2, "Enter your full name.").max(80),
-    email: emailField,
-    phone: z.union([z.literal(""), ghanaPhone]).optional(),
-    password: passwordField,
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
-
 export const forgotPasswordSchema = z.object({ email: emailField });
 
 export const resetPasswordSchema = z
@@ -42,4 +29,3 @@ export const resetPasswordSchema = z
   });
 
 export type SignInInput = z.infer<typeof signInSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;

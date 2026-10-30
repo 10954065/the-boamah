@@ -6,7 +6,6 @@ import { siteUrl } from "@/lib/utils";
 import { getActiveBanners } from "@/server/banners";
 import { getActiveCategories, getBestSellers, getFeaturedProducts, getHeroProducts, getNewArrivals, getOnSaleProducts } from "@/server/catalog";
 import { getStoreSettings } from "@/server/settings";
-import { getWishlistIds } from "@/server/wishlist";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -18,7 +17,6 @@ function ProductRow({
   subtitle,
   href,
   products,
-  savedIds,
   priorityCount = 0,
 }: {
   id: string;
@@ -26,20 +24,19 @@ function ProductRow({
   subtitle?: string;
   href: string;
   products: ProductCardView[];
-  savedIds: Set<string>;
   priorityCount?: number;
 }) {
   if (products.length === 0) return null;
   return (
     <section aria-labelledby={id} className="container-page mt-12">
       <SectionHeading id={id} title={title} subtitle={subtitle} href={href} />
-      <ProductGrid products={products} savedIds={savedIds} priorityCount={priorityCount} />
+      <ProductGrid products={products} priorityCount={priorityCount} />
     </section>
   );
 }
 
 export default async function HomePage() {
-  const [settings, heroBanners, promoBanners, categories, featured, bestSellers, newArrivals, offers, savedIds, heroProducts] = await Promise.all([
+  const [settings, heroBanners, promoBanners, categories, featured, bestSellers, newArrivals, offers, heroProducts] = await Promise.all([
     getStoreSettings(),
     getActiveBanners("HERO", 1),
     getActiveBanners("HOME_PROMO", 3),
@@ -48,7 +45,6 @@ export default async function HomePage() {
     getBestSellers(5),
     getNewArrivals(10),
     getOnSaleProducts(5),
-    getWishlistIds(),
     getHeroProducts(),
   ]);
 
@@ -80,13 +76,12 @@ export default async function HomePage() {
         subtitle="Our favourites from the shelves this week."
         href="/shop"
         products={featured}
-        savedIds={savedIds}
         priorityCount={2}
       />
       <PromoBanners banners={promoBanners} />
-      <ProductRow id="offers-title" title="Special offers" subtitle="Reduced prices for a limited time." href="/offers" products={offers} savedIds={savedIds} />
-      <ProductRow id="bestsellers-title" title="Best sellers" subtitle="What other shoppers are buying." href="/shop" products={bestSellers} savedIds={savedIds} />
-      <ProductRow id="new-title" title="New arrivals" subtitle="Recently added to the store." href="/shop?sort=newest" products={newArrivals} savedIds={savedIds} />
+      <ProductRow id="offers-title" title="Special offers" subtitle="Reduced prices for a limited time." href="/offers" products={offers} />
+      <ProductRow id="bestsellers-title" title="Best sellers" subtitle="What other shoppers are buying." href="/shop" products={bestSellers} />
+      <ProductRow id="new-title" title="New arrivals" subtitle="Recently added to the store." href="/shop?sort=newest" products={newArrivals} />
       <TrustSection hasSupportContact={Boolean(settings.contactPhone || settings.contactEmail)} />
     </>
   );

@@ -20,6 +20,7 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "admin:create": "tsx scripts/create-admin.ts",
+    "staff:links": "tsx scripts/staff-links.ts",
     "test": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:all": "vitest run",

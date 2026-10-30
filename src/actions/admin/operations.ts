@@ -6,11 +6,12 @@ import { fail, fromZod, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { parseDecimalToMinor } from "@/lib/money";
 import { ORDER_STATUSES } from "@/lib/order-status";
-import { ROLES } from "@/lib/permissions";
+import { ROLES, STAFF_ROLES } from "@/lib/permissions";
 import { parseDecimalToMilli } from "@/lib/quantity";
 import { recordAudit } from "@/server/audit";
 import { adjustStock, InsufficientStockError } from "@/server/inventory";
 import { cancelOrder, OrderActionError, recordCashPayment, updateOrderStatus } from "@/server/orders/lifecycle";
+import { addStaffMember, resetStaffMemberPassword, setStaffMemberSuspended } from "@/server/staff";
 import { notifyBackInStock } from "@/server/stock-alerts";
 import { refreshStorefront } from "@/server/storefront-cache";
 import { authorize, runAction } from "@/server/session";
@@ -113,31 +114,6 @@ export async function addOrderNote(input: { orderId: string; body: string }): Pr
 }
 
 // ---------------------------------------------------------------------------
-// Customers
-// ---------------------------------------------------------------------------
-
-export async function setCustomerSuspended(input: { userId: string; suspended: boolean }): Promise<ActionResult> {
-  return runAction("admin.suspend", async () => {
-    const actor = await authorize("customers:suspend");
-    const parsed = z.object({ userId: z.string().max(64), suspended: z.boolean() }).safeParse(input);
-    if (!parsed.success) return fail("Invalid request.");
-    if (parsed.data.userId === actor.id) return fail("You cannot suspend your own account.");
-    const target = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
-    if (!target) return fail("Customer not found.");
-    if (target.role !== "CUSTOMER" && actor.role !== "SUPER_ADMIN") return fail("Only a Super Admin can suspend staff accounts.");
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: target.id }, data: { status: parsed.data.suspended ? "SUSPENDED" : "ACTIVE" } }),
-      // Suspension takes effect immediately: existing sessions are revoked.
-      ...(parsed.data.suspended ? [prisma.session.deleteMany({ where: { userId: target.id } })] : []),
-    ]);
-    await recordAudit({ actorId: actor.id, action: parsed.data.suspended ? "user.suspend" : "user.reactivate", entityType: "User", entityId: target.id });
-    revalidatePath(`/admin/customers/${target.id}`);
-    revalidatePath("/admin/customers");
-    return ok(undefined, parsed.data.suspended ? "Account suspended." : "Account reactivated.");
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Staff & roles (Super Admin only)
 // ---------------------------------------------------------------------------
 
@@ -149,7 +125,7 @@ export async function setStaffRole(input: { email: string; role: string }): Prom
       .safeParse(input);
     if (!parsed.success) return fail("Enter a valid email and role.");
     const target = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (!target) return fail("No account exists with that email. Ask the person to register first, then assign their role.");
+    if (!target) return fail("No account has that email. Add them as a new staff member above.");
     if (target.id === actor.id) return fail("You cannot change your own role.");
     if (target.role === "SUPER_ADMIN" && parsed.data.role !== "SUPER_ADMIN") {
       const superAdmins = await prisma.user.count({ where: { role: "SUPER_ADMIN", status: "ACTIVE" } });
@@ -158,7 +134,47 @@ export async function setStaffRole(input: { email: string; role: string }): Prom
     await prisma.user.update({ where: { id: target.id }, data: { role: parsed.data.role } });
     await recordAudit({ actorId: actor.id, action: "staff.role_change", entityType: "User", entityId: target.id, details: { from: target.role, to: parsed.data.role } });
     revalidatePath("/admin/staff");
-    return ok(undefined, `${target.name} is now ${parsed.data.role === "CUSTOMER" ? "a customer (staff access removed)" : parsed.data.role.replace(/_/g, " ").toLowerCase()}.`);
+    return ok(undefined, parsed.data.role === "CUSTOMER" ? `${target.name} no longer has staff access.` : `${target.name} is now ${parsed.data.role.replace(/_/g, " ").toLowerCase()}.`);
+  });
+}
+
+const newStaffSchema = z.object({
+  name: z.string().trim().min(2, "Enter their full name.").max(80),
+  email: z.email("Enter a valid email address.").trim().toLowerCase().max(254),
+  role: z.enum(STAFF_ROLES),
+});
+
+const staffIdSchema = z.string().min(1).max(64);
+
+/** Shoppers have no accounts, and staff cannot register: the Super Admin adds them here. */
+export async function addStaff(input: z.input<typeof newStaffSchema>): Promise<ActionResult<{ name: string; temporaryPassword: string }>> {
+  return runAction("admin.addStaff", async () => {
+    const actor = await authorize("staff:manage");
+    const parsed = newStaffSchema.safeParse(input);
+    if (!parsed.success) return fromZod(parsed.error);
+    const created = await addStaffMember(actor.id, parsed.data);
+    revalidatePath("/admin/staff");
+    return ok({ name: parsed.data.name, temporaryPassword: created.temporaryPassword });
+  });
+}
+
+export async function resetStaffPassword(input: { userId: string }): Promise<ActionResult<{ name: string; temporaryPassword: string }>> {
+  return runAction("admin.resetStaffPassword", async () => {
+    const actor = await authorize("staff:manage");
+    const userId = staffIdSchema.safeParse(input.userId);
+    if (!userId.success) return fail("Staff member not found.");
+    return ok(await resetStaffMemberPassword(actor.id, userId.data));
+  });
+}
+
+export async function setStaffSuspended(input: { userId: string; suspended: boolean }): Promise<ActionResult> {
+  return runAction("admin.staffSuspended", async () => {
+    const actor = await authorize("staff:manage");
+    const parsed = z.object({ userId: staffIdSchema, suspended: z.boolean() }).safeParse(input);
+    if (!parsed.success) return fail("Invalid request.");
+    await setStaffMemberSuspended(actor.id, parsed.data.userId, parsed.data.suspended);
+    revalidatePath("/admin/staff");
+    return ok(undefined, parsed.data.suspended ? "Account suspended." : "Account reactivated.");
   });
 }
 

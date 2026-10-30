@@ -1,15 +1,18 @@
-import { StaffRoleForm } from "@/components/admin/store-managers";
+import { AddStaffForm, PrivateLinks, StaffRoleForm, StaffRowActions } from "@/components/admin/staff-manager";
 import { AdminHeader, Panel, TableWrap, td, th } from "@/components/admin/ui";
 import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/feedback";
 import { prisma } from "@/lib/db";
 import { PERMISSIONS, ROLE_LABELS, ROLE_PERMISSIONS, STAFF_ROLES } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { requireStaffPage } from "@/server/session";
+import { staffLinks } from "@/server/staff";
 
 export const metadata = { title: "Staff & roles" };
 
 export default async function StaffPage() {
-  await requireStaffPage("staff:manage", "/admin/staff");
+  const viewer = await requireStaffPage("staff:manage", "/admin/staff");
+  const links = staffLinks();
   const staff = await prisma.user.findMany({
     where: { role: { not: "CUSTOMER" } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
@@ -17,18 +20,25 @@ export default async function StaffPage() {
   });
   return (
     <>
-      <AdminHeader title="Staff & roles" description="Only a Super Admin can grant or remove roles. People must register an account before they can be given a role." />
-      <Panel title="Assign a role" className="mb-6">
+      <AdminHeader title="Staff & roles" description="Only a Super Admin can add staff, change roles, reset passwords or suspend an account." />
+      <Panel title="Private links" className="mb-6">
+        {links ? <PrivateLinks {...links} /> : <Alert tone="warning">Set STAFF_GATE_KEY on the server to get the private links.</Alert>}
+      </Panel>
+      <Panel title="Add a staff member" className="mb-6">
+        <AddStaffForm />
+      </Panel>
+      <Panel title="Change a role" className="mb-6">
         <StaffRoleForm />
       </Panel>
       <TableWrap>
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="border-b border-line bg-soft/60">
             <tr>
               <th scope="col" className={th}>Name</th>
               <th scope="col" className={th}>Role</th>
               <th scope="col" className={th}>Status</th>
               <th scope="col" className={th}>Since</th>
+              <th scope="col" className={th}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -41,6 +51,13 @@ export default async function StaffPage() {
                 <td className={td}><Badge tone="brand">{ROLE_LABELS[member.role]}</Badge></td>
                 <td className={td}>{member.status === "ACTIVE" ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Suspended</Badge>}</td>
                 <td className={td}>{formatDate(member.createdAt)}</td>
+                <td className={td}>
+                  {member.id === viewer.id ? (
+                    <span className="text-xs text-ink-subtle">You</span>
+                  ) : (
+                    <StaffRowActions userId={member.id} name={member.name} suspended={member.status !== "ACTIVE"} />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

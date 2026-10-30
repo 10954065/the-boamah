@@ -29,7 +29,6 @@ const COLUMNS = [
   {
     title: "Customer care",
     links: [
-      { href: "/account", label: "My account" },
       { href: "/track-order", label: "Track an order" },
       { href: "/policies/delivery", label: "Delivery information" },
       { href: "/policies/returns", label: "Returns & refunds" },

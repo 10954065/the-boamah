@@ -24,7 +24,6 @@ export const checkoutSchema = z
     addressDetails: z.string().trim().max(200).optional(),
     deliveryInstructions: z.string().trim().max(500).optional(),
     paymentMethod: z.enum(["PAYSTACK", "CASH_ON_DELIVERY"]),
-    saveAddress: z.boolean().optional(),
     expectedTotalMinor: z.number().int().nonnegative(),
   })
   .superRefine((data, ctx) => {
@@ -73,7 +72,8 @@ interface QuoteParams {
   cartId: string;
   fulfilmentMethod: "DELIVERY" | "PICKUP";
   zoneId?: string;
-  who: { userId: string | null; email: string | null };
+  /** The shopper's email once it is known, for per-customer coupon limits. */
+  email: string | null;
   settings: StoreSettings;
 }
 
@@ -99,7 +99,7 @@ export async function quoteCart(client: Tx | typeof prisma, params: QuoteParams)
   if (cart?.couponCode) {
     const loaded = await loadCoupon(cart.couponCode, client);
     if (loaded) {
-      const used = await countCustomerRedemptions(loaded.coupon.id, params.who, client);
+      const used = await countCustomerRedemptions(loaded.coupon.id, params.email, client);
       const result = evaluateCoupon(loaded.rule, priced, new Date(), used);
       if (result.ok) {
         discount = result.discountMinor;
@@ -155,26 +155,25 @@ export interface CreatedOrder {
  */
 export async function createOrder(
   input: CheckoutInput,
-  ctx: { cartId: string; user: { id: string; email: string } | null; settings: StoreSettings; now?: Date },
+  ctx: { cartId: string; settings: StoreSettings; now?: Date },
 ): Promise<CreatedOrder> {
   const existing = await prisma.order.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
   if (existing) {
     return { orderId: existing.id, reference: existing.reference, paymentMethod: existing.paymentMethod, guestToken: null, duplicate: true };
   }
 
-  const email = (input.email || ctx.user?.email || "").toLowerCase() || null;
-  if (!ctx.user && !email) throw new CheckoutError("Please enter your email so we can send your order confirmation.", "EMAIL_REQUIRED");
+  const email = (input.email ?? "").toLowerCase();
+  if (!email) throw new CheckoutError("Please enter your email so we can send your order confirmation.", "EMAIL_REQUIRED");
 
-  if (input.paymentMethod === "PAYSTACK") {
-    if (!isOnlinePaymentAvailable(ctx.settings)) throw new CheckoutError("Online payment is not available right now.", "PAYMENT_METHOD");
-    if (!email) throw new CheckoutError("An email address is required for online payment.", "EMAIL_REQUIRED");
+  if (input.paymentMethod === "PAYSTACK" && !isOnlinePaymentAvailable(ctx.settings)) {
+    throw new CheckoutError("Online payment is not available right now.", "PAYMENT_METHOD");
   }
   if (input.paymentMethod === "CASH_ON_DELIVERY" && !ctx.settings.codEnabled) {
     throw new CheckoutError("Cash on delivery is not available right now.", "PAYMENT_METHOD");
   }
 
   const now = ctx.now ?? new Date();
-  const guest = ctx.user ? null : generateGuestToken();
+  const guest = generateGuestToken();
 
   try {
     const order = await prisma.$transaction(
@@ -183,7 +182,7 @@ export async function createOrder(
           cartId: ctx.cartId,
           fulfilmentMethod: input.fulfilmentMethod,
           zoneId: input.zoneId,
-          who: { userId: ctx.user?.id ?? null, email },
+          email,
           settings: ctx.settings,
         });
         if (quote.totals.totalMinor !== input.expectedTotalMinor) {
@@ -195,8 +194,7 @@ export async function createOrder(
           data: {
             reference: generateOrderReference(now),
             idempotencyKey: input.idempotencyKey,
-            userId: ctx.user?.id ?? null,
-            guestTokenHash: guest?.hash ?? null,
+            guestTokenHash: guest.hash,
             customerName: input.customerName,
             email,
             phone: input.phone,
@@ -234,7 +232,6 @@ export async function createOrder(
               create: {
                 toStatus: isOnline ? "PENDING_PAYMENT" : "CONFIRMED",
                 note: isOnline ? "Order placed, awaiting online payment." : "Order placed for cash on delivery.",
-                actorId: ctx.user?.id ?? null,
               },
             },
           },
@@ -250,35 +247,18 @@ export async function createOrder(
             WHERE id = ${quote.couponId} AND ("usageLimit" IS NULL OR "usedCount" < "usageLimit")
           `;
           if (updated !== 1) throw new CheckoutError("This coupon has just reached its usage limit. Please remove it and try again.", "COUPON");
-          await tx.couponRedemption.create({ data: { couponId: quote.couponId, orderId: created.id, userId: ctx.user?.id ?? null, email } });
+          await tx.couponRedemption.create({ data: { couponId: quote.couponId, orderId: created.id, email } });
         }
 
         await tx.cartItem.deleteMany({ where: { cartId: ctx.cartId } });
         await tx.cart.update({ where: { id: ctx.cartId }, data: { couponCode: null } });
 
-        if (ctx.user && input.saveAddress && input.fulfilmentMethod === "DELIVERY" && input.city && input.area && input.addressLine) {
-          const hasDefault = await tx.address.count({ where: { userId: ctx.user.id, isDefault: true } });
-          await tx.address.create({
-            data: {
-              userId: ctx.user.id,
-              recipientName: input.customerName,
-              phone: input.phone,
-              region: quote.zone?.region ?? "",
-              city: input.city,
-              area: input.area,
-              addressLine: input.addressLine,
-              details: input.addressDetails || null,
-              zoneId: quote.zone?.id ?? null,
-              isDefault: hasDefault === 0,
-            },
-          });
-        }
         return created;
       },
       { timeout: 20_000, maxWait: 10_000 },
     );
 
-    return { orderId: order.id, reference: order.reference, paymentMethod: order.paymentMethod, guestToken: guest?.token ?? null, duplicate: false };
+    return { orderId: order.id, reference: order.reference, paymentMethod: order.paymentMethod, guestToken: guest.token, duplicate: false };
   } catch (error) {
     if (error instanceof InsufficientStockError) {
       throw new CheckoutError("Sorry, one of your items has just sold out. Please review your cart.", "OUT_OF_STOCK");

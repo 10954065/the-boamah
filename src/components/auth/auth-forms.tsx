@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { mergeGuestCartAfterSignIn } from "@/actions/account";
 import { Button } from "@/components/ui/button";
 import { ClientForm } from "@/components/ui/client-form";
 import { Alert, Spinner } from "@/components/ui/feedback";
@@ -14,11 +13,11 @@ import { Field, fieldAria } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { safeRedirectPath } from "@/lib/utils";
-import { forgotPasswordSchema, registerSchema, resetPasswordSchema, signInSchema } from "@/lib/validation";
+import { forgotPasswordSchema, resetPasswordSchema, signInSchema } from "@/lib/validation";
 
 function errorMessage(error: { message?: string; status?: number } | null | undefined, fallback: string): string {
   if (!error) return fallback;
-  if (error.status === 429) return "Too many attempts. Please wait a minute and try again.";
+  if (error.status === 429) return error.message || "Too many attempts. Please wait a minute and try again.";
   return error.message || fallback;
 }
 
@@ -35,8 +34,7 @@ export function SignInForm({ next }: { next?: string }) {
       setFormError(error.status === 401 ? "Incorrect email or password." : errorMessage(error, "We couldn't sign you in."));
       return;
     }
-    await mergeGuestCartAfterSignIn();
-    router.replace(safeRedirectPath(next, "/account"));
+    router.replace(safeRedirectPath(next, "/admin"));
     router.refresh();
   });
 
@@ -56,61 +54,6 @@ export function SignInForm({ next }: { next?: string }) {
       </div>
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Spinner label="Signing in" /> : null} Sign in
-      </Button>
-    </ClientForm>
-  );
-}
-
-export function RegisterForm({ next }: { next?: string }) {
-  const router = useRouter();
-  const [formError, setFormError] = useState<string | null>(null);
-  const form = useForm<z.input<typeof registerSchema>, unknown, z.output<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", phone: "", password: "", confirmPassword: "" },
-  });
-  const { errors, isSubmitting } = form.formState;
-
-  const onSubmit = form.handleSubmit(async (values) => {
-    setFormError(null);
-    const { error } = await authClient.signUp.email({
-      name: values.name,
-      email: values.email,
-      password: values.password,
-      ...(values.phone ? { phone: values.phone } : {}),
-    });
-    if (error) {
-      setFormError(
-        error.status === 422 || /exist/i.test(error.message ?? "")
-          ? "An account with this email already exists. Try signing in instead."
-          : errorMessage(error, "We couldn't create your account."),
-      );
-      return;
-    }
-    await mergeGuestCartAfterSignIn();
-    router.replace(safeRedirectPath(next, "/account"));
-    router.refresh();
-  });
-
-  return (
-    <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
-      {formError ? <Alert tone="danger">{formError}</Alert> : null}
-      <Field id="name" label="Full name" required error={errors.name?.message}>
-        <Input autoComplete="name" {...fieldAria("name", errors.name?.message)} {...form.register("name")} />
-      </Field>
-      <Field id="email" label="Email address" required error={errors.email?.message}>
-        <Input type="email" autoComplete="email" {...fieldAria("email", errors.email?.message)} {...form.register("email")} />
-      </Field>
-      <Field id="phone" label="Phone number" hint="Optional. Used for delivery updates." error={errors.phone?.message}>
-        <Input type="tel" autoComplete="tel" placeholder="024 123 4567" {...fieldAria("phone", errors.phone?.message, "hint")} {...form.register("phone")} />
-      </Field>
-      <Field id="password" label="Password" required hint="At least 8 characters." error={errors.password?.message}>
-        <Input type="password" autoComplete="new-password" {...fieldAria("password", errors.password?.message, "hint")} {...form.register("password")} />
-      </Field>
-      <Field id="confirmPassword" label="Confirm password" required error={errors.confirmPassword?.message}>
-        <Input type="password" autoComplete="new-password" {...fieldAria("confirmPassword", errors.confirmPassword?.message)} {...form.register("confirmPassword")} />
-      </Field>
-      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? <Spinner label="Creating account" /> : null} Create account
       </Button>
     </ClientForm>
   );
@@ -155,7 +98,7 @@ export function ForgotPasswordForm() {
 }
 
 export function ResetPasswordForm({ token }: { token: string }) {
-  const router = useRouter();
+  const [done, setDone] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<z.input<typeof resetPasswordSchema>>({
     resolver: zodResolver(resetPasswordSchema),
@@ -169,24 +112,25 @@ export function ResetPasswordForm({ token }: { token: string }) {
     if (error) {
       setFormError(
         /invalid|expired/i.test(error.message ?? "")
-          ? "This reset link is invalid or has expired. Please request a new one."
+          ? "This reset link is invalid or has expired. Request a new one from the staff sign in page."
           : errorMessage(error, "We couldn't reset your password."),
       );
       return;
     }
-    router.replace("/login?reset=1");
+    setDone(true);
   });
+
+  if (done) {
+    return (
+      <Alert tone="success" title="Your password has been changed">
+        Open your staff link and sign in with the new password.
+      </Alert>
+    );
+  }
 
   return (
     <ClientForm onSubmit={onSubmit} noValidate className="space-y-4">
-      {formError ? (
-        <Alert tone="danger">
-          {formError}{" "}
-          <Link href="/forgot-password" className="font-semibold underline">
-            Request a new link
-          </Link>
-        </Alert>
-      ) : null}
+      {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="password" label="New password" hint="At least 8 characters." error={errors.password?.message}>
         <Input type="password" autoComplete="new-password" {...fieldAria("password", errors.password?.message, "hint")} {...form.register("password")} />
       </Field>

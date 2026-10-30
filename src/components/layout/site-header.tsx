@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { ChevronRight, Heart, LayoutDashboard, ShoppingBasket, UserRound } from "lucide-react";
+import { ChevronRight, PackageSearch, ShoppingBasket } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { CartLink } from "@/components/store/cart-drawer";
-import { hasPermission } from "@/lib/permissions";
-import { posUrl } from "@/lib/pos-host";
 import { getCartCount } from "@/server/cart";
 import { getActiveCategories } from "@/server/catalog";
-import { getCurrentUser } from "@/server/session";
 import { getStoreSettings } from "@/server/settings";
 import { BottomNav } from "./bottom-nav";
 import { MainNavLinks } from "./main-nav";
@@ -21,6 +18,8 @@ export const PRIMARY_LINKS = [
   { href: "/shop?sort=newest", label: "New Arrivals" },
   { href: "/contact", label: "Contact Us" },
 ];
+
+const ORDER_LINKS = [{ href: "/track-order", label: "Track an order" }];
 
 async function AnnouncementBar() {
   const settings = await getStoreSettings();
@@ -47,29 +46,7 @@ async function AnnouncementBar() {
 }
 
 export async function SiteHeader() {
-  const [user, cartCount, categories] = await Promise.all([getCurrentUser(), getCartCount(), getActiveCategories()]);
-
-  // Staff who cannot open the admin (cashiers) get a link to the till instead.
-  const staffLink = !user?.isStaff
-    ? null
-    : hasPermission(user.role, "dashboard:view")
-      ? { href: "/admin", label: "Admin dashboard", short: "Admin" }
-      : hasPermission(user.role, "pos:sell")
-        ? { href: posUrl("/pos"), label: "Open the till", short: "Till" }
-        : null;
-
-  const accountLinks = user
-    ? [
-        { href: "/account", label: "My account" },
-        { href: "/account/orders", label: "My orders" },
-        { href: "/account/wishlist", label: "Wishlist" },
-        ...(staffLink ? [{ href: staffLink.href, label: staffLink.label }] : []),
-      ]
-    : [
-        { href: "/login", label: "Sign in" },
-        { href: "/register", label: "Create account" },
-        { href: "/track-order", label: "Track an order" },
-      ];
+  const [cartCount, categories] = await Promise.all([getCartCount(), getActiveCategories()]);
 
   return (
     <>
@@ -79,33 +56,18 @@ export async function SiteHeader() {
           <MobileNav
             links={PRIMARY_LINKS}
             categories={categories.map((c) => ({ href: `/categories/${c.slug}`, label: c.name }))}
-            accountLinks={accountLinks}
+            orderLinks={ORDER_LINKS}
           />
           <Logo compact />
           <SearchBox className="hidden min-w-0 flex-1 lg:block lg:max-w-2xl" />
-          <nav aria-label="Account" className="ml-auto flex items-center gap-1 sm:gap-2">
-            {staffLink ? (
-              <Link
-                href={staffLink.href}
-                className="hidden h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink-muted hover:bg-soft hover:text-ink xl:flex"
-              >
-                <LayoutDashboard className="h-4 w-4" aria-hidden="true" /> {staffLink.short}
-              </Link>
-            ) : null}
+          <nav aria-label="Orders and cart" className="ml-auto flex items-center gap-1 sm:gap-2">
             <Link
-              href={user ? "/account" : "/login"}
+              href="/track-order"
               className="flex h-10 items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-soft sm:px-3"
-              aria-label={user ? "My account" : "Sign in"}
+              aria-label="Track an order"
             >
-              <UserRound className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden sm:inline">{user ? `Hi, ${user.name.split(" ")[0]}` : "Sign in"}</span>
-            </Link>
-            <Link
-              href="/account/wishlist"
-              className="hidden h-10 w-10 items-center justify-center rounded-md text-ink hover:bg-soft sm:flex"
-              aria-label="Wishlist"
-            >
-              <Heart className="h-5 w-5" aria-hidden="true" />
+              <PackageSearch className="h-5 w-5" aria-hidden="true" />
+              <span className="hidden sm:inline">Track order</span>
             </Link>
             <CartLink
               count={cartCount}
@@ -135,7 +97,7 @@ export async function SiteHeader() {
           </div>
         </nav>
       </header>
-      <BottomNav cartCount={cartCount} accountHref={user ? "/account" : "/login"} />
+      <BottomNav cartCount={cartCount} />
     </>
   );
 }

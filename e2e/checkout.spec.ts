@@ -27,6 +27,7 @@ test.describe("cart and checkout", () => {
     await expect(page.getByText("Total to pay")).toBeVisible();
     await page.getByRole("button", { name: "Place order" }).click();
     await expect(page.getByText("Enter your full name.")).toBeVisible();
+    await expect(page.getByText("Enter a valid email address.")).toBeVisible();
     await expect(page.getByText(/valid Ghana phone number/)).toBeVisible();
   });
 

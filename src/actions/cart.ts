@@ -7,9 +7,10 @@ import { prisma } from "@/lib/db";
 import { evaluateCoupon, unitPriceForQuantity } from "@/lib/pricing";
 import { checkQuantity, clampToValidQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { ensureCart, getCartView, toPricedLines } from "@/server/cart";
-import { countCustomerRedemptions, loadCoupon, normalizeCouponCode } from "@/server/coupons";
+import { loadCoupon, normalizeCouponCode } from "@/server/coupons";
 import { getFreeDeliveryTarget, type FreeDeliveryTarget } from "@/server/delivery";
-import { authorizeCustomer, getCurrentUser, runAction } from "@/server/session";
+import { getAccessibleOrder } from "@/server/orders/access";
+import { runAction } from "@/server/session";
 
 const idSchema = z.string().min(1).max(64);
 const quantitySchema = z.number().int().positive().max(1_000_000);
@@ -129,15 +130,11 @@ function plural(count: number, word: string): string {
  * Puts the lines of one of the customer's past orders back in their cart at
  * today's prices, capped at what is in stock. Lines no longer sold are skipped.
  */
-export async function buyAgain(input: { reference: string }): Promise<ActionResult<BuyAgainSummary>> {
+export async function buyAgain(input: { reference: string; token?: string }): Promise<ActionResult<BuyAgainSummary>> {
   return runAction("cart.buyAgain", async () => {
-    const user = await authorizeCustomer();
-    const reference = z.string().trim().min(3).max(40).safeParse(input.reference);
-    if (!reference.success) return fail("Order not found.");
-    const order = await prisma.order.findFirst({
-      where: { reference: reference.data, userId: user.id },
-      select: { items: { select: { variantId: true, quantityMilli: true } } },
-    });
+    const parsed = z.object({ reference: z.string().trim().min(3).max(40), token: z.string().max(200).optional() }).safeParse(input);
+    if (!parsed.success) return fail("Order not found.");
+    const order = await getAccessibleOrder(parsed.data.reference, parsed.data.token);
     if (!order) return fail("Order not found.");
 
     const cartId = await ensureCart();
@@ -241,9 +238,8 @@ export async function applyCoupon(input: { code: string }): Promise<ActionResult
     if (!loaded) return fail("That coupon code is not valid.");
 
     const cart = await getCartView();
-    const user = await getCurrentUser();
-    const used = user ? await countCustomerRedemptions(loaded.coupon.id, { userId: user.id, email: user.email }) : 0;
-    const result = evaluateCoupon(loaded.rule, toPricedLines(cart.lines), new Date(), used);
+    // Per-customer limits are checked at checkout, once the email is known.
+    const result = evaluateCoupon(loaded.rule, toPricedLines(cart.lines), new Date(), 0);
     if (!result.ok) return fail(result.message);
 
     const cartId = await ensureCart();

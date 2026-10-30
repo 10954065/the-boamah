@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { saveSettings, saveZone, setStaffRole, type SettingsInput } from "@/actions/admin/operations";
+import { saveSettings, saveZone, type SettingsInput } from "@/actions/admin/operations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, fieldAria } from "@/components/ui/field";
-import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
+import { Checkbox, Input, Textarea } from "@/components/ui/input";
 
 export interface ZoneRow {
   id?: string;
@@ -281,46 +281,6 @@ export function SettingsForm({ initial, onlineConfigured }: { initial: SettingsD
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? <Spinner label="Saving" /> : null} Save settings
-      </Button>
-    </form>
-  );
-}
-
-export function StaffRoleForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("ORDER_MANAGER");
-  const [pending, startTransition] = useTransition();
-  return (
-    <form
-      className="flex flex-wrap items-end gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        startTransition(async () => {
-          const result = await setStaffRole({ email, role });
-          if (result.ok) {
-            toast.success(result.message);
-            setEmail("");
-            router.refresh();
-          } else toast.error(result.error);
-        });
-      }}
-    >
-      <Field id="staff-email" label="Account email" className="min-w-64 flex-1">
-        <Input id="staff-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </Field>
-      <Field id="staff-role" label="Role">
-        <Select id="staff-role" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="CASHIER">Cashier (till only)</option>
-          <option value="ORDER_MANAGER">Order Manager</option>
-          <option value="INVENTORY_MANAGER">Inventory Manager</option>
-          <option value="STORE_MANAGER">Store Manager</option>
-          <option value="SUPER_ADMIN">Super Admin</option>
-          <option value="CUSTOMER">Customer (remove staff access)</option>
-        </Select>
-      </Field>
-      <Button type="submit" disabled={pending}>
-        {pending ? <Spinner label="Saving" /> : null} Assign role
       </Button>
     </form>
   );

@@ -11,15 +11,13 @@ import { CardAddButton } from "./add-to-cart";
 import { Price } from "./price";
 import { QuickViewButton } from "./quick-view";
 import { SaleCountdown } from "./sale-countdown";
-import { WishlistButton } from "./wishlist-button";
 
 interface ProductCardProps {
   product: ProductCardView;
-  saved: boolean;
   priority?: boolean;
 }
 
-export function ProductCard({ product, saved, priority = false }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const variant = product.defaultVariant;
   const discount = variant ? discountPercent(variant) : null;
   const href = `/products/${product.slug}`;
@@ -47,12 +45,6 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
           {variant?.inStock && variant.lowStock ? <Badge tone="gold">Few left</Badge> : null}
           {variant?.inStock && variant.tiers.length > 0 ? <Badge tone="info">Bulk deal</Badge> : null}
         </div>
-        <WishlistButton
-          productId={product.id}
-          productName={product.name}
-          initialSaved={saved}
-          className="absolute right-2 top-2 z-10"
-        />
         {variant ? (
           // Mouse and keyboard only: on touch screens the card itself opens the product.
           <QuickViewButton
@@ -114,17 +106,16 @@ export function ProductCard({ product, saved, priority = false }: ProductCardPro
 
 interface ProductGridProps {
   products: ProductCardView[];
-  savedIds: Set<string>;
   priorityCount?: number;
   className?: string;
 }
 
-export function ProductGrid({ products, savedIds, priorityCount = 0, className }: ProductGridProps) {
+export function ProductGrid({ products, priorityCount = 0, className }: ProductGridProps) {
   return (
     <ul className={cn("grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", className)}>
       {products.map((product, index) => (
         <li key={product.id} className="reveal" style={{ "--i": index } as CSSProperties}>
-          <ProductCard product={product} saved={savedIds.has(product.id)} priority={index < priorityCount} />
+          <ProductCard product={product} priority={index < priorityCount} />
         </li>
       ))}
     </ul>

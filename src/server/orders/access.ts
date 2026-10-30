@@ -3,7 +3,6 @@ import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/server/session";
 import { hashGuestToken } from "./reference";
 
 const GUEST_COOKIE_PREFIX = "bg_go_";
@@ -40,17 +39,14 @@ function tokenMatches(token: string | undefined, hash: string | null): boolean {
 }
 
 /**
- * Returns the order only if the current visitor may see it: the signed-in
- * owner, or a guest holding the order's access token (URL or cookie).
- * Staff use the admin area instead.
+ * Returns the order only if the visitor holds its access token (URL or
+ * cookie). Anyone else can track it with its reference and their email or
+ * phone; staff use the admin area instead.
  */
 export async function getAccessibleOrder(reference: string, tokenFromUrl?: string): Promise<CustomerOrder | null> {
   if (!/^BMH-\d{6}-[A-Z0-9]{6}$/.test(reference)) return null;
   const order = await prisma.order.findUnique({ where: { reference }, include: customerOrderInclude });
   if (!order) return null;
-
-  const user = await getCurrentUser();
-  if (order.userId) return user?.id === order.userId ? order : null;
 
   const cookieToken = (await cookies()).get(guestCookieName(reference))?.value;
   if (tokenMatches(tokenFromUrl, order.guestTokenHash) || tokenMatches(cookieToken, order.guestTokenHash)) return order;

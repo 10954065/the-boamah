@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import type { StoreSettings } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import type { RoleCode } from "@/lib/permissions";
 import { DEFAULT_SETTINGS } from "@/server/settings";
 
 const TABLES = [
@@ -87,13 +88,13 @@ export async function createTill(code = "T1", isActive = true) {
   return prisma.posTill.create({ data: { code, name: `Till ${code}`, isActive } });
 }
 
-export async function createStaff(role: "CASHIER" | "STORE_MANAGER" | "CUSTOMER" = "CASHIER") {
+export async function createStaff(role: RoleCode = "CASHIER") {
   const id = randomUUID();
   return prisma.user.create({ data: { id, name: `Staff ${id.slice(0, 6)}`, email: `${id.slice(0, 8)}@example.com`, role } });
 }
 
 /** Staff who can sign in with a password, as a manager approving at the till does. */
-export async function createStaffWithPassword(password: string, role: "CASHIER" | "STORE_MANAGER" = "STORE_MANAGER") {
+export async function createStaffWithPassword(password: string, role: RoleCode = "STORE_MANAGER") {
   const user = await createStaff(role);
   await prisma.account.create({ data: { id: randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: await hashPassword(password) } });
   return user;

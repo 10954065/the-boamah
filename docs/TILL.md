@@ -4,17 +4,18 @@ The till is the shop counter's selling screen. It sells the same products as
 the website, with the same photos, prices and stock, and every sale takes the
 stock off the website straight away.
 
-**Address:** https://the-boamah-production.up.railway.app (going to `/pos` on
-the shop's website forwards there). Use Chrome or Edge on the counter PC or
-tablet.
+**Address:** your private till link. The Super Admin finds it under
+*Admin → Staff → Private links*. Open it once on each device: without it the
+till's pages look as if they do not exist. Use Chrome or Edge on the counter PC
+or tablet.
 
 **Who can use it:** staff with the **Cashier** role (till only), Store Managers
-and Super Admins. A Super Admin gives someone the role in *Admin → Staff* after
-they have registered a normal account.
+and Super Admins. The Super Admin adds staff in *Admin → Staff* and gives them a
+temporary password. Nobody can register for themselves.
 
 ## Set up the counter device once
 
-1. Open the till address in Chrome or Edge and sign in.
+1. Open the till link in Chrome or Edge and sign in.
 2. Install it as an app: on a PC, press the install icon at the right of the
    address bar (or *Menu → Install The Boamah's till*); on an Android tablet,
    *Menu → Add to Home screen*. It then opens full screen from its own icon.
@@ -24,6 +25,12 @@ they have registered a normal account.
 
 Do not clear the browser's data for the till's address: sales waiting to be
 sent are kept there.
+
+If the till shows *We couldn't find that page*, open the till link again. The
+device's pass lasts 90 days from its last visit, and it also ends if the links
+are changed. Forgot your password? Use **Forgot your password?** on the sign in
+page, or ask the Super Admin to reset it. Five wrong passwords pause an account;
+a reset lifts the pause.
 
 ## Start of the day: open a shift
 

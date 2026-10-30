@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, LayoutGrid, Search, ShoppingBasket, UserRound, type LucideIcon } from "lucide-react";
+import { House, LayoutGrid, PackageSearch, Search, ShoppingBasket, type LucideIcon } from "lucide-react";
 import { useCartDrawer } from "@/components/store/cart-drawer";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,6 @@ export const FOCUS_SEARCH_EVENT = "store:focus-search";
 
 interface BottomNavProps {
   cartCount: number;
-  accountHref: string;
 }
 
 function Item({ icon: Icon, label, active, badge }: { icon: LucideIcon; label: string; active: boolean; badge?: number }) {
@@ -44,7 +43,7 @@ const itemClass = (active: boolean) =>
   );
 
 /** App-style menu pinned to the bottom of phone screens. */
-export function BottomNav({ cartCount, accountHref }: BottomNavProps) {
+export function BottomNav({ cartCount }: BottomNavProps) {
   const pathname = usePathname();
   const { openCart } = useCartDrawer();
   const isActive = (prefix: string) => (prefix === "/" ? pathname === "/" : pathname.startsWith(prefix));
@@ -86,8 +85,8 @@ export function BottomNav({ cartCount, accountHref }: BottomNavProps) {
           </Link>
         </li>
         <li className="flex flex-1">
-          <Link href={accountHref} className={itemClass(isActive("/account"))} aria-current={isActive("/account") ? "page" : undefined}>
-            <Item icon={UserRound} label="Account" active={isActive("/account")} />
+          <Link href="/track-order" className={itemClass(isActive("/track-order"))} aria-current={isActive("/track-order") ? "page" : undefined}>
+            <Item icon={PackageSearch} label="Track" active={isActive("/track-order")} />
           </Link>
         </li>
       </ul>

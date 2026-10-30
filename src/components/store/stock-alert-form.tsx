@@ -10,14 +10,12 @@ import { Input } from "@/components/ui/input";
 interface StockAlertFormProps {
   variantId: string;
   productName: string;
-  /** Prefilled for signed-in shoppers. */
-  defaultContact?: string;
   smsEnabled: boolean;
 }
 
 /** "Tell me when it's back" for an out-of-stock option. */
-export function StockAlertForm({ variantId, productName, defaultContact = "", smsEnabled }: StockAlertFormProps) {
-  const [contact, setContact] = useState(defaultContact);
+export function StockAlertForm({ variantId, productName, smsEnabled }: StockAlertFormProps) {
+  const [contact, setContact] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

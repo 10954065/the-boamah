@@ -16,16 +16,13 @@ import { ShareButton } from "@/components/store/share-button";
 import { SectionHeading } from "@/components/store/home-sections";
 import { SaleCountdown } from "@/components/store/sale-countdown";
 import { Stars } from "@/components/store/stars";
-import { WishlistButton } from "@/components/store/wishlist-button";
 import { minorToDecimalString } from "@/lib/money";
 import { discountPercent } from "@/lib/pricing";
 import { siteUrl } from "@/lib/utils";
 import { whatsappLink } from "@/lib/whatsapp";
 import { getBoughtTogether, getProductBySlug, getRelatedProducts } from "@/server/catalog";
-import { getReviewEligibility, getReviewSummary } from "@/server/reviews";
-import { getCurrentUser } from "@/server/session";
+import { getReviewSummary } from "@/server/reviews";
 import { getStoreSettings } from "@/server/settings";
-import { getWishlistIds } from "@/server/wishlist";
 
 export async function generateMetadata({ params }: PageProps<"/products/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -50,11 +47,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, savedIds, reviews, user, settings, together] = await Promise.all([
+  const [related, reviews, settings, together] = await Promise.all([
     getRelatedProducts(product),
-    getWishlistIds(),
     getReviewSummary(product.id),
-    getCurrentUser(),
     getStoreSettings(),
     getBoughtTogether(product.id),
   ]);
@@ -71,11 +66,6 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
     defaultVariant: product.defaultVariant,
     rating: null,
   };
-  const eligibility = await getReviewEligibility(product.id, user);
-  const composer =
-    eligibility.state === "SIGNED_OUT"
-      ? { state: "SIGNED_OUT" as const, signInHref: `/login?next=${encodeURIComponent(`/products/${product.slug}#reviews`)}` }
-      : eligibility;
   const productUrl = siteUrl(`/products/${product.slug}`);
   const whatsapp = whatsappLink(settings.whatsappNumber, `Hi, I'd like to ask about ${product.name}. ${productUrl}`);
   const variant = product.defaultVariant;
@@ -182,11 +172,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
             <ProductPurchase
               variants={product.variants}
               productName={product.name}
-              stockAlert={{ defaultContact: user?.email, smsEnabled: settings.smsEnabled }}
+              stockAlert={{ smsEnabled: settings.smsEnabled }}
               stickyBar
-              secondaryAction={
-                <WishlistButton variant="full" productId={product.id} productName={product.name} initialSaved={savedIds.has(product.id)} />
-              }
             />
           </div>
 
@@ -221,12 +208,12 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
         <div className="prose-policy mt-3 whitespace-pre-line">{product.description}</div>
       </section>
 
-      <ProductReviews productId={product.id} summary={reviews} composer={composer} />
+      <ProductReviews summary={reviews} />
 
       {related.length > 0 ? (
         <section aria-labelledby="related-title" className="mt-14">
           <SectionHeading id="related-title" title={`More in ${product.categoryName}`} href={`/categories/${product.categorySlug}`} />
-          <ProductGrid products={related} savedIds={savedIds} />
+          <ProductGrid products={related} />
         </section>
       ) : null}
 

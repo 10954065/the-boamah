@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { addOrderNote, changeOrderStatus, recordCash, setCustomerSuspended } from "@/actions/admin/operations";
+import { addOrderNote, changeOrderStatus, recordCash } from "@/actions/admin/operations";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
@@ -104,42 +104,5 @@ export function OrderNoteForm({ orderId }: { orderId: string }) {
         Add note
       </Button>
     </form>
-  );
-}
-
-export function SuspendToggle({ userId, suspended }: { userId: string; suspended: boolean }) {
-  const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const run = () =>
-    startTransition(async () => {
-      const result = await setCustomerSuspended({ userId, suspended: !suspended });
-      if (result.ok) {
-        toast.success(result.message);
-        setConfirming(false);
-        router.refresh();
-      } else toast.error(result.error);
-    });
-  if (suspended) {
-    return (
-      <Button variant="secondary" disabled={pending} onClick={run}>
-        Reactivate account
-      </Button>
-    );
-  }
-  return confirming ? (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm">
-      Suspend and sign this customer out everywhere?
-      <Button size="sm" variant="danger" disabled={pending} onClick={run}>
-        Suspend
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-        Keep active
-      </Button>
-    </div>
-  ) : (
-    <Button variant="outline" className="text-danger" onClick={() => setConfirming(true)}>
-      Suspend account
-    </Button>
   );
 }

@@ -49,7 +49,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         <StatCard label="Paid revenue" value={formatMoney(m.paidRevenueMinor)} hint="Verified online + recorded cash" tone="brand" />
         <StatCard label="Orders" value={String(m.totalOrders)} hint={`${m.completedOrders} delivered / collected`} href="/admin/orders" />
         <StatCard label="Awaiting processing" value={String(m.awaitingProcessing)} hint="Confirmed, being prepared or ready (all time)" tone={m.awaitingProcessing ? "warning" : "neutral"} href="/admin/orders?status=CONFIRMED" />
-        <StatCard label="Customers" value={String(m.customers)} hint="Registered accounts" href="/admin/customers" />
+        <StatCard label="Customers" value={String(m.customers)} hint="From checkout details" href="/admin/customers" />
         <StatCard label="Awaiting online payment" value={formatMoney(m.pendingOnline.amountMinor)} hint={`${m.pendingOnline.count} order(s), not counted as revenue`} href="/admin/orders?status=PENDING_PAYMENT" />
         <StatCard label="Cash on delivery outstanding" value={formatMoney(m.codOutstanding.amountMinor)} hint={`${m.codOutstanding.count} order(s) to collect`} tone={m.codOutstanding.count ? "warning" : "neutral"} href="/admin/orders?payment=UNPAID" />
         <StatCard label="Low stock options" value={String(m.lowStock.length)} hint="At or below their alert level" tone={m.lowStock.length ? "danger" : "neutral"} href="/admin/inventory?low=1" />

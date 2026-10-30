@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ShoppingBasket, Tags } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type RefObject } from "react";
 import { toast } from "sonner";
 import { addToCart } from "@/actions/cart";
 import { Button } from "@/components/ui/button";
@@ -218,10 +218,8 @@ function StickyBuyBar({ show, productName, variant, quantity, pending, added, on
 interface ProductPurchaseProps {
   variants: VariantView[];
   productName: string;
-  /** Shown beside the add button, e.g. the wishlist toggle. */
-  secondaryAction?: ReactNode;
   /** Lets shoppers ask to be told when an out-of-stock option returns. */
-  stockAlert?: { defaultContact?: string; smsEnabled: boolean };
+  stockAlert?: { smsEnabled: boolean };
   /** Show the phone add-to-cart bar once the main button scrolls away (product page only). */
   stickyBar?: boolean;
   /** Called after a successful add, e.g. to close a quick-view window. */
@@ -229,7 +227,7 @@ interface ProductPurchaseProps {
 }
 
 /** Variant picker + quantity stepper + add button for the product page. */
-export function ProductPurchase({ variants, productName, secondaryAction, stockAlert, stickyBar = false, onAdded }: ProductPurchaseProps) {
+export function ProductPurchase({ variants, productName, stockAlert, stickyBar = false, onAdded }: ProductPurchaseProps) {
   const [variantId, setVariantId] = useState(variants[0]?.id ?? "");
   const variant = variants.find((v) => v.id === variantId) ?? variants[0];
   const [quantity, setQuantity] = useState(variant?.minQtyMilli ?? 1000);
@@ -302,7 +300,6 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
             {pending ? <Spinner label="Adding" /> : added ? <Check className="pop" /> : <ShoppingBasket />}
             {added ? "Added to cart" : "Add to cart"}
           </Button>
-          {secondaryAction}
         </div>
       ) : (
         <>
@@ -314,12 +311,10 @@ export function ProductPurchase({ variants, productName, secondaryAction, stockA
                 key={variant.id}
                 variantId={variant.id}
                 productName={productName}
-                defaultContact={stockAlert.defaultContact}
                 smsEnabled={stockAlert.smsEnabled}
               />
             ) : null}
           </div>
-          {secondaryAction}
         </>
       )}
       {variant.inStock && variant.lowStock ? (

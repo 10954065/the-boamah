@@ -1,17 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { db, setStock } from "./db";
-
-async function register(page: Page): Promise<string> {
-  const email = `e2e.${Date.now()}@example.com`;
-  await page.goto("/register");
-  await page.getByLabel("Full name").fill("Ama Boateng");
-  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
-  await page.locator("#password").fill("e2e-password-123");
-  await page.locator("#confirmPassword").fill("e2e-password-123");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.waitForURL(/\/account$/);
-  return email;
-}
 
 async function placeCashOrder(page: Page): Promise<string> {
   await page.goto("/products/royal-basmati-rice");
@@ -19,6 +8,7 @@ async function placeCashOrder(page: Page): Promise<string> {
   await expect(page.getByText(/added to your cart/i)).toBeVisible();
   await page.goto("/checkout");
   await page.getByLabel("Full name").fill("Ama Boateng");
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill("ama.boateng@example.com");
   await page.getByLabel("Phone number").fill("0241112222");
   await page.locator("#zoneId").selectOption({ index: 1 });
   await page.getByLabel("Town / city").fill("Accra");
@@ -27,7 +17,7 @@ async function placeCashOrder(page: Page): Promise<string> {
   await page.getByRole("radio", { name: /Cash on delivery/ }).check();
   await expect(page.getByText("Total to pay")).toBeVisible();
   await page.getByRole("button", { name: "Place order" }).click();
-  await page.waitForURL(/\/account\/orders\/BMH-/);
+  await page.waitForURL(/\/orders\/BMH-/);
   return new URL(page.url()).pathname.split("/").at(-1)!;
 }
 
@@ -142,46 +132,41 @@ test.describe("shopping features", () => {
     }
   });
 
-  test("a customer can buy a past order again and review what was delivered", async ({ page }) => {
-    const email = await register(page);
+  test("a shopper can buy an order again from its page", async ({ page }) => {
     const reference = await placeCashOrder(page);
-
-    // Before delivery, reviews are not open to this customer.
-    await page.goto("/products/royal-basmati-rice");
-    await expect(page.getByText(/Only customers who have received this product can review it/)).toBeVisible();
-
-    await page.goto("/account/orders");
     await page.getByRole("button", { name: `Buy again: order ${reference}` }).click();
     await page.waitForURL(/\/cart$/);
     await expect(page.getByRole("link", { name: "Royal Basmati Rice" }).first()).toBeVisible();
+  });
 
-    await db.order.update({ where: { reference }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+  test("approved reviews show on the product, on its card and to search engines", async ({ page }) => {
+    const product = await db.product.findUniqueOrThrow({ where: { slug: "royal-basmati-rice" } });
+    const author = await db.user.create({ data: { id: randomUUID(), name: "Ama Boateng", email: `review.${Date.now()}@example.com` } });
     try {
-      await page.goto("/products/royal-basmati-rice#reviews");
-      const reviews = page.getByRole("region", { name: "Customer reviews" });
-      await reviews.locator("label").filter({ has: page.getByRole("radio", { name: "5 stars, Excellent" }) }).click();
-      await expect(reviews.getByRole("radio", { name: "5 stars, Excellent" })).toBeChecked();
-      await reviews.getByLabel("Your review").fill("Lovely long grains, cooks well for jollof.");
-      await reviews.getByRole("button", { name: "Submit review" }).click();
-      await expect(reviews.getByText(/It will appear once our team has checked it/)).toBeVisible();
+      const body = "Lovely long grains, cooks well for jollof.";
+      const shared = { productId: product.id, rating: 5, authorName: "Ama B." };
+      const pendingAuthor = await db.user.create({ data: { id: randomUUID(), name: "Not Yet", email: `pending.${Date.now()}@example.com` } });
+      try {
+        await db.review.create({ data: { ...shared, userId: pendingAuthor.id, body: "This one is waiting for a check." } });
+        await db.review.create({ data: { ...shared, userId: author.id, body, status: "APPROVED", moderatedAt: new Date() } });
 
-      // Pending reviews stay hidden until a staff member approves them.
-      await page.reload();
-      await expect(page.getByText("Lovely long grains, cooks well for jollof.")).toHaveCount(0);
+        await page.goto("/products/royal-basmati-rice");
+        const reviews = page.getByRole("region", { name: "Customer reviews" });
+        await expect(reviews.getByText(body)).toBeVisible();
+        await expect(reviews.getByText("Ama B.")).toBeVisible();
+        await expect(page.getByText("This one is waiting for a check.")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Submit review" })).toHaveCount(0);
+        const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent();
+        expect(jsonLd).toContain('"aggregateRating"');
 
-      await db.review.updateMany({ where: { user: { email } }, data: { status: "APPROVED", moderatedAt: new Date() } });
-      await page.reload();
-      await expect(page.getByRole("region", { name: "Customer reviews" }).getByText("Lovely long grains, cooks well for jollof.")).toBeVisible();
-      await expect(page.getByText("Ama B.").first()).toBeVisible();
-      const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent();
-      expect(jsonLd).toContain('"aggregateRating"');
-
-      // Product cards show the rating too.
-      await page.goto("/categories/rice-grains");
-      const card = page.locator("article").filter({ has: page.getByRole("link", { name: "Royal Basmati Rice" }) });
-      await expect(card.getByRole("img", { name: /out of 5 stars/ })).toBeVisible();
+        await page.goto("/categories/rice-grains");
+        const card = page.locator("article").filter({ has: page.getByRole("link", { name: "Royal Basmati Rice" }) });
+        await expect(card.getByRole("img", { name: /out of 5 stars/ })).toBeVisible();
+      } finally {
+        await db.user.delete({ where: { id: pendingAuthor.id } });
+      }
     } finally {
-      await db.review.deleteMany({ where: { user: { email } } });
+      await db.user.delete({ where: { id: author.id } });
     }
   });
 });

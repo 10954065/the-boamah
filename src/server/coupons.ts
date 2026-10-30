@@ -41,13 +41,9 @@ export async function loadCoupon(code: string, client: Tx | typeof prisma = pris
 /** Redemptions by this customer (matched by account or by email for guests). */
 export async function countCustomerRedemptions(
   couponId: string,
-  who: { userId?: string | null; email?: string | null },
+  email: string | null,
   client: Tx | typeof prisma = prisma,
 ): Promise<number> {
-  const or = [
-    ...(who.userId ? [{ userId: who.userId }] : []),
-    ...(who.email ? [{ email: who.email.toLowerCase() }] : []),
-  ];
-  if (or.length === 0) return 0;
-  return client.couponRedemption.count({ where: { couponId, OR: or } });
+  if (!email) return 0;
+  return client.couponRedemption.count({ where: { couponId, email: email.toLowerCase() } });
 }

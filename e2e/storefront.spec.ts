@@ -74,7 +74,9 @@ test.describe("storefront", () => {
     for (const path of ["/sitemap.xml", "/sitemaps/pages/sitemap.xml", "/sitemaps/categories/sitemap.xml", "/sitemaps/products/sitemap.xml"]) {
       expect(robots).toMatch(new RegExp(`Sitemap: \\S+${path.replace(/\./g, "\\.")}`));
     }
-    for (const rule of ["Disallow: /admin", "Disallow: /account", "Disallow: /checkout", "Disallow: /*?*sort="]) expect(robots).toContain(rule);
+    for (const rule of ["Disallow: /checkout", "Disallow: /*?*sort="]) expect(robots).toContain(rule);
+    // Listing staff addresses here would point people straight at them.
+    expect(robots).not.toMatch(/admin|login|\/pos/);
     expect(robots).not.toMatch(/Disallow: \/products/);
   });
 

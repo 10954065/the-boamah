@@ -10,7 +10,7 @@ import { getAccessibleOrder, findOrderForTracking, rememberGuestOrder } from "@/
 import { CheckoutError, checkoutSchema, createOrder, quoteCart } from "@/server/orders/checkout";
 import { PaymentStartError, startPayment } from "@/server/payments/service";
 import { clientIp, rateLimit } from "@/server/rate-limit";
-import { getCurrentUser, runAction } from "@/server/session";
+import { runAction } from "@/server/session";
 import { loadStoreSettings } from "@/server/settings";
 import { statusLabel } from "@/lib/order-status";
 import { formatDateTime } from "@/lib/utils";
@@ -33,7 +33,7 @@ export async function quoteCheckout(input: z.input<typeof quoteInput>): Promise<
   return runAction("checkout.quote", async () => {
     const parsed = quoteInput.safeParse(input);
     if (!parsed.success) return fail("Invalid checkout details.");
-    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), loadStoreSettings()]);
+    const [cart, settings] = await Promise.all([findCart(), loadStoreSettings()]);
     if (!cart) return fail("Your cart is empty.");
     try {
       const quote = await quoteCart(
@@ -42,7 +42,7 @@ export async function quoteCheckout(input: z.input<typeof quoteInput>): Promise<
           cartId: cart.id,
           fulfilmentMethod: parsed.data.fulfilmentMethod,
           zoneId: parsed.data.zoneId || undefined,
-          who: { userId: user?.id ?? null, email: user?.email ?? null },
+          email: null,
           settings,
         },
       );
@@ -68,12 +68,12 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ redirec
     const parsed = checkoutSchema.safeParse(input);
     if (!parsed.success) return fromZod(parsed.error);
 
-    const [cart, user, settings] = await Promise.all([findCart(), getCurrentUser(), loadStoreSettings()]);
+    const [cart, settings] = await Promise.all([findCart(), loadStoreSettings()]);
     if (!cart) return fail("Your cart is empty.");
 
     let created;
     try {
-      created = await createOrder(parsed.data, { cartId: cart.id, user: user ? { id: user.id, email: user.email } : null, settings });
+      created = await createOrder(parsed.data, { cartId: cart.id, settings });
     } catch (error) {
       if (error instanceof CheckoutError) {
         return fail(error.code === "TOTAL_CHANGED" ? `TOTAL_CHANGED:${error.message}` : error.message);
@@ -83,7 +83,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ redirec
 
     if (created.guestToken) await rememberGuestOrder(created.reference, created.guestToken);
     revalidatePath("/", "layout");
-    const orderPath = user ? `/account/orders/${created.reference}` : `/orders/${created.reference}`;
+    const orderPath = `/orders/${created.reference}`;
 
     if (created.paymentMethod === "CASH_ON_DELIVERY") {
       if (!created.duplicate) {

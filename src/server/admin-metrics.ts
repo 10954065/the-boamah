@@ -1,6 +1,7 @@
 import "server-only";
 import type { FulfilmentMethod, OrderStatus, PaymentMethod, PaymentStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { countCustomers } from "@/server/customers";
 
 export interface DashboardMetrics {
   totalOrders: number;
@@ -47,7 +48,7 @@ export async function getDashboardMetrics(days: number): Promise<DashboardMetric
         _sum: { totalMinor: true },
         _count: true,
       }),
-      prisma.user.count({ where: { role: "CUSTOMER" } }),
+      countCustomers(),
       prisma.$queryRaw<DashboardMetrics["lowStock"]>`
         SELECT v.id, p.name AS "productName", v.name AS "variantName", v."stockMilli", v."lowStockMilli", v.unit::text AS unit, p.id AS "productId"
         FROM "ProductVariant" v JOIN "Product" p ON p.id = v."productId"

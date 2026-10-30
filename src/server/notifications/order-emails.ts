@@ -16,9 +16,8 @@ async function loadOrder(orderId: string): Promise<OrderWithItems | null> {
   return prisma.order.findUnique({ where: { id: orderId }, include: orderInclude });
 }
 
-/** Link the customer can use to view the order. Guests use tracking (reference + email/phone). */
+/** Link the customer can use to view the order: its private link, or tracking (reference + email/phone). */
 function orderLink(order: OrderWithItems, guestToken?: string | null): string {
-  if (order.userId) return siteUrl(`/account/orders/${order.reference}`);
   if (guestToken) return siteUrl(`/orders/${order.reference}?token=${encodeURIComponent(guestToken)}`);
   return siteUrl(`/track-order?reference=${encodeURIComponent(order.reference)}`);
 }
