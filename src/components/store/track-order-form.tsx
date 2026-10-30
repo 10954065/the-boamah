@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { OrderReviews } from "./order-reviews";
 
 export function TrackOrderForm({ initialReference }: { initialReference: string }) {
   const [reference, setReference] = useState(initialReference);
@@ -59,6 +60,7 @@ export function TrackOrderForm({ initialReference }: { initialReference: string 
           </ol>
         </section>
       ) : null}
+      {result ? <OrderReviews key={result.reference} items={result.reviewItems} access={{ reference: result.reference, contact }} /> : null}
     </div>
   );
 }

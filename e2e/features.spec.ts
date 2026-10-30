@@ -139,6 +139,37 @@ test.describe("shopping features", () => {
     await expect(page.getByRole("link", { name: "Royal Basmati Rice" }).first()).toBeVisible();
   });
 
+  test("a customer rates what they bought once the order is delivered, and the review waits for the shop", async ({ page, browser }) => {
+    const reference = await placeCashOrder(page);
+    const order = await db.order.update({ where: { reference }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+    try {
+      await page.reload();
+      const rate = page.getByRole("region", { name: "Rate what you bought" });
+      await rate.getByRole("button", { name: "Review Royal Basmati Rice" }).click();
+      await rate.locator("label").filter({ hasText: "4 stars" }).click();
+      await expect(rate.getByRole("radio", { name: "4 stars" })).toBeChecked();
+      await rate.getByLabel("Your review").fill("Long grains and no stones. Good for jollof.");
+      await rate.getByRole("button", { name: "Send review" }).click();
+      await expect(rate.getByRole("status")).toContainText("It will show once the shop has checked it");
+
+      const saved = await db.review.findFirstOrThrow({ where: { orderId: order.id } });
+      expect(saved).toMatchObject({ rating: 4, status: "PENDING", authorName: "Ama B.", userId: null });
+
+      // From another phone, tracking with the order's email shows the review is waiting, with no second form.
+      const other = await browser.newContext();
+      const track = await other.newPage();
+      await track.goto(`/track-order?reference=${reference}`);
+      await track.getByLabel("Email or phone number used for the order").fill("0241112222");
+      await track.getByRole("button", { name: "Track order" }).click();
+      const tracked = track.getByRole("region", { name: "Rate what you bought" });
+      await expect(tracked).toContainText("It will show once the shop has checked it");
+      await expect(tracked.getByRole("button", { name: /^Review / })).toHaveCount(0);
+      await other.close();
+    } finally {
+      await db.review.deleteMany({ where: { orderId: order.id } });
+    }
+  });
+
   test("approved reviews show on the product, on its card and to search engines", async ({ page }) => {
     const product = await db.product.findUniqueOrThrow({ where: { slug: "royal-basmati-rice" } });
     const author = await db.user.create({ data: { id: randomUUID(), name: "Ama Boateng", email: `review.${Date.now()}@example.com` } });

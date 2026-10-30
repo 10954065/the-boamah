@@ -24,6 +24,11 @@ export interface ReviewSummary {
 }
 
 /** Approved reviews only: pending and rejected reviews are never shown publicly. */
+/** Customer reviews waiting for staff to approve or reject them. */
+export function pendingReviewCount(): Promise<number> {
+  return prisma.review.count({ where: { status: "PENDING" } });
+}
+
 export const getReviewSummary = cache((productId: string): Promise<ReviewSummary> => storefrontCached(`reviews:${productId}`, () => loadReviewSummary(productId)));
 
 async function loadReviewSummary(productId: string): Promise<ReviewSummary> {

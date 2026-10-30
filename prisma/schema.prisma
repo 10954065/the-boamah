@@ -308,8 +308,9 @@ model Review {
   id          String       @id @default(cuid())
   productId   String
   product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Guests review from their delivered order, so there is often no account.
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   orderId     String?
   order       Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
   rating      Int
@@ -323,6 +324,8 @@ model Review {
   updatedAt   DateTime     @updatedAt
 
   @@unique([productId, userId])
+  // One review per product per order.
+  @@unique([orderId, productId])
   @@index([productId, status, createdAt])
   @@index([status, createdAt])
 }

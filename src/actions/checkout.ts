@@ -6,6 +6,8 @@ import { fail, fromZod, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import type { Totals } from "@/lib/pricing";
 import { findCart } from "@/server/cart";
+import type { ReviewableItem } from "@/lib/order-reviews";
+import { reviewableItems } from "@/server/order-reviews";
 import { getAccessibleOrder, findOrderForTracking, rememberGuestOrder } from "@/server/orders/access";
 import { CheckoutError, checkoutSchema, createOrder, quoteCart } from "@/server/orders/checkout";
 import { PaymentStartError, startPayment } from "@/server/payments/service";
@@ -130,6 +132,8 @@ export interface TrackingView {
   fulfilmentMethod: "DELIVERY" | "PICKUP";
   placedAt: string;
   history: { label: string; at: string }[];
+  /** Products the customer can review, once the order is delivered or collected. */
+  reviewItems: ReviewableItem[];
 }
 
 export async function trackOrder(input: { reference: string; contact: string }): Promise<ActionResult<TrackingView>> {
@@ -146,6 +150,7 @@ export async function trackOrder(input: { reference: string; contact: string }):
       fulfilmentMethod: order.fulfilmentMethod,
       placedAt: formatDateTime(order.createdAt),
       history: order.statusHistory.map((h) => ({ label: statusLabel(h.toStatus, order.fulfilmentMethod), at: formatDateTime(h.createdAt) })),
+      reviewItems: await reviewableItems(order),
     });
   });
 }

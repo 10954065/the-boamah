@@ -133,11 +133,15 @@ export async function notifyStatusChange(orderId: string): Promise<void> {
   const [order, settings] = await Promise.all([loadOrder(orderId), getStoreSettings()]);
   if (!order) return;
   const label = statusLabel(order.status, order.fulfilmentMethod);
+  const delivered = order.status === "DELIVERED";
   await emailCustomer(order, settings, {
     type: "ORDER_STATUS",
     subject: `Order ${order.reference}: ${label}`,
     heading: `Your order is ${label.toLowerCase()}`,
-    intro: `Hi ${order.customerName}, here's an update on your order.`,
+    intro: delivered
+      ? `Hi ${order.customerName}, here's an update on your order. How was everything? You can rate what you bought: open the order with your email or phone number and leave a short review for other shoppers.`
+      : `Hi ${order.customerName}, here's an update on your order.`,
+    ...(delivered ? { ctaLabel: "Rate what you bought" } : {}),
   });
   if (order.status === "OUT_FOR_DELIVERY" || order.status === "READY" || order.status === "DELIVERED") {
     await smsCustomer(order, settings, "ORDER_STATUS", `Order ${order.reference} is ${label.toLowerCase()}.`);

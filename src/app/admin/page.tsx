@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Banknote, ClipboardCheck, Clock, PackageOpen, ReceiptText, ShoppingBag, Store, TrendingUp, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Banknote, ClipboardCheck, Clock, MessageSquareText, PackageOpen, ReceiptText, ShoppingBag, Store, TrendingUp, Users, Wallet } from "lucide-react";
 import { AttentionList, BestSellers, DashboardHero, KpiTile, LowStockList, MoneyMix, OrderPipeline, type AttentionItem } from "@/components/admin/dashboard/parts";
 import { SalesChart } from "@/components/admin/dashboard/sales-chart";
 import { OrderStatusBadge, Panel, PaymentStatusBadge, td, th } from "@/components/admin/ui";
@@ -10,6 +10,7 @@ import { dayString } from "@/lib/pos-report";
 import { cn, formatDateTime } from "@/lib/utils";
 import { getDashboardMetrics } from "@/server/admin-metrics";
 import { tillReviewCount, tillSalesByDay, tillTakingsSince } from "@/server/pos/reports";
+import { pendingReviewCount } from "@/server/reviews";
 import { requireStaffPage } from "@/server/session";
 
 export const metadata = { title: "Dashboard" };
@@ -37,7 +38,11 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
   const showTill = hasPermission(user.role, "pos:manage");
   const now = new Date();
   const since = new Date(now.getTime() - days * DAY_MS);
-  const [m, till] = await Promise.all([getDashboardMetrics(days, now), showTill ? tillFigures(since, now, days) : null]);
+  const [m, till, reviewsToCheck] = await Promise.all([
+    getDashboardMetrics(days, now),
+    showTill ? tillFigures(since, now, days) : null,
+    hasPermission(user.role, "reviews:manage") ? pendingReviewCount() : null,
+  ]);
 
   const daily = m.daily.map((day) => ({ day: day.day, websiteMinor: day.paidMinor, tillMinor: till?.byDay.get(day.day) ?? 0, orders: day.orders }));
   const today = daily.at(-1);
@@ -68,6 +73,9 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
     },
     { label: "Low stock", detail: "At or below their alert level", count: m.lowStock.length, tone: "danger", icon: AlertTriangle, href: "/admin/inventory?low=1" },
     ...(till ? [{ label: "Till to review", detail: "Voids, refunds and counts that differ", count: till.toReview, tone: "info" as const, icon: ClipboardCheck, href: "/admin/till/review" }] : []),
+    ...(reviewsToCheck !== null
+      ? [{ label: "Reviews to check", detail: "From customers' delivered orders", count: reviewsToCheck, tone: "info" as const, icon: MessageSquareText, href: "/admin/reviews" }]
+      : []),
   ];
 
   return (

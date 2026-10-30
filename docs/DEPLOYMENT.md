@@ -521,7 +521,7 @@ entered, so some Search Console notes stay until the shop supplies the fact:
 | Missing `hasMerchantReturnPolicy` | *Settings → Policies → Days customers have to return an item* (0 means no returns; blank leaves it out) |
 | Missing `shippingDetails` | The cheapest active delivery zone's fee, sent for Ghana |
 | Missing `validFrom` | The time the size was last changed, so its current price applies from then |
-| Missing `aggregateRating` / `review` | Approved reviews only. Products without reviews keep this note; it is not an error |
+| Missing `aggregateRating` / `review` | Approved reviews only. Once an order is delivered or collected, the customer can rate its products from the order page or from tracking (reference plus email or phone); the "delivered" email asks them to. Each review waits in *Admin → Reviews* until approved. Products without reviews keep this note; it is not an error |
 
 A pasted shop link shows a picture in WhatsApp, Facebook, X and the like:
 the shop's name and the product (photo, name, size, price), the category or

@@ -84,7 +84,8 @@ export default async function ReviewsPage({ searchParams }: PageProps<"/admin/re
               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-ink">{review.body}</p>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
                 <span>
-                  <span className="font-semibold text-ink">{review.authorName}</span> · {review.user.email}
+                  <span className="font-semibold text-ink">{review.authorName}</span>
+                  {review.user ? <> · {review.user.email}</> : null}
                 </span>
                 {review.order ? (
                   <Link href={`/admin/orders/${review.order.id}`} className="font-mono text-brand-700 hover:underline">

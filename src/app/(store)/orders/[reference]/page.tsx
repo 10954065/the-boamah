@@ -4,7 +4,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { BuyAgainButton } from "@/components/store/buy-again-button";
 import { OrderDetail } from "@/components/store/order-detail";
+import { OrderReviews } from "@/components/store/order-reviews";
 import { PageHeader } from "@/components/store/page-header";
+import { reviewableItems } from "@/server/order-reviews";
 import { getAccessibleOrder, wasConfirmationEmailed } from "@/server/orders/access";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false, follow: false } };
@@ -40,6 +42,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         <div className="flex justify-end">
           <BuyAgainButton reference={order.reference} token={token} />
         </div>
+        <OrderReviews items={await reviewableItems(order)} access={{ reference: order.reference, token }} />
         <OrderDetail
           order={order}
           placed={query.placed === "1"}
