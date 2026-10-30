@@ -90,7 +90,7 @@ export function PasswordForm() {
   });
 
   return (
-    <ClientForm onSubmit={onSubmit} noValidate className="max-w-md space-y-4">
+    <ClientForm onSubmit={onSubmit} noValidate className="flex max-w-md flex-col gap-4">
       {formError ? <Alert tone="danger">{formError}</Alert> : null}
       <Field id="currentPassword" label="Current password" error={errors.currentPassword?.message}>
         <Input type="password" autoComplete="current-password" {...fieldAria("currentPassword", errors.currentPassword?.message)} {...form.register("currentPassword")} />

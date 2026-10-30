@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SignInForm } from "@/components/auth/auth-forms";
+import { AuthHeading } from "@/components/auth/auth-shell";
 import { safeRedirectPath } from "@/lib/utils";
 import { getCurrentUser } from "@/server/session";
 
@@ -15,11 +16,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <>
-      <h1 className="text-2xl font-extrabold">Staff sign in</h1>
-      <p className="mt-1 text-sm text-ink-muted">For The Boamah&rsquo;s staff.</p>
-      <div className="mt-6">
-        <SignInForm next={next} />
-      </div>
+      <AuthHeading title="Welcome back">Sign in with your staff email and password.</AuthHeading>
+      <SignInForm next={next} />
     </>
   );
 }
