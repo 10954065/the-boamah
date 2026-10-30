@@ -90,10 +90,11 @@ test.describe("till layout", () => {
     await expect(check.getByRole("listitem").filter({ hasText: "Wesson" })).toContainText("3");
 
     // A category can still be opened for goods that are hard to spell, and closed again.
+    await page.getByRole("button", { name: "Categories" }).click();
     await page.getByRole("button", { name: "Snacks & Cookies" }).click();
     await expect(check).toBeHidden();
     await expect(main.getByRole("listitem").first()).toBeVisible();
-    await page.getByRole("button", { name: "Snacks & Cookies" }).click();
+    await main.getByRole("button", { name: "Back to the sale" }).click();
     await expect(check).toBeVisible();
 
     await page.getByRole("region", { name: "Current sale" }).getByRole("button", { name: "Clear" }).click();

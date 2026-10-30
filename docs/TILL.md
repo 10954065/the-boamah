@@ -42,6 +42,14 @@ Only one shift runs on a till at a time. If someone else's shift is still open,
 they (or a manager) must close it first; a manager can close it from the same
 screen.
 
+## Finding your way
+
+The menu runs down the left of the screen (across the top on a phone): **Sell**,
+**Website orders**, **Sales**, **On hold**, **Last receipt**, **Printer**,
+**Refresh products** and **Close shift**, with who is signed in, the connection
+and **Sign out** at the bottom. On narrower screens it shows icons only; hold the
+pointer over one to see its name.
+
 ## Selling
 
 - The screen stays clear until you look something up. **Scan** a barcode, or
@@ -49,7 +57,8 @@ screen.
   anywhere on the screen goes into the search box, so a scanner works without
   clicking first. **F2** jumps to the search box.
 - **Tap** a match to add one, or press Enter when only one matches. Can't
-  spell it? Tap a category to open it, and tap it again to close it.
+  spell it? Press **Categories** beside the scan box and pick one; **Back to the sale**
+  closes it.
 - Each product on the sale shows on the screen with its photo and how many, so
   you can **check it against the goods** on the counter. The newest has a gold
   ring. Tap a card to change how many, or use **+** and **−** in the sale.
@@ -65,8 +74,8 @@ Everything bought on the website lands on the till by itself, so it can be
 packed without opening the admin. The till needs an open shift and the internet
 for this; new orders appear within about 15 seconds and pop up a message.
 
-- **Website orders**, beside the search box, shows how many are waiting and
-  turns gold when there are any. Press it to see them; press it again to go back
+- **Website orders** in the menu shows how many are waiting to pack in a gold
+  bubble. Press it to see them; press it again to go back
   to the sale.
 - Orders sit in four columns, longest waiting first: **To pack**, **Packing**,
   **Ready** and **With the rider**. Each carries a green **Website** tag and its order number
@@ -87,7 +96,8 @@ for this; new orders appear within about 15 seconds and pop up a message.
 
 ## Taking payment
 
-Press **Charge** (or **F4**).
+Press **Charge** (or **F4**), or press **Cash**, **Mobile money** or **Card**
+under the total to start on that method with the amount already filled in.
 
 - **Cash:** enter what the customer handed over, or tap a quick amount. The
   change to give shows in large print.
@@ -99,7 +109,7 @@ Press **Charge** (or **F4**).
   **Add as part payment**, then take the rest by another method.
 
 Press **Complete sale**. The receipt shows on screen with **Print** and **New
-sale**. **Last receipt** in the top bar prints a copy again (marked as a copy).
+sale**. **Last receipt** in the menu prints a copy again (marked as a copy).
 
 ## Putting a sale on hold
 
@@ -107,7 +117,7 @@ When a customer steps away (to fetch something, or to find money), press
 **Hold** above the sale, type who it is for if you like (for example *Ama, blue
 bag*) and serve the next customer.
 
-- **On hold** in the top bar shows how many sales are waiting. Press it, then
+- **On hold** in the menu shows how many sales are waiting. Press it, then
   **Pick up** to bring one back. Finish or clear the sale on screen first.
 - Nothing is paid or taken off stock while a sale is on hold. Prices are checked
   again when it is picked up, and anything no longer sold is left out (the till
@@ -118,7 +128,7 @@ bag*) and serve the next customer.
 
 ## Sales this shift and copies of receipts
 
-**Sales** in the top bar lists this shift's sales, newest first, with the
+**Sales** in the menu lists this shift's sales, newest first, with the
 refunds paid out in the shift. Sales still waiting to be sent are marked.
 
 - Tap a sale to see it, then **Print a copy** (marked as a copy).
@@ -174,13 +184,13 @@ Any receipt printer that Windows or Android can print to works.
 
 ## If the internet drops
 
-Carry on selling. The top bar shows **Online**, **Offline**, or **No
+Carry on selling. The menu shows **Online**, **Offline**, or **No
 connection** (the device has a network but cannot reach the shop's system).
 
 - **Sales:** each paid sale is saved on the till first. With no connection the
   receipt shows straight away with *Saved on this till*, and the sale goes to
   the shop's system by itself once the connection is back, oldest first.
-- **What is waiting:** the top bar shows a count such as **3 to send**. Press
+- **What is waiting:** the menu shows a count such as **3 to send**. Press
   it to see the list, when it last tried, and **Send now**.
 - **Prices and stock:** the till uses the product list it saved last; the
   banner says what time that list is from. Stock on the website catches up as

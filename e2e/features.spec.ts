@@ -23,7 +23,7 @@ async function placeCashOrder(page: Page): Promise<string> {
 
 test.describe("shopping features", () => {
   test("adding to cart opens the slide-out cart, where quantities can change", async ({ page }) => {
-    await page.goto("/products/quaker-quick-oats");
+    await page.goto("/products/quaker-quick-oats", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /^Add to cart$/ }).click();
     const drawer = page.getByRole("dialog", { name: /Your cart/ });
     await expect(drawer.getByRole("status").filter({ hasText: "added to your cart" })).toBeVisible();

@@ -15,24 +15,27 @@ const METHOD_ICONS: Record<PosTenderCode, typeof Banknote> = { CASH: Banknote, M
 
 interface TenderDialogProps {
   open: boolean;
+  /** The method chosen in the sale before opening; cash when Charge was pressed. */
+  initialMethod: PosTenderCode;
   totalMinor: number;
   onOpenChange: (open: boolean) => void;
   onComplete: (tenders: TenderLine[]) => void;
 }
 
 /** Takes payment: cash with change, mobile money and card for exact amounts, or a split of them. */
-export function TenderDialog({ open, totalMinor, onOpenChange, onComplete }: TenderDialogProps) {
+export function TenderDialog({ open, initialMethod, totalMinor, onOpenChange, onComplete }: TenderDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open ? <TenderForm totalMinor={totalMinor} onComplete={onComplete} /> : null}
+      {open ? <TenderForm initialMethod={initialMethod} totalMinor={totalMinor} onComplete={onComplete} /> : null}
     </Dialog>
   );
 }
 
-function TenderForm({ totalMinor, onComplete }: Pick<TenderDialogProps, "totalMinor" | "onComplete">) {
+function TenderForm({ initialMethod, totalMinor, onComplete }: Pick<TenderDialogProps, "initialMethod" | "totalMinor" | "onComplete">) {
   const [added, setAdded] = useState<TenderLine[]>([]);
-  const [method, setMethod] = useState<PosTenderCode>("CASH");
-  const [amountText, setAmountText] = useState("");
+  const [method, setMethod] = useState<PosTenderCode>(initialMethod);
+  // Mobile money and card are taken for the exact amount.
+  const [amountText, setAmountText] = useState(() => (initialMethod === "CASH" ? "" : minorToDecimalString(totalMinor)));
   const [reference, setReference] = useState("");
   const [showError, setShowError] = useState(false);
 

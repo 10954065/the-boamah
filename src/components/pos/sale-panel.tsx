@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Minus, PauseCircle, Plus, Scale, Trash2 } from "lucide-react";
+import { Minus, PauseCircle, Plus, Scale, ShoppingBasket, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
+import { POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode } from "@/lib/pos";
 import { isWeighed, type PricedSale, type PricedTillLine } from "@/lib/pos-till";
 import { formatQuantity, milliToDecimalString, UNIT_INFO } from "@/lib/quantity";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,8 @@ interface SalePanelProps {
   onClear: () => void;
   /** Puts the sale aside to serve someone else. */
   onHold: () => void;
-  onCharge: () => void;
+  /** Opens payment, on the method pressed when one was. */
+  onCharge: (method?: PosTenderCode) => void;
   /** Shown in the phone sheet, which has its own "Current sale" title. */
   inSheet?: boolean;
 }
@@ -33,10 +35,13 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
   }, [highlightId, sale.lines.length]);
 
   return (
-    <section aria-label="Current sale" className={cn("flex min-h-0 min-w-0 flex-1 flex-col bg-surface", inSheet && "h-full")}>
-      <div className="flex items-center gap-1.5 border-b border-line px-3 py-1.5">
+    <section
+      aria-label="Current sale"
+      className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface", inSheet ? "h-full" : "rounded-2xl border border-line shadow-[var(--shadow-raised)]")}
+    >
+      <div className="flex items-center gap-1.5 border-b border-line px-3 py-2">
         <div className="min-w-0 flex-1">
-          <h2 className={cn("truncate font-display text-sm font-extrabold leading-5", inSheet && "sr-only")}>Current sale</h2>
+          <h2 className={cn("truncate font-display text-base font-extrabold leading-5", inSheet && "sr-only")}>Current sale</h2>
           <p className="text-xs leading-4 text-ink-muted">
             {sale.lines.length} {sale.lines.length === 1 ? "item" : "items"}
           </p>
@@ -61,7 +66,11 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
 
       {empty ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-ink-muted">
-          <p className="text-sm">Nothing on this sale yet.</p>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-soft text-ink-subtle">
+            <ShoppingBasket className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-semibold text-ink">Nothing on this sale yet.</p>
+          <p className="text-xs">Scan or search to add products.</p>
         </div>
       ) : (
         <ol className="min-h-0 flex-1 overflow-y-auto">
@@ -71,7 +80,7 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
         </ol>
       )}
 
-      <div className="space-y-1.5 border-t border-line bg-soft/60 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2">
+      <div className="space-y-2 border-t border-line bg-soft/60 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-2.5">
         {sale.savingMinor > 0 ? (
           <p className="flex justify-between text-[13px] font-semibold text-leaf-600">
             <span>Customer saves</span>
@@ -82,7 +91,22 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
           <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Total</span>
           <span className="font-display text-2xl font-extrabold tabular-nums text-ink">{formatMoney(sale.totalMinor)}</span>
         </p>
-        <Button size="lg" className="w-full px-3 text-base" disabled={empty} onClick={onCharge}>
+        <div role="group" aria-label="Take payment by" className="grid grid-cols-3 gap-1.5">
+          {POS_TENDERS.map((method) => (
+            <Button
+              key={method}
+              variant="outline"
+              size="sm"
+              className="h-9 px-1 text-xs"
+              disabled={empty}
+              aria-label={`Pay by ${POS_TENDER_LABELS[method].toLowerCase()}`}
+              onClick={() => onCharge(method)}
+            >
+              {POS_TENDER_LABELS[method]}
+            </Button>
+          ))}
+        </div>
+        <Button size="lg" className="w-full px-3 text-base" disabled={empty} onClick={() => onCharge()}>
           Charge {formatMoney(sale.totalMinor)}
           <kbd className="hidden rounded bg-white/15 px-1.5 text-xs font-medium md:inline">F4</kbd>
         </Button>

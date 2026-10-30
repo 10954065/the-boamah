@@ -10,33 +10,6 @@ import { useMinuteClock, useOnline } from "./till-header";
 import type { TillPrefs } from "./till-storage";
 import type { WebsiteOrders } from "./use-website-orders";
 
-interface WebsiteOrdersButtonProps {
-  waiting: number;
-  active: boolean;
-  onClick: () => void;
-}
-
-/** Beside the search box: how many website orders need packing, and the way to them. */
-export function WebsiteOrdersButton({ waiting, active, onClick }: WebsiteOrdersButtonProps) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      aria-label={`Website orders, ${waiting} waiting`}
-      title="Website orders"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[13px] font-semibold transition-colors",
-        active ? "border-brand-700 bg-brand-700 text-white" : waiting > 0 ? "border-gold-500 bg-gold-100 text-brand-900" : "border-line-strong bg-surface text-ink-muted hover:bg-soft hover:text-ink",
-      )}
-    >
-      <Globe className="h-4 w-4" aria-hidden="true" />
-      <span className="hidden sm:inline">Website orders</span>
-      {waiting > 0 ? <span className="rounded-full bg-brand-900 px-1.5 text-[11px] font-bold leading-4 text-white">{waiting}</span> : null}
-    </button>
-  );
-}
-
 function OrderCard({ order, minute, onOpen }: { order: TillOrder; minute: number; onOpen: () => void }) {
   const productCount = order.lines.length;
   const paid = order.paymentStatus === "PAID";

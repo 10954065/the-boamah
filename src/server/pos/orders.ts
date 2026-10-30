@@ -54,5 +54,6 @@ export async function moveTillOrder(input: { orderId: string; to: OrderStatusCod
   if (packAction(order.status, order.fulfilmentMethod)?.to !== input.to) {
     throw new OrderActionError("This order has moved on since it was opened. Check the list and try again.");
   }
-  await updateOrderStatus({ orderId: input.orderId, to: input.to, actorId: actor.id });
+  // Saved only if it is still where it was checked: a step pressed on an old screen never moves an order backwards.
+  await updateOrderStatus({ orderId: input.orderId, to: input.to, actorId: actor.id, from: order.status });
 }

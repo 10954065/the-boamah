@@ -67,13 +67,17 @@ export async function cancelOrder(input: { orderId: string; actorId: string | nu
   await tellWaitingShoppers(order.id);
 }
 
-export async function updateOrderStatus(input: { orderId: string; to: OrderStatusCode; actorId: string; note?: string }): Promise<void> {
+/** `from`, when given, is the status the person saw: if the order has moved on since, nothing changes. */
+export async function updateOrderStatus(input: { orderId: string; to: OrderStatusCode; actorId: string; note?: string; from?: OrderStatusCode }): Promise<void> {
   if (input.to === "CANCELLED") {
     await cancelOrder({ orderId: input.orderId, actorId: input.actorId, reason: input.note || "Cancelled by staff" });
     return;
   }
   const order = await prisma.order.findUnique({ where: { id: input.orderId } });
   if (!order) throw new OrderActionError("Order not found.");
+  if (input.from && order.status !== input.from) {
+    throw new OrderActionError("This order has moved on since it was opened. Check the list and try again.");
+  }
   const check = canTransition(order.status, input.to, order);
   if (!check.ok) throw new OrderActionError(check.message);
 

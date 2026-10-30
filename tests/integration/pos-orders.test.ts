@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { prisma } from "@/lib/db";
 import { createOrder } from "@/server/orders/checkout";
-import { OrderActionError } from "@/server/orders/lifecycle";
+import { OrderActionError, updateOrderStatus } from "@/server/orders/lifecycle";
 import { moveTillOrder, tillOrders } from "@/server/pos/orders";
 import { checkoutInput, createCart, createStaff, createVariant, createZone, resetDatabase, settings } from "./factories";
 
@@ -136,6 +136,18 @@ describe("packing from the till", () => {
     await moveTillOrder({ orderId, to: "PROCESSING" }, cashier);
 
     await expect(moveTillOrder({ orderId, to: "PROCESSING" }, cashier)).rejects.toThrow(/moved on/);
+  });
+
+  test("a step saved against a status the order has left changes nothing", async () => {
+    const orderId = await placeOrder();
+    const cashier = await createStaff();
+    await moveTillOrder({ orderId, to: "PROCESSING" }, cashier);
+    await moveTillOrder({ orderId, to: "READY" }, cashier);
+
+    // Ready may go back to packing in the admin, but not from a till that last saw the order being packed.
+    await expect(updateOrderStatus({ orderId, to: "PROCESSING", actorId: cashier.id, from: "CONFIRMED" })).rejects.toThrow(/moved on/);
+
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("READY");
   });
 
   test("an order that does not exist is refused", async () => {

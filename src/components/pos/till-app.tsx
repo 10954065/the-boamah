@@ -12,7 +12,7 @@ import { OpenShiftForm } from "./open-shift";
 import type { ShopDetails } from "./receipt";
 import { SellScreen, type TillCashier, type TillInfo } from "./sell-screen";
 import { SyncStatus, TillBanner } from "./sync-status";
-import { TillHeader, TillSignOut, useMinuteClock } from "./till-header";
+import { TillHeader, TillSignOut, TillTitle, useMinuteClock } from "./till-header";
 import { warmTill } from "./till-offline";
 import { addToOutbox, journalFor, loadPrefs, noteContact, removeFromOutbox, saveLastReceipt, savePrefs, type TillPrefs } from "./till-storage";
 import {
@@ -204,18 +204,24 @@ function TillScreens({ till, cashier, initialShift, renderedAt, shop }: TillAppP
         onShiftClosedElsewhere={(serverTime) => shiftClosedElsewhere(shift, serverTime)}
       />
     ) : (
-      <div className="flex min-h-dvh flex-col">
-        <TillHeader till={till} cashierName={cashier.name} status={<SyncStatus tillCode={till.code} cashier={cashier} />}>
-          <TillSignOut tillCode={till.code} cashierId={cashier.id} />
-        </TillHeader>
-        <TillBanner tillCode={till.code} cashier={cashier} shift={null} />
-        <main id="main" className="flex flex-1 items-center justify-center p-4">
-          {shift ? (
-            <ShiftInUse shift={shift} canManage={cashier.canManage} onClose={() => setCounting(shift)} />
-          ) : (
-            <OpenShiftForm cashierName={cashier.name} onOpen={openShift} />
-          )}
-        </main>
+      <div className="flex min-h-dvh flex-col md:flex-row">
+        <TillHeader
+          till={till}
+          cashierName={cashier.name}
+          status={<SyncStatus tillCode={till.code} cashier={cashier} />}
+          footer={<TillSignOut tillCode={till.code} cashierId={cashier.id} />}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TillTitle title={shift ? "Shift still open" : "Open the till"} detail={`Till ${till.code} · ${till.name} · ${cashier.name}`} />
+          <TillBanner tillCode={till.code} cashier={cashier} shift={null} />
+          <main id="main" className="flex flex-1 items-center justify-center p-4">
+            {shift ? (
+              <ShiftInUse shift={shift} canManage={cashier.canManage} onClose={() => setCounting(shift)} />
+            ) : (
+              <OpenShiftForm cashierName={cashier.name} onOpen={openShift} />
+            )}
+          </main>
+        </div>
       </div>
     );
 

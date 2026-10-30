@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DoorClosed, History, PauseCircle, Printer, ReceiptText, RefreshCw } from "lucide-react";
+import { DoorClosed, Globe, History, PauseCircle, Printer, ReceiptText, RefreshCw, ShoppingBasket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
-import { formatReceiptNumber, parseReceiptNumber, type PosShiftView, type TenderLine } from "@/lib/pos";
+import { formatReceiptNumber, parseReceiptNumber, type PosShiftView, type PosTenderCode, type TenderLine } from "@/lib/pos";
 import { journalSaleOf, newEntryState, type SaleEntry } from "@/lib/pos-outbox";
 import {
   addToSale,
@@ -38,7 +38,7 @@ import { SaleCheck } from "./sale-check";
 import { ReceiptDialog, SendingDialog, type SendState } from "./sale-status";
 import { SyncStatus, TillBanner } from "./sync-status";
 import { TenderDialog } from "./tender-dialog";
-import { HeaderAction, TillHeader, TillSignOut } from "./till-header";
+import { HeaderAction, TillHeader, TillSignOut, TillTitle } from "./till-header";
 import { TillSettingsDialog } from "./till-settings-dialog";
 import {
   addToJournal,
@@ -57,7 +57,7 @@ import {
 import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL, useHeldSales } from "./till-sync";
 import { useTillCatalog } from "./use-till-catalog";
 import { useWebsiteOrders } from "./use-website-orders";
-import { WebsiteOrdersBoard, WebsiteOrdersButton } from "./website-orders";
+import { WebsiteOrdersBoard } from "./website-orders";
 
 export interface TillInfo {
   code: string;
@@ -97,7 +97,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   // Prices depend on the time (sale prices end), so the clock ticks and is fixed when payment starts.
   const [now, setNow] = useState(() => new Date());
   const [quantityTarget, setQuantityTarget] = useState<QuantityTarget | null>(null);
-  const [tendering, setTendering] = useState(false);
+  const [tenderMethod, setTenderMethod] = useState<PosTenderCode | null>(null);
   const [sending, setSending] = useState<SendState | null>(null);
   const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean; waiting: boolean } | null>(null);
   const [panel, setPanel] = useState<"sale" | "settings" | "hold" | "held" | "history" | null>(null);
@@ -108,6 +108,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const results = useMemo(() => searchCatalog(catalog.items, query, categoryId), [catalog.items, query, categoryId]);
   const categories = useMemo(() => catalogCategories(catalog.items), [catalog.items]);
   const busy = lines.length > 0 || sending !== null;
+  const tendering = tenderMethod !== null;
 
   useEffect(() => {
     // The amount due must not change while the customer is paying.
@@ -164,11 +165,17 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     setHighlightId(line.item.variantId);
   }
 
-  function charge() {
+  function charge(method: PosTenderCode = "CASH") {
     if (lines.length === 0 || sending) return;
     setNow(new Date());
     setPanel(null);
-    setTendering(true);
+    setTenderMethod(method);
+  }
+
+  function toggleOrders() {
+    setQuery("");
+    setCategoryId(null);
+    setShowOrders((showing) => !showing);
   }
 
   /** The sale is done at the counter: clear it and show the receipt. */
@@ -200,7 +207,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
       return;
     }
     addToJournal(till.code, shift.clientId, journalSaleOf(data, upload.clientId));
-    setTendering(false);
+    setTenderMethod(null);
     if (!navigator.onLine) return finishSale(data, true);
 
     setSending({ status: "sending", receiptNumber: upload.receiptNumber });
@@ -297,82 +304,83 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     onCharge: charge,
   };
 
+  const ordersLabel = websiteOrders.waiting > 0 ? `Website orders, ${websiteOrders.waiting} to pack` : "Website orders";
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <TillHeader till={till} cashierName={cashier.name} shiftOpenedAt={shift.openedAt} status={<SyncStatus tillCode={till.code} cashier={cashier} />}>
-        <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
+    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
+      <TillHeader
+        till={till}
+        cashierName={cashier.name}
+        shiftOpenedAt={shift.openedAt}
+        status={<SyncStatus tillCode={till.code} cashier={cashier} />}
+        footer={<TillSignOut tillCode={till.code} cashierId={cashier.id} disabled={sending !== null} />}
+      >
+        <HeaderAction icon={ShoppingBasket} label="Sell" active={!showOrders} className="hidden md:inline-flex" onClick={endLookup} />
+        <HeaderAction icon={Globe} label={ordersLabel} text="Website orders" count={websiteOrders.waiting} active={showOrders} onClick={toggleOrders} />
         <HeaderAction icon={History} label="Sales" onClick={() => setPanel("history")} />
-        <HeaderAction icon={PauseCircle} label={heldCount > 0 ? `On hold (${heldCount})` : "On hold"} onClick={() => setPanel("held")}>
-          {heldCount > 0 ? <span aria-hidden="true" className="rounded-full bg-gold-400 px-1.5 text-[11px] font-bold leading-4 text-brand-900 xl:hidden">{heldCount}</span> : null}
-        </HeaderAction>
+        <HeaderAction icon={PauseCircle} label={heldCount > 0 ? `On hold (${heldCount})` : "On hold"} text="On hold" count={heldCount} onClick={() => setPanel("held")} />
         <HeaderAction icon={ReceiptText} label="Last receipt" onClick={showLastReceipt} />
         <HeaderAction icon={Printer} label="Printer" onClick={() => setPanel("settings")} />
+        <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
         <HeaderAction icon={DoorClosed} label="Close shift" title={busy ? "Finish or clear the sale first" : "Close shift"} disabled={busy} onClick={onCloseShift} />
-        <TillSignOut tillCode={till.code} cashierId={cashier.id} disabled={sending !== null} />
       </TillHeader>
 
-      <TillBanner tillCode={till.code} cashier={cashier} shift={shift} pricesAsOf={catalog.loadedAt} onShiftClosedElsewhere={onShiftClosedElsewhere}>
-        {catalog.status === "ready" && catalog.error ? (
-          <p role="status" className="bg-warning-soft px-4 py-2 text-sm text-warning">
-            Prices and stock could not be refreshed: {catalog.error}
-          </p>
-        ) : null}
-      </TillBanner>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-soft">
+        <TillTitle
+          title={showOrders ? "Website orders" : "Sell"}
+          detail={`Till ${till.code} · ${till.name} · ${cashier.name}`}
+        />
+        <TillBanner tillCode={till.code} cashier={cashier} shift={shift} pricesAsOf={catalog.loadedAt} onShiftClosedElsewhere={onShiftClosedElsewhere}>
+          {catalog.status === "ready" && catalog.error ? (
+            <p role="status" className="bg-warning-soft px-4 py-2 text-sm text-warning">
+              Prices and stock could not be refreshed: {catalog.error}
+            </p>
+          ) : null}
+        </TillBanner>
 
-      <div className="flex min-h-0 flex-1">
-        <main id="main" className="flex min-w-0 flex-1 flex-col bg-soft">
-          <ProductGrid
-            results={results}
-            categories={categories}
-            categoryId={categoryId}
-            onCategory={setCategoryId}
-            query={query}
-            onQuery={setQuery}
-            onSubmitSearch={submitSearch}
-            searchRef={searchRef}
-            status={catalog.status}
-            error={catalog.error}
-            onRetry={() => void refreshCatalog()}
-            onPick={pick}
-            now={now}
-            idle={
-              showOrders ? (
-                <WebsiteOrdersBoard queue={websiteOrders} paper={prefs.paper} />
-              ) : (
-                <SaleCheck sale={sale} highlightId={highlightId} ready={catalog.status === "ready"} onEdit={editLine} />
-              )
-            }
-            action={
-              <WebsiteOrdersButton
-                waiting={websiteOrders.waiting}
-                active={showOrders}
-                onClick={() => {
-                  setQuery("");
-                  setCategoryId(null);
-                  setShowOrders((showing) => !showing);
-                }}
-              />
-            }
-          />
-        </main>
-        <aside className="hidden w-[clamp(17.5rem,30vw,22rem)] shrink-0 border-l border-line md:flex">
-          <SalePanel {...salePanelProps} />
-        </aside>
-      </div>
-
-      <div className="flex items-center gap-2 border-t border-line bg-surface px-3 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] pt-1.5 md:hidden">
-        <div className="min-w-0">
-          <p className="text-xs text-ink-muted">
-            {lines.length} {lines.length === 1 ? "item" : "items"}
-          </p>
-          <p className="truncate font-display text-lg font-extrabold leading-6 tabular-nums">{formatMoney(sale.totalMinor)}</p>
+        <div className="flex min-h-0 flex-1">
+          <main id="main" className="flex min-w-0 flex-1 flex-col">
+            <ProductGrid
+              results={results}
+              categories={categories}
+              categoryId={categoryId}
+              onCategory={setCategoryId}
+              query={query}
+              onQuery={setQuery}
+              onSubmitSearch={submitSearch}
+              searchRef={searchRef}
+              status={catalog.status}
+              error={catalog.error}
+              onRetry={() => void refreshCatalog()}
+              onPick={pick}
+              now={now}
+              idle={
+                showOrders ? (
+                  <WebsiteOrdersBoard queue={websiteOrders} paper={prefs.paper} />
+                ) : (
+                  <SaleCheck sale={sale} highlightId={highlightId} ready={catalog.status === "ready"} onEdit={editLine} />
+                )
+              }
+            />
+          </main>
+          <aside className="hidden w-[clamp(18.5rem,30vw,23rem)] shrink-0 py-3 pr-3 md:flex">
+            <SalePanel {...salePanelProps} />
+          </aside>
         </div>
-        <Button variant="outline" className="ml-auto h-11" onClick={() => setPanel("sale")}>
-          View sale
-        </Button>
-        <Button className="h-11" disabled={lines.length === 0} onClick={charge}>
-          Charge
-        </Button>
+
+        <div className="flex items-center gap-2 border-t border-line bg-surface px-3 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] pt-1.5 md:hidden">
+          <div className="min-w-0">
+            <p className="text-xs text-ink-muted">
+              {lines.length} {lines.length === 1 ? "item" : "items"}
+            </p>
+            <p className="truncate font-display text-lg font-extrabold leading-6 tabular-nums">{formatMoney(sale.totalMinor)}</p>
+          </div>
+          <Button variant="outline" className="ml-auto h-11" onClick={() => setPanel("sale")}>
+            View sale
+          </Button>
+          <Button className="h-11" disabled={lines.length === 0} onClick={() => charge()}>
+            Charge
+          </Button>
+        </div>
       </div>
 
       <Dialog open={panel === "sale"} onOpenChange={(open) => setPanel(open ? "sale" : null)}>
@@ -394,7 +402,13 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
         onStockChanged={() => void refreshCatalog()}
       />
       <QuantityDialog target={quantityTarget} onClose={() => setQuantityTarget(null)} onConfirm={confirmQuantity} onRemove={removeLine} />
-      <TenderDialog open={tendering} totalMinor={sale.totalMinor} onOpenChange={setTendering} onComplete={(tenders) => void complete(tenders)} />
+      <TenderDialog
+        open={tendering}
+        initialMethod={tenderMethod ?? "CASH"}
+        totalMinor={sale.totalMinor}
+        onOpenChange={(open) => !open && setTenderMethod(null)}
+        onComplete={(tenders) => void complete(tenders)}
+      />
       <SendingDialog
         state={sending}
         onBack={dropRefusedSale}
