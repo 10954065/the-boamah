@@ -258,6 +258,23 @@ export function SettingsForm({ initial, onlineConfigured }: { initial: SettingsD
       <section className={section}>
         <h2 className="text-[15px] font-bold">Policies</h2>
         <p className="text-xs text-ink-subtle">These are published as written. Have them reviewed for your business before going live.</p>
+        <Field
+          id="st-returndays"
+          label="Days customers have to return an item"
+          hint="Google shows this with your products. Enter 0 if you do not take returns, or leave it blank until you decide."
+          error={errors.returnDays}
+          className="max-w-md"
+        >
+          <Input
+            {...fieldAria("st-returndays", errors.returnDays, "hint")}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={365}
+            value={s.returnDays ?? ""}
+            onChange={(e) => setS({ ...s, returnDays: e.target.value === "" ? null : Number(e.target.value) })}
+          />
+        </Field>
         {(
           [
             ["deliveryPolicy", "Delivery information"],

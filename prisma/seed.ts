@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { CATEGORIES, PRODUCTS, ZONES } from "./seed-data";
+import { BRANDS, CATEGORIES, PRODUCTS, ZONES } from "./seed-data";
 
 if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "true") {
   console.error("Refusing to seed in production. Set SEED_ALLOW_PRODUCTION=true if you really mean it.");
@@ -64,6 +64,7 @@ async function seedCatalogue() {
         description: product.description,
         shortDescription: product.short,
         searchKeywords: product.keywords,
+        brand: BRANDS[product.slug] ?? null,
         categoryId: categoryIds.get(product.category)!,
         status: "PUBLISHED",
         isFeatured: Boolean(product.featured),

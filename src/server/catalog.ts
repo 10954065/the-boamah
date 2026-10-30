@@ -352,7 +352,11 @@ async function loadProduct(slug: string): Promise<ProductDetailView | null> {
     },
   });
   if (!product) return null;
-  const variants = product.variants.map(toVariantView);
+  const variants = product.variants.map((variant) => ({
+    ...toVariantView(variant),
+    barcode: variant.barcode,
+    priceSince: variant.updatedAt.toISOString(),
+  }));
   const cover = product.images[0];
   return {
     id: product.id,
@@ -369,6 +373,7 @@ async function loadProduct(slug: string): Promise<ProductDetailView | null> {
     rating: null,
     description: product.description,
     shortDescription: product.shortDescription,
+    brand: product.brand,
     images: product.images.map((i) => ({ id: i.id, url: i.url, alt: i.alt, credit: i.credit })),
     variants,
     publishedAt: product.publishedAt?.toISOString() ?? null,

@@ -126,6 +126,28 @@ test.describe("staff pages stay hidden", () => {
     await theirDevice.close();
   });
 
+  test("the returns window set in settings reaches the product data search engines read", async ({ page }) => {
+    await signInToAdmin(page, adminEmail);
+    try {
+      await page.goto("/admin/settings");
+      await page.getByLabel("Days customers have to return an item").fill("7");
+      await page.getByRole("button", { name: "Save settings" }).click();
+      await expect(page.getByText("Settings saved.")).toBeVisible();
+
+      await page.goto("/products/quaker-quick-oats");
+      const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+      const product = blocks.map((text) => JSON.parse(text)).find((data) => data["@type"] === "Product");
+      expect(product.offers[0].hasMerchantReturnPolicy).toEqual({
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "GH",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+      });
+    } finally {
+      await db.storeSettings.update({ where: { id: "default" }, data: { returnDays: null } });
+    }
+  });
+
   test("a cashier who opens the admin link is sent to the till", async ({ page }) => {
     const email = `gate.cashier.${stamp}@example.com`;
     await createStaff("Gate Cashier", email);

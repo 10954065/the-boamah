@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { Toaster } from "sonner";
+import { STORE_NAME } from "@/lib/open-graph";
 import { siteUrl } from "@/lib/utils";
 import "./globals.css";
 
@@ -12,13 +13,12 @@ const manrope = Manrope({
   weight: ["600", "700", "800"],
 });
 
-const STORE_NAME = "The Boamah's Online Grocery Shop";
 const DESCRIPTION =
   "Shop rice, cooking oil, breakfast cereals, juices, snacks and household essentials online from The Boamah's Online Grocery Shop in Ghana.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: `${STORE_NAME} | Fresh groceries delivered`, template: `%s | ${STORE_NAME}` },
+  title: { default: `${STORE_NAME} | Groceries delivered to your door`, template: `%s | ${STORE_NAME}` },
   description: DESCRIPTION,
   applicationName: STORE_NAME,
   openGraph: {

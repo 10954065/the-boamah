@@ -378,7 +378,8 @@ export async function saveZone(input: z.input<typeof zoneSchema>): Promise<Actio
     const zone = d.id ? await prisma.deliveryZone.update({ where: { id: d.id }, data }) : await prisma.deliveryZone.create({ data });
     await recordAudit({ actorId: user.id, action: d.id ? "zone.update" : "zone.create", entityType: "DeliveryZone", entityId: zone.id, details: { name: data.name, feeMinor: data.feeMinor, isActive: data.isActive } });
     revalidatePath("/admin/delivery");
-    revalidatePath("/policies/delivery");
+    // Product pages show the lowest delivery fee to search engines.
+    refreshStorefront();
     return ok(undefined, "Delivery zone saved.");
   });
 }
@@ -422,6 +423,7 @@ const settingsSchema = z.object({
   pendingPaymentTtlMinutes: z.number().int().min(15).max(1440),
   deliveryPolicy: z.string().trim().max(20000).optional(),
   returnsPolicy: z.string().trim().max(20000).optional(),
+  returnDays: z.number().int("Enter whole days.").min(0, "Enter 0 or more days.").max(365, "Enter at most 365 days.").nullable(),
   privacyPolicy: z.string().trim().max(20000).optional(),
   termsPolicy: z.string().trim().max(20000).optional(),
   notifyAdminEmails: z.string().trim().max(500).optional(),

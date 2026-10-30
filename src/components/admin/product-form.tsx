@@ -47,6 +47,7 @@ export interface ProductDraft {
   description: string;
   shortDescription: string;
   searchKeywords: string;
+  brand: string;
   categoryId: string;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   isFeatured: boolean;
@@ -81,6 +82,7 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
       description: "",
       shortDescription: "",
       searchKeywords: "",
+      brand: "",
       categoryId: categories[0]?.id ?? "",
       status: "DRAFT",
       isFeatured: false,
@@ -144,9 +146,6 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
         <Field id="name" label="Product name" required error={err("name")} className="md:col-span-2">
           <Input {...fieldAria("name", err("name"))} value={draft.name} onChange={(e) => set("name", e.target.value)} />
         </Field>
-        <Field id="slug" label="URL slug" hint="Leave blank to generate from the name." error={err("slug")}>
-          <Input {...fieldAria("slug", err("slug"), "hint")} value={draft.slug} onChange={(e) => set("slug", e.target.value)} />
-        </Field>
         <Field id="categoryId" label="Category" required error={err("categoryId")}>
           <Select {...fieldAria("categoryId", err("categoryId"))} value={draft.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
             {categories.map((c) => (
@@ -155,6 +154,12 @@ export function ProductForm({ initial, categories, canDelete }: { initial?: Prod
               </option>
             ))}
           </Select>
+        </Field>
+        <Field id="brand" label="Brand" hint="The maker, e.g. Quaker or Dove. Google uses it to show the product in search." error={err("brand")}>
+          <Input {...fieldAria("brand", err("brand"), "hint")} value={draft.brand} onChange={(e) => set("brand", e.target.value)} />
+        </Field>
+        <Field id="slug" label="URL slug" hint="Leave blank to generate from the name." error={err("slug")} className="md:col-span-2">
+          <Input {...fieldAria("slug", err("slug"), "hint")} value={draft.slug} onChange={(e) => set("slug", e.target.value)} />
         </Field>
         <Field id="shortDescription" label="Short description" hint="Shown under the product name." error={err("shortDescription")} className="md:col-span-2">
           <Input {...fieldAria("shortDescription", err("shortDescription"), "hint")} value={draft.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} />

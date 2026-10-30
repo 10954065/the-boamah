@@ -33,6 +33,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   pendingPaymentTtlMinutes: 60,
   deliveryPolicy: null,
   returnsPolicy: null,
+  returnDays: null,
   privacyPolicy: null,
   termsPolicy: null,
   notifyAdminEmails: null,

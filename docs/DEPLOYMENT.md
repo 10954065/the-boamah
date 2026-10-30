@@ -509,6 +509,26 @@ After launch, submit `https://your-domain/sitemap.xml` in
 [Google Search Console](https://search.google.com/search-console) and
 [Bing Webmaster Tools](https://www.bing.com/webmasters).
 
+### Product results and link previews
+
+Each product page carries schema.org Product data for Google
+(`src/lib/product-schema.ts`). It is built only from what the shop has
+entered, so some Search Console notes stay until the shop supplies the fact:
+
+| Search Console note | Where it comes from |
+| --- | --- |
+| No global identifier (gtin, brand) | **Brand** on the product form, or a real EAN/UPC barcode on a size (codes the shop made up are left out) |
+| Missing `hasMerchantReturnPolicy` | *Settings → Policies → Days customers have to return an item* (0 means no returns; blank leaves it out) |
+| Missing `shippingDetails` | The cheapest active delivery zone's fee, sent for Ghana |
+| Missing `validFrom` | The time the size was last changed, so its current price applies from then |
+| Missing `aggregateRating` / `review` | Approved reviews only. Products without reviews keep this note; it is not an error |
+
+A pasted shop link shows a picture in WhatsApp, Facebook, X and the like:
+the shop's name and the product (photo, name, size, price), the category or
+the home page headline. These come from the `opengraph-image.tsx` files and
+are sent as JPEGs under 300 KB, because WhatsApp leaves out bigger ones. The
+fonts they use are in `assets/fonts` (SIL Open Font License).
+
 ## Before going live
 
 These are business decisions and facts only the shop can supply. The app does
@@ -521,6 +541,10 @@ are left out.
       prices are illustrative only.
 - [ ] Replace the Wikimedia Commons photos with the shop's own where possible.
       Keep `/credits` accurate for any that remain.
+- [ ] A brand on every product, and barcodes scanned from the packaging, so
+      Google can identify the products.
+- [ ] The returns window in *Settings → Policies*, once the returns policy is
+      decided.
 - [ ] Decide whether prices include VAT/NHIL/GETFund levies. The app does not
       add tax to orders, so shelf prices must already be the prices customers
       pay. Confirm this with the shop's accountant.

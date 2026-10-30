@@ -16,11 +16,13 @@ import { ShareButton } from "@/components/store/share-button";
 import { SectionHeading } from "@/components/store/home-sections";
 import { SaleCountdown } from "@/components/store/sale-countdown";
 import { Stars } from "@/components/store/stars";
-import { minorToDecimalString } from "@/lib/money";
+import { pageOpenGraph } from "@/lib/open-graph";
 import { discountPercent } from "@/lib/pricing";
+import { productJsonLd } from "@/lib/product-schema";
 import { siteUrl } from "@/lib/utils";
 import { whatsappLink } from "@/lib/whatsapp";
 import { getBoughtTogether, getProductBySlug, getRelatedProducts } from "@/server/catalog";
+import { getLowestDeliveryFee } from "@/server/delivery";
 import { getReviewSummary } from "@/server/reviews";
 import { getStoreSettings } from "@/server/settings";
 
@@ -33,12 +35,7 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
     title: product.name,
     description,
     alternates: { canonical: `/products/${product.slug}` },
-    openGraph: {
-      type: "website",
-      title: product.name,
-      description,
-      images: product.imageUrl ? [{ url: product.imageUrl, alt: product.imageAlt }] : undefined,
-    },
+    openGraph: pageOpenGraph(product.name, description),
   };
 }
 
@@ -47,11 +44,12 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, reviews, settings, together] = await Promise.all([
+  const [related, reviews, settings, together, lowestDeliveryFee] = await Promise.all([
     getRelatedProducts(product),
     getReviewSummary(product.id),
     getStoreSettings(),
     getBoughtTogether(product.id),
+    getLowestDeliveryFee(),
   ]);
   const thisItem = {
     id: product.id,
@@ -72,38 +70,32 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const discount = variant ? discountPercent(variant) : null;
   const anyInStock = product.variants.some((v) => v.inStock);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
+  const jsonLd = productJsonLd({
     name: product.name,
     description: product.shortDescription ?? product.description,
-    image: product.images.map((i) => (i.url.startsWith("http") ? i.url : siteUrl(i.url))),
-    sku: variant?.sku,
+    url: productUrl,
+    images: product.images.map((i) => (i.url.startsWith("http") ? i.url : siteUrl(i.url))),
     category: product.categoryName,
+    brand: product.brand,
     offers: product.variants.map((v) => ({
-      "@type": "Offer",
       name: v.name,
       sku: v.sku,
-      price: minorToDecimalString(v.effectivePriceMinor),
-      priceCurrency: "GHS",
-      ...(v.saleEndsAt ? { priceValidUntil: v.saleEndsAt.slice(0, 10) } : {}),
-      availability: v.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      url: productUrl,
+      barcode: v.barcode,
+      priceMinor: v.priceMinor,
+      effectivePriceMinor: v.effectivePriceMinor,
+      saleEndsAt: v.saleEndsAt,
+      inStock: v.inStock,
+      priceSince: v.priceSince,
     })),
-    ...(reviews.count > 0
-      ? {
-          aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average, reviewCount: reviews.count, bestRating: 5, worstRating: 1 },
-          review: reviews.reviews.slice(0, 5).map((r) => ({
-            "@type": "Review",
-            author: { "@type": "Person", name: r.authorName },
-            datePublished: r.createdAt.toISOString().slice(0, 10),
-            name: r.title ?? undefined,
-            reviewBody: r.body,
-            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
-          })),
-        }
-      : {}),
-  };
+    reviews: {
+      average: reviews.average,
+      count: reviews.count,
+      items: reviews.reviews.slice(0, 5).map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+    },
+    deliveryFeeMinor: lowestDeliveryFee,
+    returnDays: settings.returnDays,
+    currency: settings.currency,
+  });
 
   return (
     <div className="container-page pt-6">

@@ -43,6 +43,30 @@ export const CATEGORIES = [
   { slug: "pet-food", name: "Pet Food", image: "purina-dog-chow", description: "Dog food in large bags." },
 ] as const;
 
+/** The maker's brand for each product, as printed on the packaging. */
+export const BRANDS: Record<string, string> = {
+  "royal-basmati-rice": "Royal",
+  "wesson-vegetable-oil": "Wesson",
+  "members-mark-vegetable-oil": "Member's Mark",
+  "kelloggs-corn-flakes": "Kellogg's",
+  "quaker-quick-oats": "Quaker",
+  "coffee-mate-original": "Coffee-mate",
+  "ocean-spray-cran-grape": "Ocean Spray",
+  "ocean-spray-cranberry": "Ocean Spray",
+  "martinellis-apple-juice": "Martinelli's",
+  "martinellis-sparkling-apple-grape": "Martinelli's",
+  "welchs-juice-variety-pack": "Welch's",
+  "apple-and-eve-juice-boxes": "Apple & Eve",
+  "welchs-fruit-snacks": "Welch's",
+  "famous-amos-cookies": "Famous Amos",
+  "ensure-original": "Ensure",
+  "ensure-plus": "Ensure",
+  "dove-cool-moisture-bar-soap": "Dove",
+  "dove-sensitive-bar-soap": "Dove",
+  "irish-spring-deodorant-soap": "Irish Spring",
+  "purina-dog-chow": "Purina",
+};
+
 /** Modelled on the shop's own stock photos. Pack sizes are only stated where the packaging shows them. */
 export const PRODUCTS: SeedProduct[] = [
   // Rice & Grains

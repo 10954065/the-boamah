@@ -39,12 +39,20 @@ export interface ProductCardView {
   rating: { average: number; count: number } | null;
 }
 
+/** A variant on the product page, with what Google's product data needs. */
+export interface DetailVariantView extends VariantView {
+  barcode: string | null;
+  /** When the variant last changed, so its current price applies from then at the latest. */
+  priceSince: string;
+}
+
 export interface ProductDetailView extends ProductCardView {
   description: string;
   shortDescription: string | null;
+  brand: string | null;
   categoryId: string;
   images: { id: string; url: string; alt: string; credit: string | null }[];
-  variants: VariantView[];
+  variants: DetailVariantView[];
   publishedAt: string | null;
   updatedAt: string;
 }

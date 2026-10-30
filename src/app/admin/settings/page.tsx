@@ -37,6 +37,7 @@ export default async function SettingsPage() {
           pendingPaymentTtlMinutes: s.pendingPaymentTtlMinutes,
           deliveryPolicy: s.deliveryPolicy ?? "",
           returnsPolicy: s.returnsPolicy ?? "",
+          returnDays: s.returnDays,
           privacyPolicy: s.privacyPolicy ?? "",
           termsPolicy: s.termsPolicy ?? "",
           notifyAdminEmails: s.notifyAdminEmails ?? "",

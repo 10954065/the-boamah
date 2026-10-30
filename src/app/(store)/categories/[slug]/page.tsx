@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CategoryHeader } from "@/components/store/page-header";
 import { ProductListing } from "@/components/store/product-listing";
 import { hasActiveFilters, parseListingParams } from "@/lib/listing-params";
+import { pageOpenGraph } from "@/lib/open-graph";
 import { getCategoryBySlug } from "@/server/catalog";
 
 export async function generateMetadata({ params, searchParams }: PageProps<"/categories/[slug]">): Promise<Metadata> {
@@ -10,11 +11,12 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/cat
   const category = await getCategoryBySlug(slug);
   if (!category) return { title: "Category not found" };
   const listing = parseListingParams(await searchParams);
+  const description = category.description ?? `Shop ${category.name.toLowerCase()} online at The Boamah's Online Grocery Shop.`;
   return {
     title: category.name,
-    description: category.description ?? `Shop ${category.name.toLowerCase()} online at The Boamah's Online Grocery Shop.`,
+    description,
     alternates: { canonical: `/categories/${category.slug}` },
-    openGraph: category.imageUrl ? { images: [{ url: category.imageUrl }] } : undefined,
+    openGraph: pageOpenGraph(category.name, description),
     robots: hasActiveFilters(listing) ? { index: false, follow: true } : undefined,
   };
 }

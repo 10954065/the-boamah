@@ -113,6 +113,26 @@ test.describe("storefront", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(50);
   });
 
+  test("product pages give search engines the product facts and pasted links a picture", async ({ page, request }) => {
+    await page.goto("/products/quaker-quick-oats");
+    const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+    const product = blocks.map((text) => JSON.parse(text)).find((data) => data["@type"] === "Product");
+    expect(product.brand).toEqual({ "@type": "Brand", name: "Quaker" });
+    const [offer] = product.offers;
+    expect(Date.parse(offer.validFrom)).not.toBeNaN();
+    expect(offer.itemCondition).toBe("https://schema.org/NewCondition");
+    expect(offer.shippingDetails.shippingRate.currency).toBe("GHS");
+    expect(offer.shippingDetails.shippingDestination.addressCountry).toBe("GH");
+
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Quaker Quick 1-Minute Oats");
+    const picture = await page.locator('meta[property="og:image"]').getAttribute("content");
+    expect(picture).toContain("/products/quaker-quick-oats/opengraph-image");
+    const response = await request.get(picture!);
+    expect(response.headers()["content-type"]).toBe("image/jpeg");
+    // WhatsApp leaves out preview pictures much bigger than this.
+    expect((await response.body()).length).toBeLessThan(300_000);
+  });
+
   test("unavailable products cannot be purchased", async ({ page }) => {
     await setStock("famous-amos-cookies", 0);
     await page.goto("/products/famous-amos-cookies");

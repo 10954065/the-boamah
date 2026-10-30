@@ -182,6 +182,8 @@ model Product {
   description      String
   shortDescription String?
   searchKeywords   String           @default("")
+  /// The maker's brand, e.g. "Quaker". Google needs a brand or a barcode to identify a product.
+  brand            String?
   categoryId       String
   category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   status           ProductStatus    @default(DRAFT)
@@ -728,6 +730,8 @@ model StoreSettings {
   pendingPaymentTtlMinutes Int      @default(60)
   deliveryPolicy           String?
   returnsPolicy            String?
+  /// Days a customer has to return an item, for Google's product listings. 0 means no returns; null means not set.
+  returnDays               Int?
   privacyPolicy            String?
   termsPolicy              String?
   notifyAdminEmails        String?
