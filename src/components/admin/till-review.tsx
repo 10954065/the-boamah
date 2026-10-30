@@ -46,7 +46,7 @@ export function TillReviewButton({ kind, id, label = "Mark as looked at" }: Till
 /** Prints the page as it is on screen (the admin menus are left off the paper). */
 export function PrintPageButton() {
   return (
-    <Button type="button" variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+    <Button type="button" variant="outline" size="sm" onClick={() => window.print()} className="h-9 print:hidden">
       <Printer /> Print
     </Button>
   );

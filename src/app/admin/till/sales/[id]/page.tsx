@@ -76,7 +76,7 @@ export default async function TillSalePage({ params }: PageProps<"/admin/till/sa
                           ) : null}
                         </td>
                         <td className={cn(td, "text-right tabular-nums")}>{milliToDecimalString(item.quantityMilli)}</td>
-                        <td className={cn(td, "text-right tabular-nums", item.unitPriceMinor !== item.listUnitPriceMinor && "font-semibold text-info")}>{formatMoney(item.unitPriceMinor)}</td>
+                        <td className={cn(td, "text-right tabular-nums", item.unitPriceMinor !== item.listUnitPriceMinor && "font-semibold text-warning")}>{formatMoney(item.unitPriceMinor)}</td>
                         <td className={cn(td, "text-right tabular-nums text-ink-muted")}>{formatMoney(item.listUnitPriceMinor)}</td>
                         <td className={cn(td, "text-right font-semibold tabular-nums")}>{formatMoney(item.lineTotalMinor)}</td>
                       </tr>

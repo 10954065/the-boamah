@@ -112,7 +112,7 @@ export function SalesChart({ days, showTill }: { days: readonly SalesDay[]; show
             {pick ? (
               <div
                 role="status"
-                className="pointer-events-none absolute top-1 z-10 w-max min-w-44 -translate-x-1/2 rounded-xl border border-line bg-surface/95 px-3.5 py-2.5 text-left shadow-[var(--shadow-raised)] backdrop-blur-sm"
+                className="pointer-events-none absolute top-1 z-10 w-max min-w-44 -translate-x-1/2 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-left shadow-[var(--shadow-raised)]"
                 style={{ left: `clamp(5.5rem, ${((active! + 0.5) / days.length) * 100}%, calc(100% - 5.5rem))` }}
               >
                 <p className="text-[12px] font-semibold text-ink-muted">{formatDate(pick.day)}</p>
@@ -120,7 +120,7 @@ export function SalesChart({ days, showTill }: { days: readonly SalesDay[]; show
                   {series.map((item) => (
                     <li key={item.key} className="flex items-center gap-2 text-[13px]">
                       <span aria-hidden="true" className={cn("h-[3px] w-3 rounded-full", item.swatch)} />
-                      <span className="font-extrabold text-ink">{formatMoney(pick[item.key])}</span>
+                      <span className="font-semibold text-ink">{formatMoney(pick[item.key])}</span>
                       <span className="text-ink-muted">{item.short}</span>
                     </li>
                   ))}
@@ -149,7 +149,7 @@ export function SalesChart({ days, showTill }: { days: readonly SalesDay[]; show
       </div>
 
       <details className="mt-4">
-        <summary className="cursor-pointer select-none text-[13px] font-bold text-brand-700 hover:underline">Show as a table</summary>
+        <summary className="cursor-pointer select-none text-[13px] font-semibold text-brand-700 hover:underline">Show as a table</summary>
         <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-line">
           <table id={tableId} className="w-full text-[13px]">
             <caption className="sr-only">Sales per day</caption>

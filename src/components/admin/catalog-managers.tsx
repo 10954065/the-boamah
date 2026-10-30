@@ -99,15 +99,15 @@ export function CategoryManager({ categories, canEdit }: { categories: CategoryR
           <Plus /> New category
         </Button>
       ) : null}
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full min-w-[640px] text-sm">
-          <thead className="border-b border-line bg-soft/60 text-left text-xs uppercase tracking-wider text-ink-subtle">
+          <thead className="border-b border-line bg-soft/60 text-left text-[12.5px] text-ink-muted">
             <tr>
-              <th scope="col" className="px-4 py-3">Order</th>
-              <th scope="col" className="px-4 py-3">Name</th>
-              <th scope="col" className="px-4 py-3">Products</th>
-              <th scope="col" className="px-4 py-3">Status</th>
-              <th scope="col" className="px-4 py-3 text-right">Actions</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Order</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Name</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Products</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Status</th>
+              <th scope="col" className="px-4 py-2.5 text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

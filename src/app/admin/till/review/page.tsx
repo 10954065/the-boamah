@@ -65,7 +65,7 @@ export default async function TillReviewPage() {
                       </Link>
                       {sale.status === "VOIDED" ? <Badge tone="danger">Voided</Badge> : null}
                       {sale.hasShortfall ? <Badge tone="warning">Short of stock</Badge> : null}
-                      {sale.hasPriceDifference ? <Badge tone="info">Price changed</Badge> : null}
+                      {sale.hasPriceDifference ? <Badge tone="neutral">Price changed</Badge> : null}
                     </p>
                     <p className="text-sm text-ink-muted">
                       {formatDateTime(sale.soldAt)} · {sale.cashier.name} · {formatMoney(sale.totalMinor)}

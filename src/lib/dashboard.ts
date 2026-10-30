@@ -16,13 +16,6 @@ export function periodChange(current: number, previous: number): PeriodChange {
   return { direction, percent: Math.round((Math.abs(current - previous) / previous) * 100) };
 }
 
-export function greeting(at: Date): string {
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: SHOP_TIME_ZONE }).format(at));
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 /** "Friday 30 October" in the shop's time. */
 export function longDay(at: Date): string {
   return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: SHOP_TIME_ZONE }).format(at);

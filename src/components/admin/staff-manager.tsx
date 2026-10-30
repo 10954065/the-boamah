@@ -18,8 +18,8 @@ import { CopyValue, LoginCardPanel } from "./staff-onboarding";
 export function PrivateLinks({ admin, till }: StaffLinks) {
   return (
     <div className="space-y-4">
-      <CopyValue label="Admin link" value={admin} icon={<LayoutDashboard className="h-4 w-4 text-brand-700" aria-hidden="true" />} />
-      <CopyValue label="Till link" value={till} icon={<Store className="h-4 w-4 text-gold-700" aria-hidden="true" />} />
+      <CopyValue label="Admin link" value={admin} icon={<LayoutDashboard className="h-4 w-4 text-ink-muted" aria-hidden="true" />} />
+      <CopyValue label="Till link" value={till} icon={<Store className="h-4 w-4 text-ink-muted" aria-hidden="true" />} />
       <p className="text-[12.5px] font-medium text-ink-muted">
         Each person opens their link once on each device. Without it these pages look as if they do not exist. Share them only with staff. Adding
         someone puts the right link on their login card.

@@ -13,7 +13,7 @@ import { getStoreSettings } from "@/server/settings";
 export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin" }, robots: { index: false, follow: false } };
 
 const NAV: (AdminNavItem & { permission: Permission })[] = [
-  { href: "/admin", label: "Dashboard", group: "Overview", permission: "dashboard:view" },
+  { href: "/admin", label: "Dashboard", group: "", permission: "dashboard:view" },
   { href: "/admin/orders", label: "Orders", group: "Sales", permission: "orders:view" },
   { href: "/admin/customers", label: "Customers", group: "Sales", permission: "customers:view" },
   { href: "/admin/credit", label: "Credit customers", group: "Sales", permission: "credit:manage" },
@@ -39,45 +39,43 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const items = NAV.filter((item) => hasPermission(user.role, item.permission)).map(({ href, label, group }) => ({ href, label, group }));
 
   return (
-    <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="sticky top-0 hidden h-dvh flex-col bg-brand-900 lg:flex print:hidden">
-        <div className="px-5 pb-6 pt-6">
-          <Link href="/admin" className="flex items-center gap-3">
-            <LogoMark className="h-11 w-11 rounded-xl" />
-            <span className="leading-tight">
-              <span className="block font-display text-[17px] font-extrabold text-white">The Boamah&rsquo;s</span>
-              <span className="block text-[12px] font-bold text-gold-300">Admin panel</span>
-            </span>
-          </Link>
-        </div>
+        <Link href="/admin" className="flex items-center gap-2.5 px-5 pb-4 pt-4">
+          <LogoMark className="h-9 w-9" />
+          <span className="leading-tight">
+            <span className="block font-display text-[15px] font-bold text-white">The Boamah&rsquo;s</span>
+            <span className="block text-[12px] text-brand-200">Admin</span>
+          </span>
+        </Link>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
           <AdminSidebarNav items={items} />
         </div>
-        <Link href="/admin/account" className="m-3 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/10">
-          <Initials name={user.name} />
-          <span className="min-w-0 leading-tight">
-            <span className="block truncate text-[14px] font-bold text-white">{user.name}</span>
-            <span className="block truncate text-[12px] font-semibold text-brand-200">{ROLE_LABELS[user.role]}</span>
-          </span>
-        </Link>
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6 lg:px-8 print:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6 lg:px-8 print:hidden">
           <AdminMobileNav items={items} />
           <AdminWhere items={items} />
-          <div className="ml-auto flex items-center gap-2">
-            <Link href="/" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-soft hover:text-ink sm:flex">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <Link href="/" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-ink-muted transition-colors hover:bg-soft hover:text-ink sm:flex">
               View store <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
-            <Link href="/admin/account" aria-label={`My account: ${user.name}, ${ROLE_LABELS[user.role]}`} className="flex items-center gap-2 rounded-full p-0.5 pr-3 transition-colors hover:bg-soft lg:hidden">
+            <Link
+              href="/admin/account"
+              aria-label={`My account: ${user.name}, ${ROLE_LABELS[user.role]}`}
+              className="flex items-center gap-2 rounded-full py-0.5 pl-0.5 pr-1 transition-colors hover:bg-soft sm:pr-3"
+            >
               <Initials name={user.name} small />
-              <span className="hidden text-sm font-bold sm:inline">{user.name.split(" ")[0]}</span>
+              <span className="hidden leading-tight sm:block">
+                <span className="block text-[13px] font-semibold text-ink">{user.name}</span>
+                <span className="block text-[11.5px] text-ink-muted">{ROLE_LABELS[user.role]}</span>
+              </span>
             </Link>
             <SignOutButton />
           </div>
         </header>
-        <main id="main" className="px-4 py-6 font-medium sm:px-6 lg:px-8 lg:py-8">
+        <main id="main" className="px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
           {settings.isSampleData ? (
             <Alert tone="warning" title="This store contains sample data" className="mb-6">
               Products, prices, stock, delivery zones and policies were created for demonstration. Replace them with verified

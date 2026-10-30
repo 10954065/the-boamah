@@ -47,7 +47,7 @@ export default async function TillShiftsPage({ searchParams }: PageProps<"/admin
                     </Link>
                   </td>
                   <td className={cn(td, "whitespace-nowrap text-ink-muted")}>{formatDateTime(shift.openedAt)}</td>
-                  <td className={cn(td, "whitespace-nowrap text-ink-muted")}>{shift.closedAt ? formatDateTime(shift.closedAt) : <Badge tone="info">Open</Badge>}</td>
+                  <td className={cn(td, "whitespace-nowrap text-ink-muted")}>{shift.closedAt ? formatDateTime(shift.closedAt) : <Badge tone="brand">Open</Badge>}</td>
                   <td className={cn(td, "text-right tabular-nums")}>
                     {formatMoney(shift.summary.salesTotalMinor)} <span className="text-xs text-ink-subtle">({shift.summary.salesCount})</span>
                   </td>

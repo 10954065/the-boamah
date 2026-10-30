@@ -111,7 +111,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                         ) : (
                           <span className="font-semibold text-ink">{product.name}</span>
                         )}
-                        <p className="text-xs text-ink-subtle">{product.variants.length} option(s){product.isFeatured ? " · Featured" : ""}</p>
+                        <p className="text-xs text-ink-subtle">{product.variants.length} {product.variants.length === 1 ? "option" : "options"}{product.isFeatured ? " · Featured" : ""}</p>
                       </div>
                     </div>
                   </td>

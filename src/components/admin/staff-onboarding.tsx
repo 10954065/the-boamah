@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, Copy, KeyRound, LayoutDashboard, PencilLine, Printer, RefreshCw, Store, UserPlus } from "lucide-react";
+import { Check, Copy, KeyRound, PencilLine, Printer, RefreshCw, UserPlus } from "lucide-react";
 import { useId, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { addStaff } from "@/actions/admin/operations";
@@ -66,16 +66,8 @@ export function SignInPlaceTags({ role, className }: { role: StaffRole; classNam
   const places = signInPlaces(role);
   return (
     <span className={cn("flex flex-wrap gap-1.5", className)}>
-      {places.admin ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">
-          <LayoutDashboard className="h-3 w-3" aria-hidden="true" /> Admin
-        </span>
-      ) : null}
-      {places.till ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2 py-0.5 text-[11px] font-bold text-gold-700">
-          <Store className="h-3 w-3" aria-hidden="true" /> Till
-        </span>
-      ) : null}
+      {places.admin ? <span className="rounded border border-line px-1.5 text-[11.5px] font-medium leading-5 text-ink-muted">Admin</span> : null}
+      {places.till ? <span className="rounded border border-line px-1.5 text-[11.5px] font-medium leading-5 text-ink-muted">Till</span> : null}
     </span>
   );
 }
@@ -87,7 +79,7 @@ export function SignInPlaceTags({ role, className }: { role: StaffRole; classNam
 function CardRow({ label, labelId, children }: { label: string; labelId?: string; children: ReactNode }) {
   return (
     <div className="grid gap-1 py-3 sm:grid-cols-[7.5rem_1fr] sm:gap-3">
-      <dt id={labelId} className="text-[12px] font-bold uppercase tracking-wider text-ink-subtle">
+      <dt id={labelId} className="text-[12.5px] font-medium text-ink-subtle">
         {label}
       </dt>
       <dd className="min-w-0 font-semibold text-ink">{children}</dd>
@@ -103,7 +95,7 @@ function LoginCard({ details, links, passwordLabelId }: { details: LoginDetails;
         <LogoMark className="h-10 w-10" />
         <div className="min-w-0 flex-1 leading-tight">
           <p className="font-display text-[16px] font-extrabold">The Boamah&rsquo;s</p>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300">Staff login</p>
+          <p className="text-[12px] text-brand-200">Staff login</p>
         </div>
         <span className="rounded-full bg-gold-400 px-3 py-1 text-[12px] font-extrabold text-brand-900">{ROLE_LABELS[details.role]}</span>
       </div>
@@ -169,7 +161,7 @@ export function LoginCardPanel({ details, links, onDone, extra }: { details: Log
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-3 flex items-center gap-2.5 font-display text-[15px] font-extrabold text-ink">
+      <legend className="mb-3 flex items-center gap-2.5 font-display text-[15px] font-bold text-ink">
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-700 text-[12px] text-white">{number}</span>
         {title}
       </legend>
@@ -194,7 +186,7 @@ function RoleCards({ value, onChange }: { value: StaffRole; onChange: (role: Sta
           >
             <input type="radio" name={name} value={role} checked={chosen} onChange={() => onChange(role)} className="sr-only" />
             <span className="flex items-center justify-between gap-2">
-              <span className="text-[14px] font-extrabold text-ink">{ROLE_LABELS[role]}</span>
+              <span className="text-[14px] font-semibold text-ink">{ROLE_LABELS[role]}</span>
               <span
                 aria-hidden="true"
                 className={cn("flex h-5 w-5 items-center justify-center rounded-full border-2", chosen ? "border-brand-600 bg-brand-600 text-white" : "border-line-strong")}
@@ -249,7 +241,7 @@ function PasswordChoice({ password, onChange, typing, onTyping, error }: Passwor
   }
   return (
     <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
-      <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-brand-700">
+      <p className="flex items-center gap-2 text-[13px] font-semibold text-brand-800">
         <KeyRound className="h-4 w-4" aria-hidden="true" /> Password made for them
       </p>
       <p aria-live="polite" className="mt-2 break-all font-mono text-[22px] font-bold tracking-[0.08em] text-brand-900">

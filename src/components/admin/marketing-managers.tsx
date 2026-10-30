@@ -158,15 +158,15 @@ export function CouponManager({ coupons, products, categories }: { coupons: Coup
       <Button className="mb-4" onClick={() => setEditing(emptyCoupon)}>
         <Plus /> New coupon
       </Button>
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="border-b border-line bg-soft/60 text-left text-xs uppercase tracking-wider text-ink-subtle">
+          <thead className="border-b border-line bg-soft/60 text-left text-[12.5px] text-ink-muted">
             <tr>
-              <th scope="col" className="px-4 py-3">Code</th>
-              <th scope="col" className="px-4 py-3">Discount</th>
-              <th scope="col" className="px-4 py-3">Used</th>
-              <th scope="col" className="px-4 py-3">Status</th>
-              <th scope="col" className="px-4 py-3 text-right">Edit</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Code</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Discount</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Used</th>
+              <th scope="col" className="px-4 py-2.5 font-semibold">Status</th>
+              <th scope="col" className="px-4 py-2.5 text-right font-semibold">Edit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

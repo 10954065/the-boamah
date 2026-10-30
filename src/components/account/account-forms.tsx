@@ -101,7 +101,7 @@ export function PasswordForm() {
       <Field id="confirmPassword" label="Confirm new password" error={errors.confirmPassword?.message}>
         <Input type="password" autoComplete="new-password" {...fieldAria("confirmPassword", errors.confirmPassword?.message)} {...form.register("confirmPassword")} />
       </Field>
-      <Button type="submit" disabled={isSubmitting}>
+      <Button type="submit" disabled={isSubmitting} className="self-start">
         {isSubmitting ? <Spinner label="Saving" /> : null} Change password
       </Button>
     </ClientForm>

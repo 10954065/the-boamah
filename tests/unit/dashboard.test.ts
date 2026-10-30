@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { compactCedis, greeting, longDay, niceCeiling, periodChange, scaleTicks, sharesOf } from "@/lib/dashboard";
+import { compactCedis, longDay, niceCeiling, periodChange, scaleTicks, sharesOf } from "@/lib/dashboard";
 
 describe("change against the period before", () => {
   test("rises and falls as whole percents", () => {
@@ -18,19 +18,13 @@ describe("change against the period before", () => {
   });
 });
 
-describe("greeting in the shop's time", () => {
-  test.each([
-    ["2026-10-30T06:00:00Z", "Good morning"],
-    ["2026-10-30T11:59:00Z", "Good morning"],
-    ["2026-10-30T12:00:00Z", "Good afternoon"],
-    ["2026-10-30T17:00:00Z", "Good evening"],
-    ["2026-10-30T23:30:00Z", "Good evening"],
-  ])("%s is %s", (at, expected) => {
-    expect(greeting(new Date(at))).toBe(expected);
-  });
-
+describe("the day in the shop's time", () => {
   test("names the day", () => {
     expect(longDay(new Date("2026-10-30T09:00:00Z"))).toBe("Friday 30 October");
+  });
+
+  test("late at night is still that day in Accra", () => {
+    expect(longDay(new Date("2026-10-30T23:30:00Z"))).toBe("Friday 30 October");
   });
 });
 
