@@ -246,8 +246,11 @@ service running the same code): add that custom domain, set `POS_HOST` to it,
 and put the Railway address back in `REDIRECT_HOSTS`. The till link changes with
 the address, so give staff the new one from *Admin → Staff*.
 
-**Staff:** the Super Admin adds them in *Admin → Staff* with a role, and gets a
-temporary password to pass on. Nobody can register. Cashiers can only use the
+**Staff:** the Super Admin adds them in *Admin → Staff & roles → Add staff
+member*: name, email, optional phone, a role, and a password the shop makes (or
+one typed in). A login card follows with the right private link, the email and
+the password, to print or copy as a message; the password is shown only that
+once. Nobody can register. Cashiers can only use the
 till; Store Managers and Super Admins can use it too. How to sell, print
 receipts and close shifts is in [Using the till](TILL.md).
 

@@ -92,23 +92,38 @@ test.describe("staff pages stay hidden", () => {
     expect((await request.get(adminLink, { headers, maxRedirects: 0 })).status()).toBe(303);
   });
 
-  test("the Super Admin adds a cashier and gets a password to pass on", async ({ page }) => {
+  test("the Super Admin adds a cashier, who signs in at the till with the password on their card", async ({ page, browser }) => {
     await signInToAdmin(page, adminEmail);
     await page.goto("/admin/staff");
     await expect(page.getByText("Admin link")).toBeVisible();
     await expect(page.getByText("Till link")).toBeVisible();
 
-    await page.getByLabel("Full name").fill("New Cashier");
-    await page.getByLabel("Email address").fill(newStaffEmail);
     await page.getByRole("button", { name: "Add staff member" }).click();
-    const dialog = page.getByRole("dialog", { name: "Temporary password for New Cashier" });
-    const password = await dialog.locator("code").textContent();
+    const form = page.getByRole("dialog", { name: "Add a staff member" });
+    await form.getByLabel("Full name").fill("New Cashier");
+    await form.getByLabel("Email address").fill(newStaffEmail);
+    await form.getByLabel("Phone number (optional)").fill("024 555 1234");
+    await expect(form.getByRole("radio", { name: /^Cashier/ })).toBeChecked();
+    await form.getByRole("button", { name: "Create login" }).click();
+
+    const card = page.getByRole("dialog", { name: "New Cashier can now sign in" });
+    const password = (await card.getByLabel("Password", { exact: true }).textContent())?.trim() ?? "";
     expect(password).toHaveLength(16);
-    await dialog.getByRole("button", { name: "Done" }).click();
-    await expect(page.getByRole("row", { name: /New Cashier/ })).toBeVisible();
+    await expect(card).toContainText(newStaffEmail);
+    await expect(card).toContainText(tillLink);
+    await card.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByRole("list", { name: "Staff" }).getByRole("listitem").filter({ hasText: "New Cashier" })).toContainText("Cashier");
 
     const user = await db.user.findUniqueOrThrow({ where: { email: newStaffEmail } });
-    expect(user.role).toBe("CASHIER");
+    expect(user).toMatchObject({ role: "CASHIER", phone: "0245551234" });
+
+    const theirDevice = await browser.newContext();
+    const till = await theirDevice.newPage();
+    await asNewVisitor(till);
+    await till.goto(tillLink);
+    await fillSignIn(till, newStaffEmail, password);
+    await till.waitForURL(/\/pos$/);
+    await theirDevice.close();
   });
 
   test("a cashier who opens the admin link is sent to the till", async ({ page }) => {

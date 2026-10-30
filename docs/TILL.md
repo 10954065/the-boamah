@@ -10,8 +10,11 @@ till's pages look as if they do not exist. Use Chrome or Edge on the counter PC
 or tablet.
 
 **Who can use it:** staff with the **Cashier** role (till only), Store Managers
-and Super Admins. The Super Admin adds staff in *Admin → Staff* and gives them a
-temporary password. Nobody can register for themselves.
+and Super Admins. The Super Admin adds staff with *Admin → Staff & roles → Add
+staff member* and hands over the login card it makes: the till link, the email
+and the password, to print or send as a message. Nobody can register for
+themselves. To choose your own password, use *Forgot your password?* on the
+till's sign in page.
 
 ## Set up the counter device once
 

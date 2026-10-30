@@ -1,28 +1,19 @@
 import "server-only";
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { ActionError } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { isStaffRole, type RoleCode } from "@/lib/permissions";
 import { posOrigin } from "@/lib/pos-host";
 import { entrySlug, gateKey } from "@/lib/staff-gate";
+import { generateStaffPassword, type StaffLinks, type StaffRole } from "@/lib/staff-onboarding";
 import { siteUrl } from "@/lib/utils";
 import { recordAudit } from "@/server/audit";
 import { clearSignInFailures } from "@/server/sign-in-limits";
 
-/** Letters and digits that cannot be mistaken for each other when read out. */
-const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-const TEMPORARY_PASSWORD_LENGTH = 16;
+export type { StaffLinks } from "@/lib/staff-onboarding";
+
 const CREDENTIAL_PROVIDER = "credential";
-
-export function temporaryPassword(): string {
-  return Array.from({ length: TEMPORARY_PASSWORD_LENGTH }, () => PASSWORD_ALPHABET[randomInt(PASSWORD_ALPHABET.length)]).join("");
-}
-
-export interface StaffLinks {
-  admin: string;
-  till: string;
-}
 
 /** The private links for the admin and the till, or null until STAFF_GATE_KEY is set. */
 export function staffLinks(): StaffLinks | null {
@@ -32,6 +23,11 @@ export function staffLinks(): StaffLinks | null {
     admin: siteUrl(`/${entrySlug(key, "admin")}`),
     till: `${posOrigin() || siteUrl()}/${entrySlug(key, "till")}`,
   };
+}
+
+/** Where staff sign in: the private links, or the plain sign-in pages where there is no gate (locally). */
+export function signInLinks(): StaffLinks {
+  return staffLinks() ?? { admin: siteUrl("/login"), till: `${posOrigin() || siteUrl()}/pos/login` };
 }
 
 function isDuplicateEmail(error: unknown): boolean {
@@ -44,8 +40,14 @@ async function staffMember(userId: string) {
   return user;
 }
 
-/** Creates a staff account with a temporary password, returned once and never stored. */
-export async function addStaffMember(actorId: string, input: { name: string; email: string; role: RoleCode }): Promise<{ userId: string; temporaryPassword: string }> {
+/**
+ * Creates a staff account with the password the Super Admin chose, or a new
+ * one. The password is returned once and only its hash is kept.
+ */
+export async function addStaffMember(
+  actorId: string,
+  input: { name: string; email: string; role: RoleCode; phone?: string; password?: string },
+): Promise<{ userId: string; temporaryPassword: string }> {
   const email = input.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email }, select: { role: true } });
   if (existing) {
@@ -55,13 +57,14 @@ export async function addStaffMember(actorId: string, input: { name: string; ema
     );
   }
   const userId = randomBytes(16).toString("hex");
-  const password = temporaryPassword();
+  const password = input.password ?? generateStaffPassword();
   const hash = await hashPassword(password);
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.user.create({ data: { id: userId, email, name: input.name, role: input.role, emailVerified: true } });
+      await tx.user.create({ data: { id: userId, email, name: input.name, role: input.role, phone: input.phone ?? null, emailVerified: true } });
       await tx.account.create({ data: { id: randomBytes(16).toString("hex"), accountId: userId, providerId: CREDENTIAL_PROVIDER, userId, password: hash } });
-      await recordAudit({ actorId, action: "staff.create", entityType: "User", entityId: userId, details: { role: input.role } }, tx);
+      const details = { role: input.role, password: input.password ? "chosen by the Super Admin" : "generated" };
+      await recordAudit({ actorId, action: "staff.create", entityType: "User", entityId: userId, details }, tx);
     });
   } catch (error) {
     if (isDuplicateEmail(error)) throw new ActionError("That email already belongs to a staff member.", "CONFLICT");
@@ -71,10 +74,13 @@ export async function addStaffMember(actorId: string, input: { name: string; ema
 }
 
 /** Sets a new temporary password, signs the person out everywhere and lifts any sign-in pause. */
-export async function resetStaffMemberPassword(actorId: string, userId: string): Promise<{ name: string; temporaryPassword: string }> {
+export async function resetStaffMemberPassword(
+  actorId: string,
+  userId: string,
+): Promise<{ name: string; email: string; role: StaffRole; temporaryPassword: string }> {
   if (userId === actorId) throw new ActionError("Change your own password under My account.", "FORBIDDEN");
   const user = await staffMember(userId);
-  const password = temporaryPassword();
+  const password = generateStaffPassword();
   const hash = await hashPassword(password);
   await prisma.$transaction(async (tx) => {
     const updated = await tx.account.updateMany({ where: { userId, providerId: CREDENTIAL_PROVIDER }, data: { password: hash } });
@@ -85,7 +91,7 @@ export async function resetStaffMemberPassword(actorId: string, userId: string):
     await recordAudit({ actorId, action: "staff.password_reset", entityType: "User", entityId: userId }, tx);
   });
   await clearSignInFailures(user.email);
-  return { name: user.name, temporaryPassword: password };
+  return { name: user.name, email: user.email, role: user.role as StaffRole, temporaryPassword: password };
 }
 
 /** Suspending takes effect immediately: existing sessions are revoked. */

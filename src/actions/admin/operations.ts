@@ -6,8 +6,9 @@ import { fail, fromZod, ok, type ActionResult } from "@/lib/action-result";
 import { prisma } from "@/lib/db";
 import { parseDecimalToMinor } from "@/lib/money";
 import { ORDER_STATUSES } from "@/lib/order-status";
-import { ROLES, STAFF_ROLES } from "@/lib/permissions";
+import { ROLES } from "@/lib/permissions";
 import { parseDecimalToMilli } from "@/lib/quantity";
+import { newStaffSchema, type LoginDetails, type NewStaffInput, type StaffRole } from "@/lib/staff-onboarding";
 import { recordAudit } from "@/server/audit";
 import { adjustStock, InsufficientStockError } from "@/server/inventory";
 import { cancelOrder, OrderActionError, recordCashPayment, updateOrderStatus } from "@/server/orders/lifecycle";
@@ -138,27 +139,21 @@ export async function setStaffRole(input: { email: string; role: string }): Prom
   });
 }
 
-const newStaffSchema = z.object({
-  name: z.string().trim().min(2, "Enter their full name.").max(80),
-  email: z.email("Enter a valid email address.").trim().toLowerCase().max(254),
-  role: z.enum(STAFF_ROLES),
-});
-
 const staffIdSchema = z.string().min(1).max(64);
 
 /** Shoppers have no accounts, and staff cannot register: the Super Admin adds them here. */
-export async function addStaff(input: z.input<typeof newStaffSchema>): Promise<ActionResult<{ name: string; temporaryPassword: string }>> {
+export async function addStaff(input: NewStaffInput): Promise<ActionResult<LoginDetails>> {
   return runAction("admin.addStaff", async () => {
     const actor = await authorize("staff:manage");
     const parsed = newStaffSchema.safeParse(input);
     if (!parsed.success) return fromZod(parsed.error);
     const created = await addStaffMember(actor.id, parsed.data);
     revalidatePath("/admin/staff");
-    return ok({ name: parsed.data.name, temporaryPassword: created.temporaryPassword });
+    return ok({ name: parsed.data.name, email: parsed.data.email, role: parsed.data.role, password: created.temporaryPassword });
   });
 }
 
-export async function resetStaffPassword(input: { userId: string }): Promise<ActionResult<{ name: string; temporaryPassword: string }>> {
+export async function resetStaffPassword(input: { userId: string }): Promise<ActionResult<{ name: string; email: string; role: StaffRole; temporaryPassword: string }>> {
   return runAction("admin.resetStaffPassword", async () => {
     const actor = await authorize("staff:manage");
     const userId = staffIdSchema.safeParse(input.userId);

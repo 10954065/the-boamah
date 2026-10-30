@@ -139,6 +139,18 @@ describe("staff accounts", () => {
     expect(await prisma.auditLog.count({ where: { action: "staff.create", entityId: userId, actorId: admin.id } })).toBe(1);
   });
 
+  test("a password the Super Admin typed is the one that works, and the phone is kept", async () => {
+    const admin = await createStaff("SUPER_ADMIN");
+    const chosen = "kente-cloth-2026";
+    const { userId, temporaryPassword } = await addStaffMember(admin.id, { name: "Efua Owusu", email: "efua@example.com", role: "STORE_MANAGER", phone: "0241234567", password: chosen });
+
+    expect(temporaryPassword).toBe(chosen);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: userId } })).toMatchObject({ phone: "0241234567", role: "STORE_MANAGER" });
+    expect((await signIn("efua@example.com", chosen)).status).toBe(200);
+    const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: "staff.create", entityId: userId } });
+    expect(JSON.stringify(audit.details)).not.toContain(chosen);
+  });
+
   test("the password is only ever stored hashed, and the audit log does not hold it", async () => {
     const admin = await createStaff("SUPER_ADMIN");
     const { userId, temporaryPassword } = await addStaffMember(admin.id, { name: "Kofi", email: "kofi@example.com", role: "CASHIER" });
@@ -164,8 +176,9 @@ describe("staff accounts", () => {
     for (let attempt = 0; attempt < 5; attempt++) await signIn(staff.email, "wrong-password");
     expect(await signInLocked(staff.email)).toBe(true);
 
-    const { temporaryPassword } = await resetStaffMemberPassword(admin.id, staff.id);
+    const { temporaryPassword, ...card } = await resetStaffMemberPassword(admin.id, staff.id);
 
+    expect(card).toEqual({ name: staff.name, email: staff.email, role: "CASHIER" });
     expect(await prisma.session.count({ where: { userId: staff.id } })).toBe(0);
     expect(await signInLocked(staff.email)).toBe(false);
     expect((await signIn(staff.email, PASSWORD)).status).toBe(401);
