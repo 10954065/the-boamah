@@ -83,7 +83,7 @@ test.describe("in-shop till", () => {
     // Once the products have loaded, scan the barcode, then add one more.
     const search = page.getByRole("searchbox", { name: "Search products or scan a barcode" });
     await expect(search).toBeFocused();
-    await expect(page.getByRole("main").getByRole("listitem").first()).toBeVisible();
+    await expect(page.getByRole("main").getByText("Type a product name or scan a barcode")).toBeVisible();
     await search.fill(barcode);
     await search.press("Enter");
     const sale = page.getByRole("region", { name: "Current sale" });
@@ -155,7 +155,7 @@ test.describe("in-shop till", () => {
     await page.getByLabel("Cash in the drawer").fill("100");
     await page.getByRole("button", { name: `Open the till with ${formatMoney(10_000)}` }).click();
     const search = page.getByRole("searchbox", { name: "Search products or scan a barcode" });
-    await expect(page.getByRole("main").getByRole("listitem").first()).toBeVisible();
+    await expect(page.getByRole("main").getByText("Type a product name or scan a barcode")).toBeVisible();
     // Production builds keep the till on the device, so it can even be reloaded offline.
     const savedOnDevice = await offlineHelperReady(page);
     test.info().annotations.push({ type: "offline reload", description: savedOnDevice ? "tested" : "skipped: no offline helper (development server)" });
@@ -184,7 +184,7 @@ test.describe("in-shop till", () => {
       // Reloaded with no connection: the same shift, the products saved on the till, and the sale still waiting.
       await page.reload();
       await expect(search).toBeVisible();
-      await expect(page.getByRole("main").getByRole("listitem").first()).toBeVisible();
+      await expect(page.getByRole("main").getByText("Type a product name or scan a barcode")).toBeVisible();
       await expect(page.getByRole("button", { name: "1 to send" })).toBeVisible();
       numbers.push(await sellOneOffline());
       await expect(page.getByRole("button", { name: "2 to send" })).toBeVisible();
@@ -222,7 +222,7 @@ test.describe("in-shop till", () => {
     await page.getByLabel("Cash in the drawer").fill("100");
     await page.getByRole("button", { name: `Open the till with ${formatMoney(10_000)}` }).click();
     const search = page.getByRole("searchbox", { name: "Search products or scan a barcode" });
-    await expect(page.getByRole("main").getByRole("listitem").first()).toBeVisible();
+    await expect(page.getByRole("main").getByText("Type a product name or scan a barcode")).toBeVisible();
     const stockBefore = (await db.productVariant.findUniqueOrThrow({ where: { id: product.variantId } })).stockMilli;
     const sale = page.getByRole("region", { name: "Current sale" });
 
@@ -234,7 +234,7 @@ test.describe("in-shop till", () => {
     const hold = page.getByRole("dialog", { name: "Put this sale on hold" });
     await hold.getByLabel(/Who is it for/).fill("Blue bag");
     await hold.getByRole("button", { name: "Put on hold" }).click();
-    await expect(sale.getByText("Scan a barcode or tap a product to start a sale.")).toBeVisible();
+    await expect(sale.getByText("Nothing on this sale yet.")).toBeVisible();
     await page.getByRole("button", { name: "On hold (1)" }).click();
     const held = page.getByRole("dialog", { name: "Sales on hold" });
     await expect(held.getByText("Blue bag")).toBeVisible();

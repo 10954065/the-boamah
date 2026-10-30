@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Minus, PauseCircle, Plus, Scale, ScanBarcode, Trash2 } from "lucide-react";
+import { Minus, PauseCircle, Plus, Scale, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
@@ -61,8 +61,7 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
 
       {empty ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-ink-muted">
-          <ScanBarcode className="h-8 w-8 text-brand-300" aria-hidden="true" />
-          <p className="max-w-56 text-sm">Scan a barcode or tap a product to start a sale.</p>
+          <p className="text-sm">Nothing on this sale yet.</p>
         </div>
       ) : (
         <ol className="min-h-0 flex-1 overflow-y-auto">

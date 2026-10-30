@@ -19,8 +19,8 @@ const PAGE_CACHE = "boamah-till-page";
 const DATA_CACHE = "boamah-till-data";
 const CATALOG_KEY = "/api/pos/catalog";
 
-/** Photo sizes on the product tiles; product-grid.tsx uses the same. */
-export const TILE_IMAGE_SIZES = "48px";
+/** Photo size on the till; product-grid.tsx and sale-check.tsx both use it, so one saved file serves both offline. */
+export const TILE_IMAGE_SIZES = "160px";
 /** Photos fetched ahead of time, a few at once so sales are not held up. */
 const MAX_WARM_IMAGES = 1000;
 const IMAGE_BATCH = 4;

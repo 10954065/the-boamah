@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { FormEvent, RefObject } from "react";
+import type { FormEvent, ReactNode, RefObject } from "react";
 import { ImageOff, RefreshCw, ScanBarcode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, Skeleton } from "@/components/ui/feedback";
@@ -15,8 +15,7 @@ import { TILE_IMAGE_SIZES } from "./till-offline";
 /** Enough to fill a large screen; searching narrows the rest down. */
 export const MAX_TILES = 120;
 
-/** As many tiles across as the frame holds, so more of the shop is in view without scrolling. */
-const TILE_GRID = "grid grid-cols-2 gap-1.5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]";
+const TILE_GRID = "grid grid-cols-1 gap-1.5 sm:grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]";
 
 interface ProductGridProps {
   results: readonly PosCatalogItem[];
@@ -32,10 +31,14 @@ interface ProductGridProps {
   onRetry: () => void;
   onPick: (item: PosCatalogItem) => void;
   now: Date;
+  /** Shown while nothing is being looked up, so the whole shop is not piled on the screen. */
+  idle: ReactNode;
 }
 
+/** The search box and, once something is typed or a category is opened, the matching products. */
 export function ProductGrid(props: ProductGridProps) {
-  const { results, categories, categoryId, onCategory, query, onQuery, onSubmitSearch, searchRef, status, error, onRetry, onPick, now } = props;
+  const { results, categories, categoryId, onCategory, query, onQuery, onSubmitSearch, searchRef, status, error, onRetry, onPick, now, idle } = props;
+  const lookingUp = query.trim() !== "" || categoryId !== null;
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -62,12 +65,12 @@ export function ProductGrid(props: ProductGridProps) {
         </form>
         {/* Swiped sideways on a phone; a mouse cannot do that, so larger screens show every category. */}
         <div className="scrollbar-none -mx-2 flex gap-1 overflow-x-auto px-2 md:flex-wrap" role="group" aria-label="Categories">
-          {[{ id: null, name: "All" }, ...categories].map((category) => (
+          {categories.map((category) => (
             <button
-              key={category.id ?? "all"}
+              key={category.id}
               type="button"
               aria-pressed={categoryId === category.id}
-              onClick={() => onCategory(category.id)}
+              onClick={() => onCategory(categoryId === category.id ? null : category.id)}
               className={cn(
                 "shrink-0 rounded-full border px-2.5 py-1 text-[13px] font-semibold transition-colors",
                 categoryId === category.id ? "border-brand-700 bg-brand-700 text-white" : "border-line-strong bg-surface text-ink-muted hover:bg-soft hover:text-ink",
@@ -80,19 +83,21 @@ export function ProductGrid(props: ProductGridProps) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        {status === "loading" ? (
-          <div className={TILE_GRID} aria-label="Loading products">
-            {Array.from({ length: 12 }, (_, index) => (
-              <Skeleton key={index} className="h-20" />
-            ))}
-          </div>
-        ) : status === "error" ? (
+        {status === "error" ? (
           <Alert tone="danger" title="The products could not be loaded">
             <p>{error}</p>
             <Button size="sm" variant="outline" className="mt-2" onClick={onRetry}>
               <RefreshCw /> Try again
             </Button>
           </Alert>
+        ) : !lookingUp ? (
+          idle
+        ) : status === "loading" ? (
+          <div className={TILE_GRID} aria-label="Loading products">
+            {Array.from({ length: 6 }, (_, index) => (
+              <Skeleton key={index} className="h-20" />
+            ))}
+          </div>
         ) : results.length === 0 ? (
           <p className="py-12 text-center text-sm text-ink-muted">{query ? `No products match "${query}".` : "No products in this category."}</p>
         ) : (
@@ -125,9 +130,9 @@ function ProductTile({ item, now, onPick }: { item: PosCatalogItem; now: Date; o
       onClick={() => onPick(item)}
       className="group flex h-full w-full items-start gap-2 rounded-md border border-line bg-surface p-1.5 text-left transition-[border-color,box-shadow] hover:border-brand-300 hover:shadow-[var(--shadow-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:translate-y-px"
     >
-      <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded bg-soft">
+      <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded bg-white">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt="" fill sizes={TILE_IMAGE_SIZES} className="object-cover" />
+          <Image src={item.imageUrl} alt="" fill sizes={TILE_IMAGE_SIZES} className="object-contain" />
         ) : (
           <span className="flex h-full items-center justify-center text-ink-subtle">
             <ImageOff className="h-5 w-5" aria-hidden="true" />

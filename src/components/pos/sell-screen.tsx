@@ -34,6 +34,7 @@ import { QuantityDialog, type QuantityTarget } from "./quantity-dialog";
 import type { ShopDetails } from "./receipt";
 import { SalePanel } from "./sale-panel";
 import { SalesHistorySheet } from "./sales-history";
+import { SaleCheck } from "./sale-check";
 import { ReceiptDialog, SendingDialog, type SendState } from "./sale-status";
 import { SyncStatus, TillBanner } from "./sync-status";
 import { TenderDialog } from "./tender-dialog";
@@ -111,11 +112,21 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     return () => window.clearInterval(timer);
   }, [tendering]);
 
-  const pick = useCallback((item: PosCatalogItem) => {
-    if (isWeighed(item.unit)) return setQuantityTarget({ item, quantityMilli: null });
-    setLines((current) => addToSale(current, item, MILLI));
-    setHighlightId(item.variantId);
+  /** Goes back from the products looked up to the sale, ready for the next item. */
+  const endLookup = useCallback(() => {
+    setQuery("");
+    setCategoryId(null);
   }, []);
+
+  const pick = useCallback(
+    (item: PosCatalogItem) => {
+      if (isWeighed(item.unit)) return setQuantityTarget({ item, quantityMilli: null });
+      setLines((current) => addToSale(current, item, MILLI));
+      setHighlightId(item.variantId);
+      endLookup();
+    },
+    [endLookup],
+  );
 
   function submitSearch() {
     const code = query.trim();
@@ -125,11 +136,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
       return;
     }
     const match = findByCode(catalog.items, code) ?? (results.length === 1 ? results[0] : undefined);
-    if (match) {
-      pick(match);
-      setQuery("");
-      return;
-    }
+    if (match) return pick(match);
     toast.error(results.length === 0 ? `Nothing matches "${code}".` : "More than one product matches. Tap the one you want.");
   }
 
@@ -138,6 +145,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     setLines((current) => (editing ? setLineQuantity(current, item.variantId, quantityMilli) : addToSale(current, item, quantityMilli)));
     setHighlightId(item.variantId);
     setQuantityTarget(null);
+    endLookup();
     searchRef.current?.focus();
   }
 
@@ -272,10 +280,11 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const editLine = (line: PricedTillLine) => setQuantityTarget({ item: line.item, quantityMilli: line.quantityMilli });
   const salePanelProps = {
     sale,
     highlightId,
-    onEdit: (line: PricedTillLine) => setQuantityTarget({ item: line.item, quantityMilli: line.quantityMilli }),
+    onEdit: editLine,
     onStep: step,
     onRemove: removeLine,
     onClear: () => setLines([]),
@@ -321,6 +330,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
             onRetry={() => void refreshCatalog()}
             onPick={pick}
             now={now}
+            idle={<SaleCheck sale={sale} highlightId={highlightId} ready={catalog.status === "ready"} onEdit={editLine} />}
           />
         </main>
         <aside className="hidden w-[clamp(17.5rem,30vw,22rem)] shrink-0 border-l border-line md:flex">

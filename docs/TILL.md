@@ -44,11 +44,15 @@ screen.
 
 ## Selling
 
-- **Scan** a barcode, or type part of a product name in the search box and
-  press Enter. Typing anywhere on the screen goes into the search box, so a
-  scanner works without clicking first. **F2** jumps to the search box.
-- **Tap** a product to add one. Tap again, or use **+** and **−**, to change
-  the quantity; tap the number to type it.
+- The screen stays clear until you look something up. **Scan** a barcode, or
+  type part of a product name and the matches pop up with their photos. Typing
+  anywhere on the screen goes into the search box, so a scanner works without
+  clicking first. **F2** jumps to the search box.
+- **Tap** a match to add one, or press Enter when only one matches. Can't
+  spell it? Tap a category to open it, and tap it again to close it.
+- Each product on the sale shows on the screen with its photo and how many, so
+  you can **check it against the goods** on the counter. The newest has a gold
+  ring. Tap a card to change how many, or use **+** and **−** in the sale.
 - **Weighed goods** (sold per kg or litre) ask for the weight, to the gram.
 - Sale and bulk prices apply by themselves, exactly as on the website.
 - Products whose barcode is not set yet can still be found by name. Add the
