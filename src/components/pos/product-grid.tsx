@@ -15,6 +15,9 @@ import { TILE_IMAGE_SIZES } from "./till-offline";
 /** Enough to fill a large screen; searching narrows the rest down. */
 export const MAX_TILES = 120;
 
+/** As many tiles across as the frame holds, so more of the shop is in view without scrolling. */
+const TILE_GRID = "grid grid-cols-2 gap-1.5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]";
+
 interface ProductGridProps {
   results: readonly PosCatalogItem[];
   categories: readonly { id: string; name: string }[];
@@ -41,9 +44,9 @@ export function ProductGrid(props: ProductGridProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="space-y-2 border-b border-line bg-surface p-3">
+      <div className="space-y-1.5 border-b border-line bg-surface p-2">
         <form onSubmit={submit} role="search" className="relative">
-          <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+          <ScanBarcode className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
           <input
             ref={searchRef}
             type="search"
@@ -54,10 +57,11 @@ export function ProductGrid(props: ProductGridProps) {
             placeholder="Search products or scan a barcode (F2)"
             value={query}
             onChange={(event) => onQuery(event.target.value)}
-            className="h-12 w-full rounded-lg border border-line-strong bg-surface pl-11 pr-3 text-base text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="h-10 w-full rounded-md border border-line-strong bg-surface pl-9 pr-3 text-base text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </form>
-        <div className="scrollbar-none -mx-3 flex gap-1.5 overflow-x-auto px-3" role="group" aria-label="Categories">
+        {/* Swiped sideways on a phone; a mouse cannot do that, so larger screens show every category. */}
+        <div className="scrollbar-none -mx-2 flex gap-1 overflow-x-auto px-2 md:flex-wrap" role="group" aria-label="Categories">
           {[{ id: null, name: "All" }, ...categories].map((category) => (
             <button
               key={category.id ?? "all"}
@@ -65,7 +69,7 @@ export function ProductGrid(props: ProductGridProps) {
               aria-pressed={categoryId === category.id}
               onClick={() => onCategory(category.id)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors",
+                "shrink-0 rounded-full border px-2.5 py-1 text-[13px] font-semibold transition-colors",
                 categoryId === category.id ? "border-brand-700 bg-brand-700 text-white" : "border-line-strong bg-surface text-ink-muted hover:bg-soft hover:text-ink",
               )}
             >
@@ -75,11 +79,11 @@ export function ProductGrid(props: ProductGridProps) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {status === "loading" ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6" aria-label="Loading products">
-            {Array.from({ length: 10 }, (_, index) => (
-              <Skeleton key={index} className="aspect-[4/5]" />
+          <div className={TILE_GRID} aria-label="Loading products">
+            {Array.from({ length: 12 }, (_, index) => (
+              <Skeleton key={index} className="h-20" />
             ))}
           </div>
         ) : status === "error" ? (
@@ -93,7 +97,7 @@ export function ProductGrid(props: ProductGridProps) {
           <p className="py-12 text-center text-sm text-ink-muted">{query ? `No products match "${query}".` : "No products in this category."}</p>
         ) : (
           <>
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <ul className={TILE_GRID}>
               {results.slice(0, MAX_TILES).map((item) => (
                 <li key={item.variantId}>
                   <ProductTile item={item} now={now} onPick={onPick} />
@@ -119,28 +123,27 @@ function ProductTile({ item, now, onPick }: { item: PosCatalogItem; now: Date; o
     <button
       type="button"
       onClick={() => onPick(item)}
-      className="group flex h-full w-full flex-col rounded-lg border border-line bg-surface p-2 text-left transition-[border-color,box-shadow] hover:border-brand-300 hover:shadow-[var(--shadow-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:translate-y-px"
+      className="group flex h-full w-full items-start gap-2 rounded-md border border-line bg-surface p-1.5 text-left transition-[border-color,box-shadow] hover:border-brand-300 hover:shadow-[var(--shadow-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:translate-y-px"
     >
-      <span className="relative block aspect-square overflow-hidden rounded-md bg-soft">
+      <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded bg-soft">
         {item.imageUrl ? (
           <Image src={item.imageUrl} alt="" fill sizes={TILE_IMAGE_SIZES} className="object-cover" />
         ) : (
           <span className="flex h-full items-center justify-center text-ink-subtle">
-            <ImageOff className="h-7 w-7" aria-hidden="true" />
+            <ImageOff className="h-5 w-5" aria-hidden="true" />
           </span>
         )}
-        {stockNote ? (
-          <span className={cn("absolute left-1.5 top-1.5 rounded-sm px-1.5 py-0.5 text-[11px] font-semibold", item.stockMilli <= 0 ? "bg-warning-soft text-warning" : "bg-gold-100 text-gold-700")}>
-            {stockNote}
-          </span>
-        ) : null}
       </span>
-      <span className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-ink">{item.productName}</span>
-      <span className="truncate text-xs text-ink-muted">{item.variantName}</span>
-      <span className="mt-auto pt-1.5 text-sm">
-        <span className="font-bold tabular-nums text-brand-800">{formatMoney(price)}</span>{" "}
-        {price < item.priceMinor ? <s className="text-xs text-ink-subtle">{formatMoney(item.priceMinor)}</s> : null}{" "}
-        <span className="text-xs text-ink-muted">{UNIT_INFO[item.unit].per}</span>
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-2 text-[13px] font-semibold leading-4.25 text-ink">{item.productName}</span>
+        <span className="block truncate text-[11px] leading-4 text-ink-muted">{item.variantName}</span>
+        {/* Fixed to one line: whatever does not fit whole wraps out of sight instead of being cut mid word. */}
+        <span className="flex h-4.5 flex-wrap items-baseline gap-x-1 overflow-hidden text-[13px] leading-4.5">
+          <span className="font-bold tabular-nums text-brand-800">{formatMoney(price)}</span>
+          <span className="text-[11px] text-ink-muted">{UNIT_INFO[item.unit].per}</span>
+          {price < item.priceMinor ? <s className="text-[11px] text-ink-subtle">{formatMoney(item.priceMinor)}</s> : null}
+        </span>
+        {stockNote ? <span className={cn("block truncate text-[11px] font-semibold leading-4", item.stockMilli <= 0 ? "text-warning" : "text-gold-700")}>{stockNote}</span> : null}
       </span>
     </button>
   );

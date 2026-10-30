@@ -20,7 +20,7 @@ const DATA_CACHE = "boamah-till-data";
 const CATALOG_KEY = "/api/pos/catalog";
 
 /** Photo sizes on the product tiles; product-grid.tsx uses the same. */
-export const TILE_IMAGE_SIZES = "(min-width: 1280px) 180px, (min-width: 640px) 25vw, 45vw";
+export const TILE_IMAGE_SIZES = "48px";
 /** Photos fetched ahead of time, a few at once so sales are not held up. */
 const MAX_WARM_IMAGES = 1000;
 const IMAGE_BATCH = 4;

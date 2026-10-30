@@ -30,7 +30,7 @@ export function Keypad({ onKey, decimals, className }: KeypadProps) {
           aria-label={KEY_LABELS[key] ?? key}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onKey(key)}
-          className="h-12 select-none rounded-md border border-line bg-surface text-lg font-semibold tabular-nums text-ink shadow-sm transition-colors hover:bg-soft active:translate-y-px active:bg-brand-50"
+          className="h-11 select-none rounded-md border border-line bg-surface text-lg font-semibold tabular-nums text-ink shadow-sm transition-colors hover:bg-soft active:translate-y-px active:bg-brand-50"
         >
           {key === "back" ? <Delete className="mx-auto h-5 w-5" aria-hidden="true" /> : key === "clear" ? "C" : key}
         </button>

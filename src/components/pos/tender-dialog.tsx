@@ -77,10 +77,10 @@ function TenderForm({ totalMinor, onComplete }: Pick<TenderDialogProps, "totalMi
   }
 
   return (
-    <DialogContent title="Take payment" className="max-w-2xl">
-      <form onSubmit={complete} className="grid gap-5 sm:grid-cols-[1fr_15rem]">
-        <div className="min-w-0 space-y-4">
-          <div className="rounded-lg bg-brand-900 px-4 py-3 text-white">
+    <DialogContent title="Take payment" className="max-w-2xl p-4">
+      <form onSubmit={complete} className="grid gap-4 sm:grid-cols-[1fr_15rem]">
+        <div className="min-w-0 space-y-3">
+          <div className="rounded-lg bg-brand-900 px-4 py-2 text-white">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{added.length ? "Still to pay" : "Amount due"}</p>
             <p className="font-display text-3xl font-extrabold tabular-nums">{formatMoney(due)}</p>
             {added.length ? <p className="text-xs text-white/70">of {formatMoney(totalMinor)}</p> : null}
@@ -113,7 +113,7 @@ function TenderForm({ totalMinor, onComplete }: Pick<TenderDialogProps, "totalMi
                   disabled={used}
                   onClick={() => startEntry(code, due)}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg border px-2 py-3 text-sm font-semibold transition-colors disabled:opacity-40",
+                    "flex flex-col items-center gap-0.5 rounded-lg border px-2 py-2 text-sm font-semibold transition-colors disabled:opacity-40",
                     method === code ? "border-brand-600 bg-brand-50 text-brand-800 ring-2 ring-brand-500/30" : "border-line-strong bg-surface hover:bg-soft",
                   )}
                 >
@@ -136,7 +136,7 @@ function TenderForm({ totalMinor, onComplete }: Pick<TenderDialogProps, "totalMi
               placeholder="0.00"
               value={amountText}
               onChange={(event) => setAmountText(event.target.value.replace(/[^\d.]/g, ""))}
-              className="h-14 text-2xl font-bold tabular-nums"
+              className="h-12 text-2xl font-bold tabular-nums"
             />
           </div>
 

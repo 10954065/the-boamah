@@ -68,13 +68,13 @@ interface TillHeaderProps {
 export function TillHeader({ till, cashierName, shiftOpenedAt, status, children }: TillHeaderProps) {
   const connection = CONNECTION[useConnection()];
   return (
-    <header className="flex items-center gap-3 bg-brand-900 px-3 py-2 text-white">
-      <LogoMark className="hidden h-8 w-8 shrink-0 sm:block" />
+    <header className="flex items-center gap-2 bg-brand-900 px-2 py-1 text-white sm:gap-3 sm:px-3">
+      <LogoMark className="hidden h-7 w-7 shrink-0 sm:block" />
       <div className="min-w-0">
-        <p className="truncate font-display text-[15px] font-extrabold leading-tight">
+        <p className="truncate font-display text-sm font-extrabold leading-tight">
           Till {till.code} · {till.name}
         </p>
-        <p className="truncate text-xs text-white/70">
+        <p className="truncate text-[11px] leading-4 text-white/70">
           {cashierName}
           {shiftOpenedAt ? ` · Shift since ${formatTime(shiftOpenedAt)}` : ""}
         </p>
@@ -84,7 +84,7 @@ export function TillHeader({ till, cashierName, shiftOpenedAt, status, children 
         <span className="sr-only sm:not-sr-only">{connection.label}</span>
       </span>
       {status}
-      <div className="ml-auto flex items-center gap-1">{children}</div>
+      <div className="ml-auto flex shrink-0 items-center">{children}</div>
     </header>
   );
 }
@@ -101,7 +101,7 @@ export function HeaderAction({ icon: Icon, label, className, children, ...props 
       type="button"
       title={label}
       className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-md px-2.5 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40",
+        "inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[13px] font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
       {...props}

@@ -74,7 +74,7 @@ sale**. **Last receipt** in the top bar prints a copy again (marked as a copy).
 ## Putting a sale on hold
 
 When a customer steps away (to fetch something, or to find money), press
-**Hold** under the sale, type who it is for if you like (for example *Ama, blue
+**Hold** above the sale, type who it is for if you like (for example *Ama, blue
 bag*) and serve the next customer.
 
 - **On hold** in the top bar shows how many sales are waiting. Press it, then

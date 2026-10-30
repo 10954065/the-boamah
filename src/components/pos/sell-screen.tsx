@@ -284,7 +284,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   };
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <TillHeader till={till} cashierName={cashier.name} shiftOpenedAt={shift.openedAt} status={<SyncStatus tillCode={till.code} cashier={cashier} />}>
         <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
         <HeaderAction icon={History} label="Sales" onClick={() => setPanel("history")} />
@@ -323,28 +323,28 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
             now={now}
           />
         </main>
-        <aside className="hidden w-[min(26rem,40vw)] shrink-0 border-l border-line lg:flex">
+        <aside className="hidden w-[clamp(17.5rem,30vw,22rem)] shrink-0 border-l border-line md:flex">
           <SalePanel {...salePanelProps} />
         </aside>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-line bg-surface px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-2 lg:hidden">
+      <div className="flex items-center gap-2 border-t border-line bg-surface px-3 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] pt-1.5 md:hidden">
         <div className="min-w-0">
           <p className="text-xs text-ink-muted">
             {lines.length} {lines.length === 1 ? "item" : "items"}
           </p>
-          <p className="font-display text-xl font-extrabold tabular-nums">{formatMoney(sale.totalMinor)}</p>
+          <p className="truncate font-display text-lg font-extrabold leading-6 tabular-nums">{formatMoney(sale.totalMinor)}</p>
         </div>
-        <Button variant="outline" size="lg" className="ml-auto" onClick={() => setPanel("sale")}>
+        <Button variant="outline" className="ml-auto h-11" onClick={() => setPanel("sale")}>
           View sale
         </Button>
-        <Button size="lg" disabled={lines.length === 0} onClick={charge}>
+        <Button className="h-11" disabled={lines.length === 0} onClick={charge}>
           Charge
         </Button>
       </div>
 
       <Dialog open={panel === "sale"} onOpenChange={(open) => setPanel(open ? "sale" : null)}>
-        <SheetContent side="right" title="Current sale" closeLabel="Back to products" className="lg:hidden">
+        <SheetContent side="right" title="Current sale" closeLabel="Back to products" className="md:hidden">
           <SalePanel {...salePanelProps} inSheet />
         </SheetContent>
       </Dialog>
