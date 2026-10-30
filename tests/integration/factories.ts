@@ -6,7 +6,7 @@ import type { RoleCode } from "@/lib/permissions";
 import { DEFAULT_SETTINGS } from "@/server/settings";
 
 const TABLES = [
-  "PosReturnItem", "PosReturn", "PosPayment", "PosSaleItem", "PosSale", "PosShift", "PosTill",
+  "CreditPayment", "PosReturnItem", "PosReturn", "PosPayment", "PosSaleItem", "PosSale", "CreditCustomer", "PosShift", "PosTill",
   "Review", "StockAlert", "PriceTier", "PaymentEvent", "Notification", "AuditLog", "InventoryMovement", "Payment", "CouponRedemption", "OrderNote",
   "OrderStatusHistory", "OrderItem", "Order", "CartItem", "Cart", "WishlistItem", "Address", "ProductImage",
   "ProductVariant", "_CouponProducts", "_CouponCategories", "Coupon", "Product", "Category", "DeliveryZone",

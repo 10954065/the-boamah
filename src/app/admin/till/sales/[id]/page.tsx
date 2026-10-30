@@ -4,8 +4,8 @@ import { AdminHeader, Panel, TableWrap, td, th } from "@/components/admin/ui";
 import { TillSaleBadges } from "@/components/admin/till-parts";
 import { TillReviewButton } from "@/components/admin/till-review";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS } from "@/lib/pos";
-import { formatRefundNumber } from "@/lib/pos-returns";
+import { SALE_TENDER_LABELS } from "@/lib/pos";
+import { formatRefundNumber, REFUND_METHOD_TEXT } from "@/lib/pos-returns";
 import { formatQuantity, milliToDecimalString, type SellingUnitCode } from "@/lib/quantity";
 import { cn, formatDateTime } from "@/lib/utils";
 import { tillSaleDetail } from "@/server/pos/reports";
@@ -99,7 +99,7 @@ export default async function TillSalePage({ params }: PageProps<"/admin/till/sa
                 {sale.returns.map((refund) => (
                   <li key={refund.id} className="rounded-md border border-line p-3 text-sm">
                     <p className="font-semibold">
-                      {formatRefundNumber(refund.number)}: {formatMoney(refund.refundMinor)} by {POS_TENDER_LABELS[refund.method].toLowerCase()}
+                      {formatRefundNumber(refund.number)}: {formatMoney(refund.refundMinor)} {REFUND_METHOD_TEXT[refund.method]}
                       {refund.reference ? ` (ref ${refund.reference})` : ""}
                     </p>
                     <p className="text-xs text-ink-muted">
@@ -146,7 +146,7 @@ export default async function TillSalePage({ params }: PageProps<"/admin/till/sa
               {sale.payments.map((payment) => (
                 <li key={payment.id} className="flex justify-between gap-2">
                   <span>
-                    {POS_TENDER_LABELS[payment.method]}
+                    {SALE_TENDER_LABELS[payment.method]}
                     {payment.reference ? <span className="text-ink-muted"> · ref {payment.reference}</span> : null}
                   </span>
                   <span className="tabular-nums">{formatMoney(payment.amountMinor)}</span>

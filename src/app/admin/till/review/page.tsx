@@ -5,7 +5,7 @@ import { differenceSummary } from "@/components/admin/till-parts";
 import { TillReviewButton } from "@/components/admin/till-review";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS } from "@/lib/pos";
+import { REFUND_METHOD_TEXT } from "@/lib/pos-returns";
 import { formatDateTime } from "@/lib/utils";
 import { tillReviewQueue } from "@/server/pos/reports";
 import { requireStaffPage } from "@/server/session";
@@ -92,7 +92,7 @@ export default async function TillReviewPage() {
                       <Link href={`/admin/till/sales/${refund.sale.id}`} className="font-mono text-[13px] font-semibold text-brand-700 hover:underline">
                         {refund.sale.receiptNumber}
                       </Link>
-                      : {formatMoney(refund.refundMinor)} by {POS_TENDER_LABELS[refund.method].toLowerCase()}
+                      : {formatMoney(refund.refundMinor)} {REFUND_METHOD_TEXT[refund.method]}
                     </p>
                     <p className="text-sm text-ink-muted">
                       {formatDateTime(refund.createdAt)} · {refund.cashier.name}, approved by {refund.approvedBy.name} · {refund.reason}

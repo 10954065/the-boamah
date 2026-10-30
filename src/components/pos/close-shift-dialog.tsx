@@ -168,6 +168,8 @@ function ShiftReportView({ report, confirmed, shop, paper, onDone }: ShiftReport
           ? ` ${summary.refundsCount} ${summary.refundsCount === 1 ? "refund" : "refunds"} for ${formatMoney(totalOf(summary.refundedMinor))}, taken off what is expected.`
           : ""}
         {summary.voidsCount > 0 ? ` ${summary.voidsCount} voided ${summary.voidsCount === 1 ? "sale" : "sales"} (${formatMoney(summary.voidedTotalMinor)}), not counted.` : ""}
+        {totalOf(summary.creditPaidMinor) > 0 ? ` Credit customers paid ${formatMoney(totalOf(summary.creditPaidMinor))}, added to what is expected.` : ""}
+        {summary.onCreditMinor > 0 ? ` ${formatMoney(summary.onCreditMinor)} was sold on account, so no money was taken for it.` : ""}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

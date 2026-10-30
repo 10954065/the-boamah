@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   POS_MAX_SALES_PER_UPLOAD,
   POS_TENDERS,
+  SALE_TENDERS,
   posSaleUploadSchema,
   posShiftCloseSchema,
   posShiftOpenSchema,
@@ -12,6 +13,7 @@ import {
   type PosShiftOpen,
   type PosShiftView,
   type PosTenderCode,
+  type SaleTenderCode,
   type ShiftSummary,
 } from "@/lib/pos";
 import type { ReceiptData } from "@/lib/pos-till";
@@ -91,11 +93,13 @@ const shiftViewSchema = z.object({
 
 const noTotals = { CASH: 0, MOMO: 0, CARD: 0 };
 
-// Reports saved before returns and voids existed have none of either.
+// Reports saved before returns, voids and credit existed have none of them.
 const summarySchema = z.object({
   salesCount: z.number().int(),
   salesTotalMinor: z.number().int(),
   takenMinor: tenderTotalsSchema,
+  onCreditMinor: z.number().int().default(0),
+  creditPaidMinor: tenderTotalsSchema.default(noTotals),
   refundsCount: z.number().int().default(0),
   refundedMinor: tenderTotalsSchema.default(noTotals),
   voidsCount: z.number().int().default(0),
@@ -225,30 +229,39 @@ export interface JournalSale {
   clientId: string;
   totalMinor: number;
   changeMinor: number;
-  payments: { method: PosTenderCode; amountMinor: number }[];
+  payments: { method: SaleTenderCode; amountMinor: number }[];
   /** Voided later in the shift: its money went back. */
   voided?: boolean;
 }
 
-/** Money given back from the drawer (or by mobile money or card) for a return. */
+/** Money given back from the drawer (or by mobile money or card) for a return, or taken off a credit account. */
 export interface JournalRefund {
   kind: "refund";
   clientId: string;
-  method: PosTenderCode;
+  method: SaleTenderCode;
   refundMinor: number;
 }
 
-export type JournalEntry = JournalSale | JournalRefund;
+/** Money a credit customer paid off their account at this till. */
+export interface JournalCreditPayment {
+  kind: "credit-payment";
+  clientId: string;
+  method: PosTenderCode;
+  amountMinor: number;
+}
+
+export type JournalEntry = JournalSale | JournalRefund | JournalCreditPayment;
 
 const journalEntrySchema = z.union([
-  z.object({ kind: z.literal("refund"), clientId: z.string(), method: z.enum(POS_TENDERS), refundMinor: z.number().int() }),
+  z.object({ kind: z.literal("refund"), clientId: z.string(), method: z.enum(SALE_TENDERS), refundMinor: z.number().int() }),
+  z.object({ kind: z.literal("credit-payment"), clientId: z.string(), method: z.enum(POS_TENDERS), amountMinor: z.number().int() }),
   z.object({
     // Journals kept before returns existed hold only sales, without a kind.
     kind: z.literal("sale").default("sale"),
     clientId: z.string(),
     totalMinor: z.number().int(),
     changeMinor: z.number().int(),
-    payments: z.array(z.object({ method: z.enum(POS_TENDERS), amountMinor: z.number().int() })),
+    payments: z.array(z.object({ method: z.enum(SALE_TENDERS), amountMinor: z.number().int() })),
     voided: z.boolean().optional(),
   }),
 ]);
@@ -284,6 +297,7 @@ export function localShiftReport(shift: PosShiftView, close: PosShiftClose, jour
       {
         refunds: journal.filter((entry): entry is JournalRefund => entry.kind === "refund"),
         voidedTotalsMinor: sales.filter((sale) => sale.voided).map((sale) => sale.totalMinor),
+        creditPayments: journal.filter((entry): entry is JournalCreditPayment => entry.kind === "credit-payment"),
       },
     ),
   };

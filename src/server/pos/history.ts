@@ -46,6 +46,7 @@ const saleRecordSelect = {
   voidedBy: { select: { name: true } },
   shift: { select: { clientId: true, closedAt: true } },
   payments: { select: { method: true, amountMinor: true, reference: true }, orderBy: { id: "asc" } },
+  creditCustomer: { select: { id: true, name: true, phone: true } },
   items: {
     select: { id: true, productName: true, variantName: true, unit: true, quantityMilli: true, unitPriceMinor: true, lineTotalMinor: true, returnedMilli: true, refundedMinor: true },
     orderBy: { id: "asc" },
@@ -96,6 +97,7 @@ function toSaleRecord(row: SaleRow): PosSaleRecord {
     paidMinor: row.paidMinor,
     changeMinor: row.changeMinor,
     payments: row.payments.map((p) => ({ method: p.method, amountMinor: p.amountMinor, reference: p.reference })),
+    creditCustomer: row.creditCustomer,
     lines: row.items.map((item) => ({ ...item, unit: item.unit as SellingUnitCode })),
     voided: row.voidedAt ? { at: row.voidedAt.toISOString(), byName: row.voidedBy?.name ?? null, reason: row.voidReason } : null,
     refunds: row.returns.map(toRefundRecord),

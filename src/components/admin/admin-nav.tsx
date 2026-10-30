@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  BookUser,
   Boxes,
   ChevronRight,
   ClipboardCheck,
@@ -39,6 +40,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/orders": ShoppingBag,
   "/admin/customers": Users,
+  "/admin/credit": BookUser,
   "/admin/till": ReceiptText,
   "/admin/till/shifts": Clock,
   "/admin/till/review": ClipboardCheck,

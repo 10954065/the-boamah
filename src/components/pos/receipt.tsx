@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { formatMoney } from "@/lib/money";
-import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode, type ShiftSummary, type TenderTotals } from "@/lib/pos";
+import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode, type SaleTenderCode, type ShiftSummary, type TenderTotals } from "@/lib/pos";
 import type { PosRefundRecord } from "@/lib/pos-returns";
 import { isWeighed, type ReceiptData, type ReceiptLine } from "@/lib/pos-till";
 import { formatQuantity, milliToDecimalString } from "@/lib/quantity";
@@ -62,7 +62,7 @@ function quantityText(line: Pick<ReceiptLine, "unit" | "quantityMilli">): string
 /** Printed at the foot of every receipt, as on the Vantage POS receipts. */
 const SYSTEM_CREDIT = { name: "Sunleon Router Enterprise", phone: "0556105551", email: "admin@sunleonrouterenterprise.com" };
 
-const RECEIPT_METHOD_LABELS: Record<PosTenderCode, string> = { CASH: "Cash", MOMO: "Mobile Money", CARD: "Card" };
+const RECEIPT_METHOD_LABELS: Record<SaleTenderCode, string> = { CASH: "Cash", MOMO: "Mobile Money", CARD: "Card", CREDIT: "On account" };
 
 /** The paper of a customer's slip in the Vantage POS layout: shop name and title on top, then the slip. */
 function SlipFrame({ shop, paper, title, children }: { shop: ShopDetails; paper: PaperWidth; title: string; children: ReactNode }) {
@@ -95,15 +95,21 @@ export function ReceiptDocument({ receipt, shop, paper, copy = false }: { receip
   const [firstPayment] = receipt.payments;
   const split = receipt.payments.length > 1;
   const cash = receipt.payments.find((payment) => payment.method === "CASH");
+  const onAccount = receipt.payments.some((payment) => payment.method === "CREDIT");
   return (
     <SlipFrame shop={shop} paper={paper} title={copy ? "Receipt (copy)" : "Receipt"}>
       <div className="mb-3 space-y-0.5 text-xs text-ink-muted print:text-black">
         <p>Receipt #: {receipt.receiptNumber}</p>
         <p>Date: {formatDateTime(receipt.soldAt)}</p>
         <p>Cashier: {receipt.cashierName}</p>
+        {receipt.creditCustomer ? (
+          <p>
+            Customer: {receipt.creditCustomer.name} ({receipt.creditCustomer.phone})
+          </p>
+        ) : null}
         {firstPayment ? (
           <p>
-            Payment: {split ? "Split payment" : RECEIPT_METHOD_LABELS[firstPayment.method]} · Paid
+            Payment: {split ? "Split payment" : RECEIPT_METHOD_LABELS[firstPayment.method]} · {onAccount ? (split ? "Part on account" : "To pay later") : "Paid"}
           </p>
         ) : null}
         {split ? (
@@ -154,7 +160,7 @@ export function RefundDocument({ refund, shop, paper, copy = false }: { refund: 
         <p>Date: {formatDateTime(refund.createdAt)}</p>
         <p>Cashier: {refund.cashierName}</p>
         <p>Approved by: {refund.approvedByName}</p>
-        <p>Refunded: {RECEIPT_METHOD_LABELS[refund.method]}</p>
+        <p>Refunded: {refund.method === "CREDIT" ? "Taken off the account" : RECEIPT_METHOD_LABELS[refund.method]}</p>
         {refund.reference ? (
           <p>
             {RECEIPT_METHOD_LABELS[refund.method]} ref: {refund.reference}
@@ -176,6 +182,48 @@ export function RefundDocument({ refund, shop, paper, copy = false }: { refund: 
       <div className="flex justify-between border-t border-dashed border-line-strong pt-2 text-base font-bold print:border-black">
         <span>Refund total</span>
         <span>{formatMoney(refund.refundMinor)}</span>
+      </div>
+    </SlipFrame>
+  );
+}
+
+/** What a credit customer paid off their account, in the same layout as the receipt. */
+export interface CreditPaymentSlip {
+  clientId: string;
+  customerName: string;
+  customerPhone: string;
+  receivedAt: string;
+  cashierName: string;
+  method: PosTenderCode;
+  reference: string | null;
+  amountMinor: number;
+  /** What they still owe after this payment. */
+  owedAfterMinor: number;
+}
+
+export function CreditPaymentDocument({ slip, shop, paper }: { slip: CreditPaymentSlip; shop: ShopDetails; paper: PaperWidth }) {
+  return (
+    <SlipFrame shop={shop} paper={paper} title="Payment received">
+      <div className="mb-3 space-y-0.5 text-xs text-ink-muted print:text-black">
+        <p>Date: {formatDateTime(slip.receivedAt)}</p>
+        <p>Cashier: {slip.cashierName}</p>
+        <p>
+          Customer: {slip.customerName} ({slip.customerPhone})
+        </p>
+        <p>Payment: {RECEIPT_METHOD_LABELS[slip.method]}</p>
+        {slip.reference ? (
+          <p>
+            {RECEIPT_METHOD_LABELS[slip.method]} ref: {slip.reference}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex justify-between border-t border-dashed border-line-strong pt-2 text-base font-bold print:border-black">
+        <span>Paid</span>
+        <span>{formatMoney(slip.amountMinor)}</span>
+      </div>
+      <div className="mt-1 flex justify-between text-sm">
+        <span>Still owed</span>
+        <span>{formatMoney(slip.owedAfterMinor)}</span>
       </div>
     </SlipFrame>
   );
@@ -217,6 +265,7 @@ export function ShiftReportDocument({ shift, summary, shop, paper, provisional }
       <Rule />
       <Row left="Sales" right={summary.salesCount} />
       <Row strong left="Sales total" right={formatMoney(summary.salesTotalMinor)} />
+      {summary.onCreditMinor > 0 ? <Row left="Sold on account" right={formatMoney(summary.onCreditMinor)} /> : null}
       {summary.refundsCount > 0 ? <Row left={`Refunds (${summary.refundsCount})`} right={formatMoney(totalOf(summary.refundedMinor))} /> : null}
       {summary.voidsCount > 0 ? <Row left={`Voided sales (${summary.voidsCount})`} right={formatMoney(summary.voidedTotalMinor)} /> : null}
       <Row left="Opening float" right={formatMoney(shift.openingFloatMinor)} />
@@ -224,6 +273,7 @@ export function ShiftReportDocument({ shift, summary, shop, paper, provisional }
       {POS_TENDERS.map((method) => (
         <div key={method} className="mb-[1.5mm] break-inside-avoid">
           <p className="font-semibold">{POS_TENDER_LABELS[method]}</p>
+          {summary.creditPaidMinor[method] > 0 ? <Row left="Credit payments" right={formatMoney(summary.creditPaidMinor[method])} /> : null}
           {summary.refundedMinor[method] > 0 ? <Row left="Refunded" right={formatMoney(summary.refundedMinor[method])} /> : null}
           <Row left={method === "CASH" ? "Expected (with float)" : "Expected"} right={formatMoney(summary.expectedMinor[method])} />
           <Row left="Counted" right={formatMoney(counted[method])} />

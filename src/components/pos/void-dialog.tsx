@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS } from "@/lib/pos";
+import { POS_TENDER_LABELS, type SaleTenderCode } from "@/lib/pos";
 import { VOID_REASONS, type PosSaleRecord } from "@/lib/pos-returns";
 import { approvalReady, approvalToSend, ManagerApprovalFields, NO_APPROVAL, ReasonField, reasonReady, withoutPassword } from "./manager-approval";
 import { failureOf, tillOnlineApi } from "./till-api";
@@ -30,8 +30,8 @@ export function VoidSaleDialog({ sale, shiftClientId, canManage, onClose, onVoid
   );
 }
 
-/** What goes back to the customer, by how they paid: cash less the change they were given. */
-function giveBack(sale: PosSaleRecord): { method: keyof typeof POS_TENDER_LABELS; amountMinor: number }[] {
+/** What goes back to the customer, by how they paid: cash less the change they were given. A part on account comes off it. */
+function giveBack(sale: PosSaleRecord): { method: SaleTenderCode; amountMinor: number }[] {
   return sale.payments
     .map((payment) => ({ method: payment.method, amountMinor: payment.method === "CASH" ? payment.amountMinor - sale.changeMinor : payment.amountMinor }))
     .filter((part) => part.amountMinor > 0);
@@ -68,7 +68,7 @@ function VoidForm({ sale, shiftClientId, canManage, onVoided }: Omit<VoidSaleDia
         <ul className="mt-1 space-y-0.5">
           {giveBack(sale).map((part) => (
             <li key={part.method} className="flex justify-between font-display text-lg font-extrabold tabular-nums text-brand-900">
-              <span>{POS_TENDER_LABELS[part.method]}</span>
+              <span>{part.method === "CREDIT" ? "Off their account" : POS_TENDER_LABELS[part.method]}</span>
               <span>{formatMoney(part.amountMinor)}</span>
             </li>
           ))}

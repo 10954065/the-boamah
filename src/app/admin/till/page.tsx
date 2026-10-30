@@ -80,6 +80,14 @@ export default async function TillReportPage({ searchParams }: PageProps<"/admin
             </table>
           </TableWrap>
           <p className="mt-2 text-xs text-ink-muted">Cash is after the change given back. Each shift&apos;s own count is under Till shifts.</p>
+          {report.onCreditMinor > 0 ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              Also sold on account, not paid yet: <span className="font-semibold text-ink">{formatMoney(report.onCreditMinor)}</span>.{" "}
+              <Link href="/admin/credit" className="font-semibold text-brand-700 hover:underline">
+                Credit customers
+              </Link>
+            </p>
+          ) : null}
         </Panel>
 
         <Panel title="By cashier">

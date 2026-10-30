@@ -5,6 +5,7 @@ import { differenceClass, differenceText, TillSaleBadges } from "@/components/ad
 import { PrintPageButton, TillReviewButton } from "@/components/admin/till-review";
 import { formatMoney } from "@/lib/money";
 import { POS_TENDER_LABELS, POS_TENDERS } from "@/lib/pos";
+import { REFUND_METHOD_TEXT } from "@/lib/pos-returns";
 import { cn, formatDateTime } from "@/lib/utils";
 import { hasDifference, tillShiftDetail } from "@/server/pos/reports";
 import { requireStaffPage } from "@/server/session";
@@ -18,6 +19,7 @@ export default async function TillShiftPage({ params }: PageProps<"/admin/till/s
   if (!detail) notFound();
   const { shift, sales, refunds } = detail;
   const { summary } = shift;
+  const creditPaidMinor = POS_TENDERS.reduce((sum, method) => sum + summary.creditPaidMinor[method], 0);
 
   return (
     <>
@@ -65,6 +67,12 @@ export default async function TillShiftPage({ params }: PageProps<"/admin/till/s
               </tbody>
             </table>
           </TableWrap>
+          {creditPaidMinor > 0 ? (
+            <p className="mt-3 text-sm text-ink-muted">Credit customers paid {formatMoney(creditPaidMinor)} off their accounts in this shift; it is in what is expected.</p>
+          ) : null}
+          {summary.onCreditMinor > 0 ? (
+            <p className="mt-1 text-sm text-ink-muted">Sold on account in this shift, no money taken: {formatMoney(summary.onCreditMinor)}.</p>
+          ) : null}
           {shift.notes ? <p className="mt-3 text-sm">Cashier&apos;s note: {shift.notes}</p> : null}
         </Panel>
 
@@ -119,7 +127,7 @@ export default async function TillShiftPage({ params }: PageProps<"/admin/till/s
                     <Link href={`/admin/till/sales/${refund.sale.id}`} className="text-brand-700 hover:underline">
                       {refund.sale.receiptNumber}
                     </Link>{" "}
-                    by {POS_TENDER_LABELS[refund.method].toLowerCase()}, approved by {refund.approvedBy.name}
+                    {REFUND_METHOD_TEXT[refund.method]}, approved by {refund.approvedBy.name}
                   </span>
                   <span className="ml-auto font-semibold tabular-nums">{formatMoney(refund.refundMinor)}</span>
                 </li>

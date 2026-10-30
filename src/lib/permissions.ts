@@ -36,6 +36,8 @@ export const PERMISSIONS = [
   // In-shop till (pos. subdomain): selling, and managing tills, shifts and voids.
   "pos:sell",
   "pos:manage",
+  // Customers who buy at the till on credit: limits, statements and payments.
+  "credit:manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

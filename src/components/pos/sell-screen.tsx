@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DoorClosed, Globe, History, PauseCircle, Printer, ReceiptText, RefreshCw, ShoppingBasket } from "lucide-react";
+import { BookUser, DoorClosed, Globe, History, PauseCircle, Printer, ReceiptText, RefreshCw, ShoppingBasket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
+import type { TillCreditCustomer } from "@/lib/credit";
 import { formatMoney } from "@/lib/money";
 import { formatReceiptNumber, parseReceiptNumber, type PosShiftView, type PosTenderCode, type TenderLine } from "@/lib/pos";
 import { journalSaleOf, newEntryState, type SaleEntry } from "@/lib/pos-outbox";
@@ -28,6 +29,7 @@ import {
   type TillLine,
 } from "@/lib/pos-till";
 import { MILLI } from "@/lib/quantity";
+import { CreditCustomersSheet } from "./credit-customers-sheet";
 import { HeldSalesDialog, HoldSaleDialog } from "./held-sales";
 import { ProductGrid } from "./product-grid";
 import { QuantityDialog, type QuantityTarget } from "./quantity-dialog";
@@ -55,6 +57,7 @@ import {
   type TillPrefs,
 } from "./till-storage";
 import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL, useHeldSales } from "./till-sync";
+import { useCreditCustomers } from "./use-credit-customers";
 import { useTillCatalog } from "./use-till-catalog";
 import { useWebsiteOrders } from "./use-website-orders";
 import { WebsiteOrdersBoard } from "./website-orders";
@@ -100,9 +103,10 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const [tenderMethod, setTenderMethod] = useState<PosTenderCode | null>(null);
   const [sending, setSending] = useState<SendState | null>(null);
   const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean; waiting: boolean } | null>(null);
-  const [panel, setPanel] = useState<"sale" | "settings" | "hold" | "held" | "history" | null>(null);
+  const [panel, setPanel] = useState<"sale" | "settings" | "hold" | "held" | "history" | "credit" | null>(null);
   const heldCount = useHeldSales(till.code).length;
   const websiteOrders = useWebsiteOrders();
+  const credit = useCreditCustomers(till.code);
 
   const sale = useMemo(() => priceSale(lines, now), [lines, now]);
   const results = useMemo(() => searchCatalog(catalog.items, query, categoryId), [catalog.items, query, categoryId]);
@@ -192,14 +196,15 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
    * Saves the paid sale on the till first, then sends it. Without an answer
    * in a few seconds the receipt shows anyway and the sale waits on the till.
    */
-  async function complete(tenders: TenderLine[]) {
+  async function complete(tenders: TenderLine[], creditCustomer: TillCreditCustomer | null) {
     const sequence = issueReceiptSequence(till.code, till.lastReceiptSeq);
     const upload = buildSaleUpload(
       { clientId: crypto.randomUUID(), receiptNumber: formatReceiptNumber(till.code, sequence), tillCode: till.code, shiftClientId: shift.clientId, cashierId: cashier.id, soldAt: now },
       sale,
       tenders,
+      creditCustomer,
     );
-    const data = receiptFor(upload, sale, cashier.name);
+    const data = receiptFor(upload, sale, cashier.name, creditCustomer);
     const entry: SaleEntry = { kind: "sale", id: upload.clientId, cashierId: cashier.id, cashierName: cashier.name, createdAt: new Date().toISOString(), ...newEntryState, upload, receipt: data, renumbered: 0 };
     if (!addToOutbox(till.code, entry)) {
       releaseReceiptSequence(till.code, sequence);
@@ -212,7 +217,11 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
 
     setSending({ status: "sending", receiptNumber: upload.receiptNumber });
     const outcome = await sendNow(till.code, cashier.id, entry.id, ANSWER_WAIT_MS);
-    if (outcome?.kind === "sale") return finishSale(outcome.receipt, false);
+    if (outcome?.kind === "sale") {
+      // Recorded: the balance on the stored list is behind until it is loaded again.
+      if (upload.creditCustomerId) void credit.refresh();
+      return finishSale(outcome.receipt, false);
+    }
     if (outcome?.kind === "refused") {
       setSending({
         status: "rejected",
@@ -318,6 +327,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
         <HeaderAction icon={Globe} label={ordersLabel} text="Website orders" count={websiteOrders.waiting} active={showOrders} onClick={toggleOrders} />
         <HeaderAction icon={History} label="Sales" onClick={() => setPanel("history")} />
         <HeaderAction icon={PauseCircle} label={heldCount > 0 ? `On hold (${heldCount})` : "On hold"} text="On hold" count={heldCount} onClick={() => setPanel("held")} />
+        <HeaderAction icon={BookUser} label="Credit customers" text="Credit" onClick={() => setPanel("credit")} />
         <HeaderAction icon={ReceiptText} label="Last receipt" onClick={showLastReceipt} />
         <HeaderAction icon={Printer} label="Printer" onClick={() => setPanel("settings")} />
         <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
@@ -406,8 +416,19 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
         open={tendering}
         initialMethod={tenderMethod ?? "CASH"}
         totalMinor={sale.totalMinor}
+        credit={credit}
         onOpenChange={(open) => !open && setTenderMethod(null)}
-        onComplete={(tenders) => void complete(tenders)}
+        onComplete={(tenders, creditCustomer) => void complete(tenders, creditCustomer)}
+      />
+      <CreditCustomersSheet
+        open={panel === "credit"}
+        onOpenChange={(open) => setPanel(open ? "credit" : null)}
+        credit={credit}
+        cashier={cashier}
+        shift={shift}
+        tillCode={till.code}
+        shop={shop}
+        prefs={prefs}
       />
       <SendingDialog
         state={sending}

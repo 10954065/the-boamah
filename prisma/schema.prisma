@@ -45,27 +45,29 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  sessions           Session[]
-  accounts           Account[]
-  addresses          Address[]
-  cart               Cart?
-  wishlistItems      WishlistItem[]
-  orders             Order[]
-  inventoryMovements InventoryMovement[]
-  statusChanges      OrderStatusHistory[]
-  orderNotes         OrderNote[]
-  auditLogs          AuditLog[]
-  cashPayments       Payment[]            @relation("PaymentRecordedBy")
-  reviews            Review[]
-  stockAlerts        StockAlert[]
-  posSales           PosSale[]            @relation("PosSaleCashier")
-  posShifts          PosShift[]           @relation("PosShiftCashier")
-  posSalesVoided     PosSale[]            @relation("PosSaleVoidedBy")
-  posSalesReviewed   PosSale[]            @relation("PosSaleReviewedBy")
-  posShiftsReviewed  PosShift[]           @relation("PosShiftReviewedBy")
-  posReturns         PosReturn[]          @relation("PosReturnCashier")
-  posReturnsApproved PosReturn[]          @relation("PosReturnApprovedBy")
-  posReturnsReviewed PosReturn[]          @relation("PosReturnReviewedBy")
+  sessions             Session[]
+  accounts             Account[]
+  addresses            Address[]
+  cart                 Cart?
+  wishlistItems        WishlistItem[]
+  orders               Order[]
+  inventoryMovements   InventoryMovement[]
+  statusChanges        OrderStatusHistory[]
+  orderNotes           OrderNote[]
+  auditLogs            AuditLog[]
+  cashPayments         Payment[]            @relation("PaymentRecordedBy")
+  reviews              Review[]
+  stockAlerts          StockAlert[]
+  posSales             PosSale[]            @relation("PosSaleCashier")
+  posShifts            PosShift[]           @relation("PosShiftCashier")
+  posSalesVoided       PosSale[]            @relation("PosSaleVoidedBy")
+  posSalesReviewed     PosSale[]            @relation("PosSaleReviewedBy")
+  posShiftsReviewed    PosShift[]           @relation("PosShiftReviewedBy")
+  posReturns           PosReturn[]          @relation("PosReturnCashier")
+  posReturnsApproved   PosReturn[]          @relation("PosReturnApprovedBy")
+  posReturnsReviewed   PosReturn[]          @relation("PosReturnReviewedBy")
+  creditCustomersAdded CreditCustomer[]     @relation("CreditCustomerAddedBy")
+  creditPaymentsTaken  CreditPayment[]      @relation("CreditPaymentTakenBy")
 
   @@index([role])
   @@index([createdAt])
@@ -803,6 +805,8 @@ enum PosTender {
   CASH
   MOMO
   CARD
+  /// Put on a credit customer's account: no money changes hands.
+  CREDIT
 }
 
 enum PosSaleStatus {
@@ -851,46 +855,51 @@ model PosShift {
   reviewedBy        User?     @relation("PosShiftReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewNote        String?
 
-  sales   PosSale[]
-  returns PosReturn[]
+  sales          PosSale[]
+  returns        PosReturn[]
+  /// Money credit customers paid at the till during the shift; it is in the drawer.
+  creditPayments CreditPayment[]
 
   @@index([tillId, openedAt])
   @@index([cashierId, openedAt])
 }
 
 model PosSale {
-  id                 String        @id @default(cuid())
-  clientId           String        @unique
+  id                 String          @id @default(cuid())
+  clientId           String          @unique
   /// Issued on the till, e.g. "T1-000231".
-  receiptNumber      String        @unique
+  receiptNumber      String          @unique
   tillId             String
-  till               PosTill       @relation(fields: [tillId], references: [id])
+  till               PosTill         @relation(fields: [tillId], references: [id])
   shiftId            String?
-  shift              PosShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  shift              PosShift?       @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   cashierId          String
-  cashier            User          @relation("PosSaleCashier", fields: [cashierId], references: [id])
-  status             PosSaleStatus @default(COMPLETED)
+  cashier            User            @relation("PosSaleCashier", fields: [cashierId], references: [id])
+  status             PosSaleStatus   @default(COMPLETED)
   totalMinor         Int
   paidMinor          Int
-  changeMinor        Int           @default(0)
+  changeMinor        Int             @default(0)
   /// More was sold than the recorded stock (usually while offline).
-  hasShortfall       Boolean       @default(false)
+  hasShortfall       Boolean         @default(false)
   /// A line was charged at other than the shelf price for that time and quantity.
-  hasPriceDifference Boolean       @default(false)
+  hasPriceDifference Boolean         @default(false)
   /// The till's clock when the sale was made.
   soldAt             DateTime
-  syncedAt           DateTime      @default(now())
+  syncedAt           DateTime        @default(now())
   /// Cancelled at the till during its own shift; the money went back and the stock was put back.
   voidedAt           DateTime?
   /// The manager who approved the void.
   voidedById         String?
-  voidedBy           User?         @relation("PosSaleVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  voidedBy           User?           @relation("PosSaleVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
   voidReason         String?
   /// A manager looked at a flagged or voided sale.
   reviewedAt         DateTime?
   reviewedById       String?
-  reviewedBy         User?         @relation("PosSaleReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedBy         User?           @relation("PosSaleReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewNote         String?
+  /// Whose account the CREDIT part of the payment went on.
+  creditCustomerId   String?
+  creditCustomer     CreditCustomer? @relation(fields: [creditCustomerId], references: [id], onDelete: Restrict)
 
   items     PosSaleItem[]
   payments  PosPayment[]
@@ -898,6 +907,7 @@ model PosSale {
   returns   PosReturn[]
 
   @@index([soldAt])
+  @@index([creditCustomerId])
   @@index([shiftId])
   @@index([cashierId, soldAt])
 }
@@ -994,4 +1004,55 @@ model PosReturnItem {
 
   @@index([returnId])
   @@index([saleItemId])
+}
+
+// ---------------------------------------------------------------------------
+// Credit customers: people the shop lets buy at the till and pay later.
+// ---------------------------------------------------------------------------
+// What a customer owes is never stored. It is worked out each time from the
+// CREDIT part of their completed sales, less goods brought back onto the
+// account (PosReturn with method CREDIT) and the payments they made.
+
+model CreditCustomer {
+  id         String   @id @default(cuid())
+  name       String
+  /// 0XXXXXXXXX, so the same person cannot be added twice.
+  phone      String   @unique
+  /// The most they may owe; null means no limit.
+  limitMinor Int?
+  notes      String?
+  /// Off: no new credit, but payments are still taken.
+  isActive   Boolean  @default(true)
+  addedById  String?
+  addedBy    User?    @relation("CreditCustomerAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sales    PosSale[]
+  payments CreditPayment[]
+
+  @@index([name])
+}
+
+model CreditPayment {
+  id          String         @id @default(cuid())
+  /// Made where the payment was taken, so a retried request records it once.
+  clientId    String         @unique
+  customerId  String
+  customer    CreditCustomer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  amountMinor Int
+  /// CASH, MOMO or CARD; never CREDIT.
+  method      PosTender
+  /// Mobile money transaction ID or card approval code.
+  reference   String?
+  note        String?
+  takenById   String
+  takenBy     User           @relation("CreditPaymentTakenBy", fields: [takenById], references: [id])
+  /// Taken at the till: counted in that shift's drawer. Null when recorded in the admin.
+  shiftId     String?
+  shift       PosShift?      @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  receivedAt  DateTime       @default(now())
+
+  @@index([customerId, receivedAt])
+  @@index([shiftId])
 }

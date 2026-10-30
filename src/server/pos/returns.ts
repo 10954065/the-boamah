@@ -2,7 +2,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma, type Tx } from "@/lib/db";
 import { hasPermission } from "@/lib/permissions";
-import { refundForLine, refundMethodProblem, returnQuantityProblem, type PosReturnInput, type PosReturnResult } from "@/lib/pos-returns";
+import { creditLeftOnSale, refundForLine, refundMethodProblem, returnQuantityProblem, type PosReturnInput, type PosReturnResult } from "@/lib/pos-returns";
 import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { recordAudit } from "@/server/audit";
 import { invalidateStorefront } from "@/server/storefront-cache";
@@ -66,6 +66,8 @@ async function createReturn(tx: Tx, input: PosReturnInput, user: TillUser, appro
       id: true,
       receiptNumber: true,
       status: true,
+      payments: { select: { method: true, amountMinor: true } },
+      returns: { select: { method: true, refundMinor: true } },
       items: {
         select: { id: true, variantId: true, productName: true, unit: true, quantityMilli: true, returnedMilli: true, unitPriceMinor: true, lineTotalMinor: true, refundedMinor: true },
       },
@@ -84,6 +86,10 @@ async function createReturn(tx: Tx, input: PosReturnInput, user: TillUser, appro
     if (problem) throw new PosRejected(problem);
     return { request, line, unit, refundMinor: refundForLine(line, request.quantityMilli) };
   });
+  const refundMinor = lines.reduce((sum, line) => sum + line.refundMinor, 0);
+  // Taken off a credit account: only up to what this sale still has on it.
+  const creditProblem = refundMethodProblem(input.method, input.reference, refundMinor, creditLeftOnSale({ payments: sale.payments, refunds: sale.returns }));
+  if (creditProblem) throw new PosRejected(creditProblem);
 
   const created = await tx.posReturn.create({
     data: {
@@ -96,7 +102,7 @@ async function createReturn(tx: Tx, input: PosReturnInput, user: TillUser, appro
       reason: input.reason,
       method: input.method,
       reference: input.reference?.trim() || null,
-      refundMinor: lines.reduce((sum, line) => sum + line.refundMinor, 0),
+      refundMinor,
       items: {
         create: lines.map(({ request, refundMinor }) => ({
           saleItemId: request.saleItemId,

@@ -40,6 +40,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   "audit:view": "See the audit log",
   "pos:sell": "Sell on the shop till",
   "pos:manage": "Till sales, shifts and refunds",
+  "credit:manage": "Credit customers and their payments",
 };
 
 export default async function StaffPage() {

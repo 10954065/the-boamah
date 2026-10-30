@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/money";
  * offline) and the server that records uploaded sales.
  */
 
+/** Ways money is taken: into the drawer, or onto the shop's mobile money and card accounts. */
 export const POS_TENDERS = ["CASH", "MOMO", "CARD"] as const;
 export type PosTenderCode = (typeof POS_TENDERS)[number];
 
@@ -14,6 +15,16 @@ export const POS_TENDER_LABELS: Record<PosTenderCode, string> = {
   MOMO: "Mobile money",
   CARD: "Card",
 };
+
+/** Ways a sale can be settled: money, or on a credit customer's account (no money changes hands). */
+export const SALE_TENDERS = [...POS_TENDERS, "CREDIT"] as const;
+export type SaleTenderCode = (typeof SALE_TENDERS)[number];
+
+export const SALE_TENDER_LABELS: Record<SaleTenderCode, string> = { ...POS_TENDER_LABELS, CREDIT: "On account" };
+
+export function isMoneyTender(method: SaleTenderCode): method is PosTenderCode {
+  return method !== "CREDIT";
+}
 
 // ---------------------------------------------------------------------------
 // Receipt numbers: issued on the till so it can sell offline, e.g. T1-000231.
@@ -38,12 +49,12 @@ export function parseReceiptNumber(value: string): { tillCode: string; sequence:
 }
 
 // ---------------------------------------------------------------------------
-// Tender: mobile money and card are taken for exact amounts, so only cash can
-// be over the total and give change.
+// Tender: mobile money, card and credit are for exact amounts, so only cash
+// can be over the total and give change.
 // ---------------------------------------------------------------------------
 
 export interface TenderLine {
-  method: PosTenderCode;
+  method: SaleTenderCode;
   amountMinor: number;
   reference?: string | null;
 }
@@ -63,7 +74,7 @@ export function settleTender(totalMinor: number, tenders: readonly TenderLine[])
   }
   const exact = tenders.filter((t) => t.method !== "CASH").reduce((sum, t) => sum + t.amountMinor, 0);
   if (exact > totalMinor) {
-    return { ok: false, error: "Mobile money and card cannot be more than the total. Only cash gives change." };
+    return { ok: false, error: "Mobile money, card and credit cannot be more than the total. Only cash gives change." };
   }
   const paidMinor = tenders.reduce((sum, t) => sum + t.amountMinor, 0);
   if (paidMinor < totalMinor) return { ok: false, error: `${formatMoney(totalMinor - paidMinor)} still to pay.` };
@@ -99,13 +110,18 @@ export const posSaleUploadSchema = z.object({
   payments: z
     .array(
       z.object({
-        method: z.enum(POS_TENDERS),
+        method: z.enum(SALE_TENDERS),
         amountMinor: z.number().int().positive().max(MAX_AMOUNT_MINOR),
         reference: z.string().trim().max(60).nullish(),
       }),
     )
     .min(1)
-    .max(POS_TENDERS.length),
+    .max(SALE_TENDERS.length),
+  /** The credit customer whose account the CREDIT payment goes on. */
+  creditCustomerId: z.string().min(1).max(64).nullish(),
+}).refine((sale) => sale.payments.some((p) => p.method === "CREDIT") === Boolean(sale.creditCustomerId), {
+  path: ["creditCustomerId"],
+  message: "A sale on account needs its customer, and only a sale on account has one.",
 });
 
 export type PosSaleUpload = z.infer<typeof posSaleUploadSchema>;
@@ -168,27 +184,37 @@ export interface PosShiftView {
 export interface ShiftSaleTotals {
   changeMinor: number;
   totalMinor: number;
-  payments: readonly { method: PosTenderCode; amountMinor: number }[];
+  payments: readonly { method: SaleTenderCode; amountMinor: number }[];
 }
 
-/** Money given back for goods returned during the shift, by how it was given back. */
+/** Goods returned during the shift, by how the money was given back (CREDIT: taken off the customer's account). */
 export interface ShiftRefundTotals {
-  method: PosTenderCode;
+  method: SaleTenderCode;
   refundMinor: number;
+}
+
+/** Money a credit customer paid off their account at the till during the shift. */
+export interface ShiftCreditPaymentTotals {
+  method: PosTenderCode;
+  amountMinor: number;
 }
 
 export interface ShiftSummary {
   salesCount: number;
   salesTotalMinor: number;
-  /** Money taken per method. Cash is net of the change given back. */
+  /** Money taken for sales per method. Cash is net of the change given back. */
   takenMinor: TenderTotals;
+  /** What the shift's sales put on credit customers' accounts. */
+  onCreditMinor: number;
+  /** Money credit customers paid off their accounts, per method. */
+  creditPaidMinor: TenderTotals;
   /** Returns paid out of the shift, per method. */
   refundsCount: number;
   refundedMinor: TenderTotals;
   /** Sales cancelled during the shift; their money went straight back, so they count nowhere else. */
   voidsCount: number;
   voidedTotalMinor: number;
-  /** What should be at the till at close: taken less refunded, and cash includes the opening float. */
+  /** What should be at the till at close: taken and paid in, less refunded; cash includes the opening float. */
   expectedMinor: TenderTotals;
 }
 
@@ -204,42 +230,51 @@ interface ShiftAdjustments {
   refunds?: readonly ShiftRefundTotals[];
   /** Totals of the sales voided in the shift. */
   voidedTotalsMinor?: readonly number[];
+  creditPayments?: readonly ShiftCreditPaymentTotals[];
 }
 
-/** The shift's completed sales, less what returns gave back. Voided sales are only counted. */
-export function summariseShift(openingFloatMinor: number, sales: readonly ShiftSaleTotals[], { refunds = [], voidedTotalsMinor = [] }: ShiftAdjustments = {}): ShiftSummary {
+const sumOf = <T>(rows: readonly T[], amount: (row: T) => number) => rows.reduce((sum, row) => sum + amount(row), 0);
+
+/** The shift's completed sales and credit payments, less what returns gave back. Voided sales are only counted. */
+export function summariseShift(
+  openingFloatMinor: number,
+  sales: readonly ShiftSaleTotals[],
+  { refunds = [], voidedTotalsMinor = [], creditPayments = [] }: ShiftAdjustments = {},
+): ShiftSummary {
   const payments = sales.flatMap((sale) => sale.payments);
-  const paidBy = (method: PosTenderCode) => payments.filter((p) => p.method === method).reduce((sum, p) => sum + p.amountMinor, 0);
-  const refundedBy = (method: PosTenderCode) => refunds.filter((r) => r.method === method).reduce((sum, r) => sum + r.refundMinor, 0);
-  const changeMinor = sales.reduce((sum, sale) => sum + sale.changeMinor, 0);
+  const paidBy = (method: SaleTenderCode) => sumOf(payments.filter((p) => p.method === method), (p) => p.amountMinor);
+  const refundedBy = (method: PosTenderCode) => sumOf(refunds.filter((r) => r.method === method), (r) => r.refundMinor);
+  const creditPaidBy = (method: PosTenderCode) => sumOf(creditPayments.filter((p) => p.method === method), (p) => p.amountMinor);
+  const changeMinor = sumOf(sales, (sale) => sale.changeMinor);
   const takenMinor: TenderTotals = { CASH: paidBy("CASH") - changeMinor, MOMO: paidBy("MOMO"), CARD: paidBy("CARD") };
+  const creditPaidMinor: TenderTotals = { CASH: creditPaidBy("CASH"), MOMO: creditPaidBy("MOMO"), CARD: creditPaidBy("CARD") };
   const refundedMinor: TenderTotals = { CASH: refundedBy("CASH"), MOMO: refundedBy("MOMO"), CARD: refundedBy("CARD") };
+  const expected = (method: PosTenderCode) => takenMinor[method] + creditPaidMinor[method] - refundedMinor[method];
   return {
     salesCount: sales.length,
-    salesTotalMinor: sales.reduce((sum, sale) => sum + sale.totalMinor, 0),
+    salesTotalMinor: sumOf(sales, (sale) => sale.totalMinor),
     takenMinor,
+    onCreditMinor: paidBy("CREDIT"),
+    creditPaidMinor,
     refundsCount: refunds.length,
     refundedMinor,
     voidsCount: voidedTotalsMinor.length,
-    voidedTotalMinor: voidedTotalsMinor.reduce((sum, total) => sum + total, 0),
-    expectedMinor: {
-      CASH: openingFloatMinor + takenMinor.CASH - refundedMinor.CASH,
-      MOMO: takenMinor.MOMO - refundedMinor.MOMO,
-      CARD: takenMinor.CARD - refundedMinor.CARD,
-    },
+    voidedTotalMinor: sumOf(voidedTotalsMinor, (total) => total),
+    expectedMinor: { CASH: openingFloatMinor + expected("CASH"), MOMO: expected("MOMO"), CARD: expected("CARD") },
   };
 }
 
-/** A shift's summary from all its recorded sales, voided or not, and its refunds. */
+/** A shift's summary from all its recorded sales, voided or not, its refunds and the credit payments taken in it. */
 export function summariseShiftSales(
   openingFloatMinor: number,
   sales: readonly (ShiftSaleTotals & { status: "COMPLETED" | "VOIDED" })[],
   refunds: readonly ShiftRefundTotals[],
+  creditPayments: readonly ShiftCreditPaymentTotals[] = [],
 ): ShiftSummary {
   return summariseShift(
     openingFloatMinor,
     sales.filter((sale) => sale.status === "COMPLETED"),
-    { refunds, voidedTotalsMinor: sales.filter((sale) => sale.status === "VOIDED").map((sale) => sale.totalMinor) },
+    { refunds, voidedTotalsMinor: sales.filter((sale) => sale.status === "VOIDED").map((sale) => sale.totalMinor), creditPayments },
   );
 }
 

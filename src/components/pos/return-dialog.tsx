@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Checkbox, Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS, POS_TENDERS, type PosTenderCode } from "@/lib/pos";
+import { POS_TENDER_LABELS, POS_TENDERS, type SaleTenderCode } from "@/lib/pos";
 import {
+  creditLeftOnSale,
   refundForLine,
   refundMethodProblem,
   RETURN_REASONS,
@@ -59,7 +60,10 @@ interface LineChoice {
 function ReturnForm({ sale, clientId, tillCode, shiftClientId, canManage, onReturned }: Omit<ReturnItemsDialogProps, "sale" | "onClose"> & { sale: PosSaleRecord }) {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [damaged, setDamaged] = useState<Record<string, boolean>>({});
-  const [method, setMethod] = useState<PosTenderCode>(sale.payments[0]?.method ?? "CASH");
+  const creditLeft = creditLeftOnSale(sale);
+  // A sale on account is given back off the account first; money only for what was paid in money.
+  const [method, setMethod] = useState<SaleTenderCode>(creditLeft > 0 ? "CREDIT" : (sale.payments[0]?.method ?? "CASH"));
+  const methods: SaleTenderCode[] = creditLeft > 0 ? [...POS_TENDERS, "CREDIT"] : [...POS_TENDERS];
   const [reference, setReference] = useState("");
   const [reason, setReason] = useState("");
   const [approval, setApproval] = useState(NO_APPROVAL);
@@ -75,8 +79,8 @@ function ReturnForm({ sale, clientId, tillCode, shiftClientId, canManage, onRetu
     return [{ line, quantityMilli, problem, refundMinor: quantityMilli !== null && !problem ? refundForLine(line, quantityMilli) : 0, restock: !damaged[line.id] }];
   });
   const lineProblem = choices.find((choice) => choice.problem)?.problem ?? null;
-  const methodProblem = refundMethodProblem(method, reference);
   const refundMinor = choices.reduce((sum, choice) => sum + choice.refundMinor, 0);
+  const methodProblem = refundMethodProblem(method, reference, refundMinor, creditLeft);
   const ready = choices.length > 0 && !lineProblem && !methodProblem && reasonReady(reason) && approvalReady(canManage, approval);
 
   async function submit(event: FormEvent) {
@@ -155,8 +159,8 @@ function ReturnForm({ sale, clientId, tillCode, shiftClientId, canManage, onRetu
 
       <fieldset>
         <legend className="mb-1 text-sm font-semibold">Give the money back by</legend>
-        <div className="grid grid-cols-3 gap-1.5">
-          {POS_TENDERS.map((tender) => (
+        <div className={cn("grid gap-1.5", methods.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}>
+          {methods.map((tender) => (
             <button
               key={tender}
               type="button"
@@ -167,11 +171,16 @@ function ReturnForm({ sale, clientId, tillCode, shiftClientId, canManage, onRetu
                 method === tender ? "border-brand-700 bg-brand-700 text-white" : "border-line-strong bg-surface hover:bg-soft",
               )}
             >
-              {POS_TENDER_LABELS[tender]}
+              {tender === "CREDIT" ? "Off their account" : POS_TENDER_LABELS[tender]}
             </button>
           ))}
         </div>
-        {method === "CASH" ? null : (
+        {method === "CREDIT" && sale.creditCustomer ? (
+          <p className="mt-2 text-xs text-ink-muted">
+            Takes {formatMoney(refundMinor)} off what {sale.creditCustomer.name} owes. Up to {formatMoney(creditLeft)} of this sale is on the account.
+          </p>
+        ) : null}
+        {method === "CASH" || method === "CREDIT" ? null : (
           <div className="mt-2">
             <label htmlFor="refund-reference" className="mb-1 block text-xs font-semibold">
               {method === "MOMO" ? "Mobile money transaction ID of the refund" : "Card refund approval code (optional)"}

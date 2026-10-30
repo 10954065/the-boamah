@@ -232,7 +232,15 @@ export interface SaleContext {
   soldAt: Date;
 }
 
-export function buildSaleUpload(context: SaleContext, sale: PricedSale, tenders: readonly TenderLine[]): PosSaleUpload {
+/** The credit customer a sale on account is for. */
+export interface SaleCreditCustomer {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export function buildSaleUpload(context: SaleContext, sale: PricedSale, tenders: readonly TenderLine[], creditCustomer: SaleCreditCustomer | null = null): PosSaleUpload {
+  const onAccount = tenders.some((tender) => tender.method === "CREDIT");
   return {
     clientId: context.clientId,
     receiptNumber: context.receiptNumber,
@@ -242,6 +250,7 @@ export function buildSaleUpload(context: SaleContext, sale: PricedSale, tenders:
     soldAt: context.soldAt.toISOString(),
     items: sale.lines.map((line) => ({ variantId: line.item.variantId, quantityMilli: line.quantityMilli, unitPriceMinor: line.unitPriceMinor })),
     payments: tenders.map((tender) => ({ method: tender.method, amountMinor: tender.amountMinor, reference: tender.reference?.trim() || null })),
+    creditCustomerId: onAccount ? (creditCustomer?.id ?? null) : null,
   };
 }
 
@@ -270,9 +279,11 @@ export interface ReceiptData {
   payments: TenderLine[];
   paidMinor: number;
   changeMinor: number;
+  /** Whose account the sale (or part of it) went on. */
+  creditCustomer?: { name: string; phone: string } | null;
 }
 
-export function receiptFor(upload: PosSaleUpload, sale: PricedSale, cashierName: string): ReceiptData {
+export function receiptFor(upload: PosSaleUpload, sale: PricedSale, cashierName: string, creditCustomer: SaleCreditCustomer | null = null): ReceiptData {
   const progress = tenderProgress(sale.totalMinor, upload.payments);
   return {
     receiptNumber: upload.receiptNumber,
@@ -293,6 +304,7 @@ export function receiptFor(upload: PosSaleUpload, sale: PricedSale, cashierName:
     payments: upload.payments.map((p) => ({ method: p.method, amountMinor: p.amountMinor, reference: p.reference ?? null })),
     paidMinor: progress.paidMinor,
     changeMinor: progress.changeMinor,
+    creditCustomer: upload.creditCustomerId && creditCustomer ? { name: creditCustomer.name, phone: creditCustomer.phone } : null,
   };
 }
 

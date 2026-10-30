@@ -46,6 +46,7 @@ function record(overrides: Partial<PosSaleRecord> = {}): PosSaleRecord {
     shiftClientId: SHIFT,
     shiftOpen: true,
     status: "COMPLETED",
+    creditCustomer: null,
     totalMinor: 2999,
     paidMinor: 3000,
     changeMinor: 1,

@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS, type PosShiftView, type TenderLine } from "@/lib/pos";
+import { SALE_TENDER_LABELS, type PosShiftView, type TenderLine } from "@/lib/pos";
 import type { SaleEntry } from "@/lib/pos-outbox";
 import {
   receiptForRecord,
   receiptNumberFrom,
+  REFUND_METHOD_TEXT,
   returnProblem,
   saleReturnState,
   voidCheckOf,
@@ -224,7 +225,7 @@ function SalesHistory({ till, cashier, shift, shop, prefs, onStockChanged }: Sal
                           {refund.number} · for {refund.receiptNumber}
                         </span>
                         <span className="block text-xs text-ink-muted">
-                          {POS_TENDER_LABELS[refund.method]} at {formatTime(refund.createdAt)} · {refund.reason}
+                          {SALE_TENDER_LABELS[refund.method]} at {formatTime(refund.createdAt)} · {refund.reason}
                         </span>
                       </span>
                       <span className="shrink-0 text-sm font-bold tabular-nums">{formatMoney(refund.refundMinor)}</span>
@@ -254,7 +255,7 @@ function SalesHistory({ till, cashier, shift, shop, prefs, onStockChanged }: Sal
 }
 
 function methodsText(payments: readonly TenderLine[]): string {
-  return payments.map((payment) => POS_TENDER_LABELS[payment.method]).join(" + ");
+  return payments.map((payment) => SALE_TENDER_LABELS[payment.method]).join(" + ");
 }
 
 function SaleRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
@@ -356,7 +357,7 @@ function SaleDetail({ detail, shiftClientId, online, onBack, onCopy, onVoid, onR
           {sale.refunds.map((refund) => (
             <li key={refund.id} className="flex items-center justify-between gap-2 rounded-md bg-soft px-3 py-2">
               <span>
-                {refund.number}: {formatMoney(refund.refundMinor)} by {POS_TENDER_LABELS[refund.method].toLowerCase()} on {formatDateTime(refund.createdAt)}
+                {refund.number}: {formatMoney(refund.refundMinor)} {REFUND_METHOD_TEXT[refund.method]} on {formatDateTime(refund.createdAt)}
               </span>
               <Button size="sm" variant="ghost" onClick={() => onRefundSlip(refund)}>
                 Slip

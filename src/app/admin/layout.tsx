@@ -16,6 +16,7 @@ const NAV: (AdminNavItem & { permission: Permission })[] = [
   { href: "/admin", label: "Dashboard", group: "Overview", permission: "dashboard:view" },
   { href: "/admin/orders", label: "Orders", group: "Sales", permission: "orders:view" },
   { href: "/admin/customers", label: "Customers", group: "Sales", permission: "customers:view" },
+  { href: "/admin/credit", label: "Credit customers", group: "Sales", permission: "credit:manage" },
   { href: "/admin/till", label: "Till sales", group: "Shop till", permission: "pos:manage" },
   { href: "/admin/till/shifts", label: "Till shifts", group: "Shop till", permission: "pos:manage" },
   { href: "/admin/till/review", label: "Till review", group: "Shop till", permission: "pos:manage" },

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { formatReceiptNumber, POS_MAX_ITEMS, POS_MAX_QUANTITY_MILLI, POS_TENDERS, TILL_CODE_PATTERN, type PosTenderCode, type TenderLine } from "@/lib/pos";
+import { formatMoney } from "@/lib/money";
+import { formatReceiptNumber, POS_MAX_ITEMS, POS_MAX_QUANTITY_MILLI, SALE_TENDERS, TILL_CODE_PATTERN, type SaleTenderCode, type TenderLine } from "@/lib/pos";
 import { outboxEntrySchema } from "@/lib/pos-outbox";
 import type { ReceiptData } from "@/lib/pos-till";
 import { formatQuantity, lineTotalMinor, MILLI, UNIT_INFO, type SellingUnitCode } from "@/lib/quantity";
@@ -55,7 +56,8 @@ export const posReturnSchema = z.object({
     )
     .min(1)
     .max(POS_MAX_ITEMS),
-  method: z.enum(POS_TENDERS),
+  /** How the money goes back; CREDIT takes it off the customer's account instead. */
+  method: z.enum(SALE_TENDERS),
   reference: z.string().trim().max(60).nullish(),
   reason: reasonSchema,
   approval: managerApprovalSchema.nullish(),
@@ -112,7 +114,7 @@ export interface PosRefundRecord {
   cashierName: string;
   approvedByName: string;
   reason: string;
-  method: PosTenderCode;
+  method: SaleTenderCode;
   reference: string | null;
   refundMinor: number;
   lines: PosRefundLine[];
@@ -133,6 +135,8 @@ export interface PosSaleRecord {
   paidMinor: number;
   changeMinor: number;
   payments: TenderLine[];
+  /** Whose account the CREDIT part went on. */
+  creditCustomer: { id: string; name: string; phone: string } | null;
   lines: PosSaleLineRecord[];
   voided: { at: string; byName: string | null; reason: string | null } | null;
   refunds: PosRefundRecord[];
@@ -191,9 +195,33 @@ export function returnQuantityProblem(line: Pick<PosSaleLineRecord, "productName
   return null;
 }
 
-/** Why the refund cannot be paid this way, or null when it can. */
-export function refundMethodProblem(method: PosTenderCode, reference: string | null | undefined): string | null {
-  return method === "MOMO" && !reference?.trim() ? "Enter the mobile money transaction ID of the refund." : null;
+/** How the money for a return went back, for sentences such as "GH₵20.00 in cash". */
+export const REFUND_METHOD_TEXT: Record<SaleTenderCode, string> = {
+  CASH: "in cash",
+  MOMO: "by mobile money",
+  CARD: "to the card",
+  CREDIT: "off the customer's account",
+};
+
+/** What can still be taken off the customer's account for a sale: its CREDIT part less what returns already took off. */
+export function creditLeftOnSale(record: {
+  payments: readonly { method: SaleTenderCode; amountMinor: number }[];
+  refunds: readonly { method: SaleTenderCode; refundMinor: number }[];
+}): number {
+  const onAccount = record.payments.filter((p) => p.method === "CREDIT").reduce((sum, p) => sum + p.amountMinor, 0);
+  const takenOff = record.refunds.filter((r) => r.method === "CREDIT").reduce((sum, r) => sum + r.refundMinor, 0);
+  return Math.max(onAccount - takenOff, 0);
+}
+
+/** Why the refund cannot be given back this way, or null when it can. creditLeftMinor: what the sale still has on account. */
+export function refundMethodProblem(method: SaleTenderCode, reference: string | null | undefined, refundMinor = 0, creditLeftMinor = 0): string | null {
+  if (method === "MOMO" && !reference?.trim()) return "Enter the mobile money transaction ID of the refund.";
+  if (method === "CREDIT" && refundMinor > creditLeftMinor) {
+    return creditLeftMinor > 0
+      ? `Only ${formatMoney(creditLeftMinor)} of this sale is on the customer's account. Give the rest back in money.`
+      : "This sale was not put on a customer's account.";
+  }
+  return null;
 }
 
 export function saleReturnState(record: Pick<PosSaleRecord, "lines">): "none" | "part" | "all" {
@@ -250,5 +278,6 @@ export function receiptForRecord(record: PosSaleRecord): ReceiptData {
     payments: record.payments,
     paidMinor: record.paidMinor,
     changeMinor: record.changeMinor,
+    creditCustomer: record.creditCustomer ? { name: record.creditCustomer.name, phone: record.creditCustomer.phone } : null,
   };
 }

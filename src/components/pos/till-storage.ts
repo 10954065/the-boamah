@@ -1,3 +1,4 @@
+import { storedCreditListSchema, type TillCreditCustomer } from "@/lib/credit";
 import type { PosShiftView } from "@/lib/pos";
 import { parseJournal, parseOutbox, type JournalEntry, type OutboxEntry, type ShiftRecord } from "@/lib/pos-outbox";
 import { MAX_HELD_SALES, parseHeldSales, type HeldSale, type ReceiptData } from "@/lib/pos-till";
@@ -322,4 +323,31 @@ export function loadPrefs(): TillPrefs {
 
 export function savePrefs(prefs: TillPrefs): void {
   write("prefs", prefs);
+}
+
+// ---------------------------------------------------------------------------
+// Credit customers and what they owed when last loaded, so the till can sell
+// on account while offline.
+// ---------------------------------------------------------------------------
+
+const creditKey = (tillCode: string) => `${tillCode}.credit`;
+
+export interface StoredCreditList {
+  loadedAt: string | null;
+  customers: TillCreditCustomer[];
+}
+
+const NO_CREDIT_LIST: StoredCreditList = { loadedAt: null, customers: [] };
+
+function parseCreditList(value: unknown): StoredCreditList {
+  const parsed = storedCreditListSchema.safeParse(value);
+  return parsed.success ? parsed.data : NO_CREDIT_LIST;
+}
+
+export function loadCreditList(tillCode: string): StoredCreditList {
+  return readParsed(creditKey(tillCode), parseCreditList);
+}
+
+export function saveCreditList(tillCode: string, customers: readonly TillCreditCustomer[], loadedAt: string): void {
+  writeChecked(creditKey(tillCode), { loadedAt, customers });
 }

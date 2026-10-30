@@ -159,7 +159,9 @@ export function RefundSlipDialog({ refund, copy, shop, prefs, onClose }: RefundS
           <div className="space-y-4">
             {copy ? null : (
               <div className="rounded-lg bg-gold-100 px-4 py-3 text-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gold-700">Give back by {POS_TENDER_LABELS[refund.method].toLowerCase()}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gold-700">
+                  {refund.method === "CREDIT" ? "Taken off their account" : `Give back by ${POS_TENDER_LABELS[refund.method].toLowerCase()}`}
+                </p>
                 <p className="font-display text-4xl font-extrabold tabular-nums text-brand-900">{formatMoney(refund.refundMinor)}</p>
               </div>
             )}

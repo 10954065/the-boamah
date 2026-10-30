@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { countDifferences, POS_TENDERS, summariseShiftSales, type PosTenderCode, type ShiftSummary, type TenderTotals } from "@/lib/pos";
+import { countDifferences, isMoneyTender, POS_TENDERS, summariseShiftSales, type SaleTenderCode, type ShiftSummary, type TenderTotals } from "@/lib/pos";
 import type { ReportPeriod } from "@/lib/pos-report";
 import { formatRefundNumber } from "@/lib/pos-returns";
 import type { SellingUnitCode } from "@/lib/quantity";
@@ -28,6 +28,8 @@ export interface TillReport {
   salesTotalMinor: number;
   /** Money taken per method; cash net of change. */
   takenMinor: TenderTotals;
+  /** Sales put on credit customers' accounts: sold, but no money taken yet. */
+  onCreditMinor: number;
   refundsCount: number;
   refundedMinor: TenderTotals;
   voidsCount: number;
@@ -72,10 +74,11 @@ export async function tillReport(period: ReportPeriod): Promise<TillReport> {
   const voided = saleGroups.filter((group) => group.status === "VOIDED");
   const sum = <T>(rows: readonly T[], value: (row: T) => number | null | undefined) => rows.reduce((total, row) => total + (value(row) ?? 0), 0);
   const changeMinor = sum(completed, (g) => g._sum.changeMinor);
-  const paidBy = (method: PosTenderCode) => sum(paymentGroups.filter((g) => g.method === method), (g) => g._sum.amountMinor);
+  const paidBy = (method: SaleTenderCode) => sum(paymentGroups.filter((g) => g.method === method), (g) => g._sum.amountMinor);
   const takenMinor: TenderTotals = { CASH: paidBy("CASH") - changeMinor, MOMO: paidBy("MOMO"), CARD: paidBy("CARD") };
+  // Goods brought back onto a credit account give back no money.
   const refundedMinor = noTotals();
-  for (const group of refundGroups) refundedMinor[group.method] += group._sum.refundMinor ?? 0;
+  for (const group of refundGroups) if (isMoneyTender(group.method)) refundedMinor[group.method] += group._sum.refundMinor ?? 0;
 
   const cashierIds = [...new Set([...saleGroups.map((g) => g.cashierId), ...refundGroups.map((g) => g.cashierId)])];
   const names = new Map((await prisma.user.findMany({ where: { id: { in: cashierIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
@@ -98,6 +101,7 @@ export async function tillReport(period: ReportPeriod): Promise<TillReport> {
     salesCount: sum(completed, (g) => g._count._all),
     salesTotalMinor: sum(completed, (g) => g._sum.totalMinor),
     takenMinor,
+    onCreditMinor: paidBy("CREDIT"),
     refundsCount: sum(refundGroups, (g) => g._count._all),
     refundedMinor,
     voidsCount: sum(voided, (g) => g._count._all),
@@ -247,15 +251,17 @@ export interface TillShift extends ShiftRow {
 /** Shifts with what their sales and refunds came to, worked out from the records each time. */
 async function withSummaries(shifts: readonly ShiftRow[]): Promise<TillShift[]> {
   const ids = shifts.map((shift) => shift.id);
-  const [sales, refunds] = await Promise.all([
+  const [sales, refunds, creditPayments] = await Promise.all([
     prisma.posSale.findMany({ where: { shiftId: { in: ids } }, select: { shiftId: true, status: true, totalMinor: true, changeMinor: true, payments: { select: { method: true, amountMinor: true } } } }),
     prisma.posReturn.findMany({ where: { shiftId: { in: ids } }, select: { shiftId: true, method: true, refundMinor: true } }),
+    prisma.creditPayment.findMany({ where: { shiftId: { in: ids } }, select: { shiftId: true, method: true, amountMinor: true } }),
   ]);
   return shifts.map((shift) => {
     const summary = summariseShiftSales(
       shift.openingFloatMinor,
       sales.filter((sale) => sale.shiftId === shift.id),
       refunds.filter((refund) => refund.shiftId === shift.id),
+      creditPayments.filter((payment) => payment.shiftId === shift.id).flatMap(({ method, amountMinor }) => (isMoneyTender(method) ? [{ method, amountMinor }] : [])),
     );
     const counted = shift.closedAt ? { CASH: shift.countedCashMinor ?? 0, MOMO: shift.countedMomoMinor ?? 0, CARD: shift.countedCardMinor ?? 0 } : null;
     return { ...shift, summary, counted, difference: counted ? countDifferences(summary.expectedMinor, counted) : null };
@@ -359,15 +365,23 @@ async function unbalancedShiftIds(limit: number): Promise<string[]> {
              sum("refundMinor") FILTER (WHERE method = 'CARD') AS card
       FROM "PosReturn" WHERE "shiftId" IN (SELECT id FROM pending)
       GROUP BY "shiftId"
+    ), credit_paid AS (
+      SELECT "shiftId",
+             sum("amountMinor") FILTER (WHERE method = 'CASH') AS cash,
+             sum("amountMinor") FILTER (WHERE method = 'MOMO') AS momo,
+             sum("amountMinor") FILTER (WHERE method = 'CARD') AS card
+      FROM "CreditPayment" WHERE "shiftId" IN (SELECT id FROM pending)
+      GROUP BY "shiftId"
     )
     SELECT sh.id FROM "PosShift" sh
     JOIN pending ON pending.id = sh.id
     LEFT JOIN taken t ON t."shiftId" = sh.id
     LEFT JOIN change c ON c."shiftId" = sh.id
     LEFT JOIN refunded r ON r."shiftId" = sh.id
-    WHERE coalesce(sh."countedCashMinor", 0) <> sh."openingFloatMinor" + coalesce(t.cash, 0) - coalesce(c.change, 0) - coalesce(r.cash, 0)
-       OR coalesce(sh."countedMomoMinor", 0) <> coalesce(t.momo, 0) - coalesce(r.momo, 0)
-       OR coalesce(sh."countedCardMinor", 0) <> coalesce(t.card, 0) - coalesce(r.card, 0)
+    LEFT JOIN credit_paid cp ON cp."shiftId" = sh.id
+    WHERE coalesce(sh."countedCashMinor", 0) <> sh."openingFloatMinor" + coalesce(t.cash, 0) - coalesce(c.change, 0) + coalesce(cp.cash, 0) - coalesce(r.cash, 0)
+       OR coalesce(sh."countedMomoMinor", 0) <> coalesce(t.momo, 0) + coalesce(cp.momo, 0) - coalesce(r.momo, 0)
+       OR coalesce(sh."countedCardMinor", 0) <> coalesce(t.card, 0) + coalesce(cp.card, 0) - coalesce(r.card, 0)
     ORDER BY sh."closedAt" DESC
     LIMIT ${limit}
   `;

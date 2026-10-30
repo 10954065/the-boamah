@@ -78,6 +78,21 @@ describe("sale upload format", () => {
     ];
     for (const sale of bad) expect(posSaleUploadSchema.safeParse(sale).success).toBe(false);
   });
+
+  test("a sale on account names its customer, and only a sale on account has one", () => {
+    const onAccount = { ...valid, payments: [{ method: "CREDIT", amountMinor: 3750 }] };
+    expect(posSaleUploadSchema.safeParse({ ...onAccount, creditCustomerId: "cust-1" }).success).toBe(true);
+    expect(posSaleUploadSchema.safeParse(onAccount).success).toBe(false);
+    expect(posSaleUploadSchema.safeParse({ ...valid, creditCustomerId: "cust-1" }).success).toBe(false);
+  });
+});
+
+describe("settling a sale on account", () => {
+  test("credit is for an exact amount, alone or with money", () => {
+    expect(settleTender(5000, [{ method: "CREDIT", amountMinor: 5000 }])).toEqual({ ok: true, paidMinor: 5000, changeMinor: 0 });
+    expect(settleTender(5000, [{ method: "CASH", amountMinor: 3000 }, { method: "CREDIT", amountMinor: 2000 }])).toEqual({ ok: true, paidMinor: 5000, changeMinor: 0 });
+    expect(settleTender(5000, [{ method: "CREDIT", amountMinor: 6000 }])).toMatchObject({ ok: false });
+  });
 });
 
 describe("shift totals", () => {
@@ -91,12 +106,36 @@ describe("shift totals", () => {
       salesCount: 3,
       salesTotalMinor: 19_500,
       takenMinor: { CASH: 11_500, MOMO: 5000, CARD: 3000 },
+      onCreditMinor: 0,
+      creditPaidMinor: { CASH: 0, MOMO: 0, CARD: 0 },
       refundsCount: 0,
       refundedMinor: { CASH: 0, MOMO: 0, CARD: 0 },
       voidsCount: 0,
       voidedTotalMinor: 0,
       expectedMinor: { CASH: 31_500, MOMO: 5000, CARD: 3000 },
     });
+  });
+
+  test("sales on account take no money; credit payments at the till are in the drawer; returns onto an account give none back", () => {
+    const summary = summariseShift(
+      10_000,
+      [
+        { totalMinor: 20_000, changeMinor: 0, payments: [{ method: "CREDIT", amountMinor: 20_000 }] },
+        { totalMinor: 9000, changeMinor: 0, payments: [{ method: "CASH", amountMinor: 4000 }, { method: "CREDIT", amountMinor: 5000 }] },
+      ],
+      {
+        creditPayments: [
+          { method: "CASH", amountMinor: 3000 },
+          { method: "MOMO", amountMinor: 2000 },
+        ],
+        refunds: [{ method: "CREDIT", refundMinor: 1500 }],
+      },
+    );
+    expect(summary.onCreditMinor).toBe(25_000);
+    expect(summary.takenMinor).toEqual({ CASH: 4000, MOMO: 0, CARD: 0 });
+    expect(summary.creditPaidMinor).toEqual({ CASH: 3000, MOMO: 2000, CARD: 0 });
+    expect(summary.refundedMinor).toEqual({ CASH: 0, MOMO: 0, CARD: 0 });
+    expect(summary.expectedMinor).toEqual({ CASH: 17_000, MOMO: 2000, CARD: 0 });
   });
 
   test("an empty shift expects just the float", () => {

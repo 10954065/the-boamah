@@ -1,3 +1,4 @@
+import type { AddCreditCustomerResult, CreditPaymentResult, TillCreditCustomer, TillCreditPaymentInput } from "@/lib/credit";
 import type { PosSaleResult, PosSaleUpload, PosShiftClose, PosShiftOpen, ShiftCloseResult, ShiftOpenResult } from "@/lib/pos";
 import type {
   PosRefundRecord,
@@ -75,6 +76,9 @@ export const tillOnlineApi = {
   recordRemoval: (input: PosRemovalInput) => request<Stamped<PosRemovalResult>>("/api/pos/removals", input),
   websiteOrders: () => request<Stamped<{ orders: TillOrder[] }>>("/api/pos/orders"),
   moveWebsiteOrder: (input: { orderId: string; to: OrderStatusCode }) => request<Stamped<{ orders: TillOrder[] }>>("/api/pos/orders", input),
+  creditCustomers: () => request<Stamped<{ customers: TillCreditCustomer[] }>>("/api/pos/credit"),
+  addCreditCustomer: (input: { name: string; phone: string }) => request<Stamped<AddCreditCustomerResult>>("/api/pos/credit", input),
+  takeCreditPayment: (input: TillCreditPaymentInput) => request<Stamped<CreditPaymentResult>>("/api/pos/credit/payments", input),
 };
 
 export function failureOf(error: unknown): SyncFailure {

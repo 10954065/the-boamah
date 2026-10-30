@@ -148,6 +148,10 @@ async function createSale(tx: Tx, input: PosSaleUpload, now: Date): Promise<Sale
   const totalMinor = lines.reduce((sum, line) => sum + line.lineTotalMinor, 0);
   const settlement = settleTender(totalMinor, input.payments);
   if (!settlement.ok) throw new PosRejected(settlement.error);
+  // The till checked the customer's limit when it sold (perhaps offline); here the account only has to exist.
+  if (input.creditCustomerId && !(await tx.creditCustomer.findUnique({ where: { id: input.creditCustomerId }, select: { id: true } }))) {
+    throw new PosRejected("The credit customer for this sale was not found.");
+  }
 
   const stock: { before: number; after: number }[] = [];
   for (const line of lines) {
@@ -174,6 +178,7 @@ async function createSale(tx: Tx, input: PosSaleUpload, now: Date): Promise<Sale
       changeMinor: settlement.changeMinor,
       hasShortfall: shortfalls.some((s) => s > 0),
       hasPriceDifference: lines.some((line) => line.item.unitPriceMinor !== line.listUnitPriceMinor),
+      creditCustomerId: input.creditCustomerId ?? null,
       soldAt,
       items: {
         create: lines.map((line, i) => ({

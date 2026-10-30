@@ -3,7 +3,7 @@ import { AdminHeader, EmptyRow, TableWrap, td, th } from "@/components/admin/ui"
 import { FilterChips, PeriodPicker, periodLabel, TillSaleBadges } from "@/components/admin/till-parts";
 import { Pagination } from "@/components/ui/pagination";
 import { formatMoney } from "@/lib/money";
-import { POS_TENDER_LABELS } from "@/lib/pos";
+import { SALE_TENDER_LABELS } from "@/lib/pos";
 import { reportPeriod } from "@/lib/pos-report";
 import { cn, formatDateTime } from "@/lib/utils";
 import { SALE_FILTERS, tillSales, type SaleFilter } from "@/server/pos/reports";
@@ -53,7 +53,7 @@ export default async function TillSalesPage({ searchParams }: PageProps<"/admin/
                 </td>
                 <td className={cn(td, "whitespace-nowrap text-ink-muted")}>{formatDateTime(sale.soldAt)}</td>
                 <td className={td}>{sale.cashier.name}</td>
-                <td className={td}>{[...new Set(sale.payments.map((p) => POS_TENDER_LABELS[p.method]))].join(" + ")}</td>
+                <td className={td}>{[...new Set(sale.payments.map((p) => SALE_TENDER_LABELS[p.method]))].join(" + ")}</td>
                 <td className={td}>
                   <TillSaleBadges sale={sale} />
                 </td>

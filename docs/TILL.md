@@ -110,6 +110,11 @@ under the total to start on that method with the amount already filled in.
   slip is optional.
 - **Split payment:** enter the first part (for example mobile money), press
   **Add as part payment**, then take the rest by another method.
+- **On account:** for credit customers who pay later. Find the customer by name
+  or phone number (or press **New customer** and enter their name and number),
+  check what they already owe, and the amount goes on their account. A customer
+  can also pay part now and put the rest on account. See *Credit customers*
+  below.
 
 Press **Complete sale**. The receipt shows on screen with **Print** and **New
 sale**. **Last receipt** in the menu prints a copy again (marked as a copy).
@@ -165,7 +170,9 @@ voided: return the items instead. Voids need the internet.
    sell again** for anything damaged or past its date; it is refunded but not
    put back into stock.
 3. Choose how the money goes back: cash from the drawer, mobile money (enter the
-   transaction ID of the refund) or card (refund it on the card machine).
+   transaction ID of the refund) or card (refund it on the card machine). For a
+   sale put on a customer's account, **Off their account** takes the amount off
+   what they owe instead of giving money back.
 4. Choose or type the reason, and a manager approves (as for a void).
 5. Press **Refund**. Give the amount shown and print the refund slip for the
    customer.
@@ -173,6 +180,24 @@ voided: return the items instead. Voids need the internet.
 The customer gets back what they paid for those items, never more. The refund
 is paid out of the shift open now, so the shift report takes it off what is
 expected in the drawer. Returns need the internet.
+
+## Credit customers
+
+Some customers buy now and pay later. Each one has a name, a phone number and,
+if a manager sets one, a credit limit: the most they may owe.
+
+- **Selling on account:** take payment with **On account** (see *Taking
+  payment*). The receipt shows the customer and "To pay later". The till keeps
+  the list of credit customers, so it can sell on account with no internet;
+  adding a new customer needs the internet.
+- **What someone owes:** press **Credit customers** in the menu and find them.
+- **Taking a payment:** in **Credit customers**, open the customer, choose cash,
+  mobile money (enter the transaction ID) or card, enter the amount (or press
+  **All**) and press **Record payment**. Print the slip for the customer. The
+  money goes into this shift's drawer, so the shift report expects it. Payments
+  need the internet and can never be more than the customer owes.
+- A customer whose credit a manager has stopped cannot buy on account, but can
+  still pay what they owe.
 
 ## Receipt printer
 
@@ -234,10 +259,11 @@ this.
 2. Count and enter: the cash in the drawer (including the float), the mobile
    money received (from the mobile money statement) and the card total (from
    the card machine's end of day slip).
-3. Press **Close the shift**. The report shows what the sales should have
-   brought in, less any refunds, against what you counted, method by method, as
-   **Exact**, **Over by** or **Short by**. Voided sales are listed but not
-   counted. Print it for the manager.
+3. Press **Close the shift**. The report shows what the sales and credit
+   payments should have brought in, less any refunds, against what you counted,
+   method by method, as **Exact**, **Over by** or **Short by**. Voided sales are
+   listed but not counted, and sales on account show separately because no money
+   was taken for them. Print it for the manager.
 
 ## For managers: the till in the admin
 
@@ -253,3 +279,18 @@ this.
   sales that sold more than the recorded stock or were charged at another price,
   voids, refunds, and anything removed from a till. Check each one, add a note
   if useful, and press **Mark as looked at**.
+
+*Admin → Sales → Credit customers* (Store Managers and Super Admins):
+
+- The list shows every credit customer, what each owes, their limit and when
+  they last paid, with the total owed to the shop at the top. The dashboard's
+  *Needs your attention* shows it too.
+- **Add credit customer** adds one with an optional credit limit.
+- Each customer opens to a **statement**: every sale on account (with its
+  receipt number), goods brought back onto the account, and every payment, with
+  what was owed after each.
+- **Record a payment** is for money paid to the shop outside the till, such as
+  mobile money sent to the shop's number. Payments at the till are recorded
+  there, so they count in that shift's drawer.
+- **Details and limit** changes the name, number, limit or notes, or stops new
+  credit for the customer.
