@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "./label";
 
@@ -35,7 +36,7 @@ export function Field({ id, label, error, hint, required, className, children }:
       ) : null}
       {error ? (
         <p id={`${id}-error`} role="alert" className="flex items-center gap-1 text-xs font-medium text-danger">
-          <span aria-hidden="true">⚠</span> {error}
+          <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> {error}
         </p>
       ) : null}
     </div>

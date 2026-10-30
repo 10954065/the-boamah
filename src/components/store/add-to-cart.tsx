@@ -262,7 +262,7 @@ export function ProductPurchase({ variants, productName, stockAlert, stickyBar =
                   "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-200 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500",
                   v.id === variant.id
                     ? "border-brand-700 bg-brand-50 text-brand-800 shadow-[inset_0_0_0_1px_var(--color-brand-700)]"
-                    : "border-line-strong bg-surface text-ink hover:border-brand-400 hover:bg-brand-50/50 motion-safe:hover:-translate-y-0.5",
+                    : "border-line-strong bg-surface text-ink hover:border-brand-400 hover:bg-brand-50/50",
                   !v.inStock && "text-ink-subtle line-through decoration-1",
                 )}
               >

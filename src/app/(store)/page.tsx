@@ -1,10 +1,11 @@
-import { CategoryTiles, Hero, PromoBanners, SectionHeading, TrustSection } from "@/components/store/home-sections";
+import { CategoryTiles, Hero, PromoBanners, SectionHeading, ShopFacts } from "@/components/store/home-sections";
 import { ProductGrid } from "@/components/store/product-card";
 import { RecentlyViewed } from "@/components/store/recently-viewed";
 import type { ProductCardView } from "@/lib/catalog-types";
 import { siteUrl } from "@/lib/utils";
 import { getActiveBanners } from "@/server/banners";
 import { getActiveCategories, getBestSellers, getFeaturedProducts, getHeroProducts, getNewArrivals, getOnSaleProducts } from "@/server/catalog";
+import { isOnlinePaymentAvailable } from "@/server/payments/config";
 import { getStoreSettings } from "@/server/settings";
 
 export const metadata = {
@@ -63,26 +64,20 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization).replace(/</g, "\\u003c") }} />
-      <Hero
-        banner={heroBanners[0] ?? null}
-        products={heroProducts}
-        stats={{ products: stocked.reduce((sum, c) => sum + c.productCount, 0), categories: stocked.length }}
-      />
+      <Hero banner={heroBanners[0] ?? null} products={heroProducts} />
       <CategoryTiles categories={stocked} />
-      <RecentlyViewed title="Pick up where you left off" className="container-page mt-12" />
-      <ProductRow
-        id="featured-title"
-        title="Featured this week"
-        subtitle="Our favourites from the shelves this week."
-        href="/shop"
-        products={featured}
-        priorityCount={2}
-      />
+      <RecentlyViewed className="container-page mt-12" />
+      <ProductRow id="featured-title" title="Featured products" href="/shop" products={featured} priorityCount={2} />
       <PromoBanners banners={promoBanners} />
-      <ProductRow id="offers-title" title="Special offers" subtitle="Reduced prices for a limited time." href="/offers" products={offers} />
-      <ProductRow id="bestsellers-title" title="Best sellers" subtitle="What other shoppers are buying." href="/shop" products={bestSellers} />
-      <ProductRow id="new-title" title="New arrivals" subtitle="Recently added to the store." href="/shop?sort=newest" products={newArrivals} />
-      <TrustSection hasSupportContact={Boolean(settings.contactPhone || settings.contactEmail)} />
+      <ProductRow id="offers-title" title="Special offers" href="/offers" products={offers} />
+      <ProductRow id="bestsellers-title" title="Best sellers" href="/shop" products={bestSellers} />
+      <ProductRow id="new-title" title="New arrivals" href="/shop?sort=newest" products={newArrivals} />
+      <ShopFacts
+        onlinePayment={isOnlinePaymentAvailable(settings)}
+        cashOnDelivery={settings.codEnabled}
+        pickup={settings.pickupEnabled}
+        phone={settings.contactPhone}
+      />
     </>
   );
 }

@@ -42,7 +42,7 @@ export function FreeDeliveryBar({ goodsTotalMinor, target, className }: FreeDeli
         <div
           className={cn(
             "h-full rounded-full transition-[width] duration-700 ease-out",
-            progress.reached ? "bg-success" : "bg-gradient-to-r from-leaf-500 to-brand-600",
+            progress.reached ? "bg-success" : "bg-brand-500",
           )}
           style={{ width: `${progress.percent}%` }}
         />

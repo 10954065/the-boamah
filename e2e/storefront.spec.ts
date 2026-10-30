@@ -7,7 +7,7 @@ test.describe("storefront", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Shop by category" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Juices/ }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Featured this week" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Featured products" })).toBeVisible();
   });
 
   test("the hero grid shows live products, rotates them and can be paused", async ({ page }) => {
@@ -98,7 +98,7 @@ test.describe("storefront", () => {
     await expect(recent.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toHaveCount(0);
 
     await page.goto("/");
-    const home = page.getByRole("region", { name: "Pick up where you left off" });
+    const home = page.getByRole("region", { name: "Recently viewed" });
     await expect(home.getByRole("link", { name: "Quaker Quick 1-Minute Oats" })).toBeVisible();
     await expect(home.getByRole("link", { name: "Royal Basmati Rice" })).toBeVisible();
   });

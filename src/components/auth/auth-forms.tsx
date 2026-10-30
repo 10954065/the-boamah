@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, MailCheck, type LucideIcon } from "lucide-react";
+import { ArrowRight, CircleAlert, Eye, EyeOff, LockKeyhole, Mail, MailCheck, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentProps, type KeyboardEvent } from "react";
@@ -109,7 +109,7 @@ export function SignInForm({ next, forgotHref = "/forgot-password" }: { next?: s
         <PasswordInput autoComplete="current-password" {...fieldAria("password", passwordError)} {...form.register("password")} />
         {passwordError ? (
           <p id="password-error" role="alert" className="flex items-center gap-1 text-xs font-medium text-danger">
-            <span aria-hidden="true">⚠</span> {passwordError}
+            <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> {passwordError}
           </p>
         ) : null}
       </div>

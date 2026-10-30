@@ -14,9 +14,9 @@ export const PRIMARY_LINKS = [
   { href: "/", label: "Home" },
   { href: "/shop", label: "Shop" },
   { href: "/categories", label: "Categories" },
-  { href: "/offers", label: "Special Offers" },
-  { href: "/shop?sort=newest", label: "New Arrivals" },
-  { href: "/contact", label: "Contact Us" },
+  { href: "/offers", label: "Special offers" },
+  { href: "/shop?sort=newest", label: "New arrivals" },
+  { href: "/contact", label: "Contact us" },
 ];
 
 const ORDER_LINKS = [{ href: "/track-order", label: "Track an order" }];

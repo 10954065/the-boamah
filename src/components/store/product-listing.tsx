@@ -79,7 +79,7 @@ function CategoryNav(props: CategoryNavProps) {
                 />
                 <span
                   className={cn(
-                    "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-soft ring-1 transition-transform duration-200 group-hover:scale-105",
+                    "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-soft ring-1",
                     isActive ? "ring-brand-300" : "ring-line",
                   )}
                 >

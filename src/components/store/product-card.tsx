@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
@@ -23,7 +22,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const href = `/products/${product.slug}`;
 
   return (
-    <article className="group relative flex h-full flex-col rounded-xl border border-line bg-surface p-2.5 transition-[border-color,box-shadow,transform] duration-200 hover:border-brand-200 hover:shadow-[var(--shadow-raised)] motion-safe:hover:-translate-y-0.5 sm:p-3">
+    <article className="group relative flex h-full flex-col rounded-xl border border-line bg-surface p-2.5 transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-[var(--shadow-card)] sm:p-3">
       <div className="relative aspect-square overflow-hidden rounded-lg bg-soft">
         {product.imageUrl ? (
           <Image
@@ -32,7 +31,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             fill
             priority={priority}
             sizes="(min-width: 1280px) 220px, (min-width: 768px) 25vw, 45vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-ink-subtle">
@@ -114,7 +113,7 @@ export function ProductGrid({ products, priorityCount = 0, className }: ProductG
   return (
     <ul className={cn("grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", className)}>
       {products.map((product, index) => (
-        <li key={product.id} className="reveal" style={{ "--i": index } as CSSProperties}>
+        <li key={product.id}>
           <ProductCard product={product} priority={index < priorityCount} />
         </li>
       ))}

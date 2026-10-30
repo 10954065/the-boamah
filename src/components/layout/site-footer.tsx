@@ -57,10 +57,7 @@ export async function SiteFooter() {
   const payment = { online: isOnlinePaymentAvailable(settings), cod: settings.codEnabled };
 
   return (
-    <footer className="relative isolate mt-16 overflow-hidden bg-brand-900 text-brand-100">
-      <div className="absolute -left-32 -top-40 -z-10 h-96 w-96 rounded-full bg-leaf-500/15 blur-3xl" aria-hidden="true" />
-      <div className="absolute -bottom-40 right-0 -z-10 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl" aria-hidden="true" />
-      <div className="h-1 bg-gradient-to-r from-leaf-500 via-gold-400 to-leaf-500" aria-hidden="true" />
+    <footer className="mt-16 bg-brand-900 text-brand-100">
       <div className="container-page grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.3fr_repeat(3,0.8fr)_1.4fr]">
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">

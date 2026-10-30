@@ -248,7 +248,7 @@ function PasswordChoice({ password, onChange, typing, onTyping, error }: Passwor
     );
   }
   return (
-    <div className="rounded-xl border border-brand-200 bg-gradient-to-br from-brand-50 to-surface p-4">
+    <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
       <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-brand-700">
         <KeyRound className="h-4 w-4" aria-hidden="true" /> Password made for them
       </p>

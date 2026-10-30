@@ -23,8 +23,8 @@ function pageWindow(page: number, total: number): (number | "gap")[] {
 }
 
 const itemClass =
-  "group inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold tabular-nums transition-[color,background-color,border-color,box-shadow,transform] duration-200 motion-safe:hover:-translate-y-0.5";
-const idleClass = "border-line bg-surface text-ink hover:border-brand-400 hover:bg-brand-50 hover:text-brand-800 hover:shadow-[var(--shadow-raised)]";
+  "group inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold tabular-nums transition-colors duration-200";
+const idleClass = "border-line bg-surface text-ink hover:border-brand-400 hover:bg-brand-50 hover:text-brand-800";
 
 export function Pagination({ page, totalPages, hrefFor, className }: PaginationProps) {
   if (totalPages <= 1) return null;
@@ -48,7 +48,7 @@ export function Pagination({ page, totalPages, hrefFor, className }: PaginationP
             className={cn(
               itemClass,
               item === page
-                ? "pop border-brand-700 bg-brand-700 text-white shadow-[var(--shadow-raised)] hover:translate-y-0"
+                ? "border-brand-700 bg-brand-700 text-white"
                 : idleClass,
             )}
           >

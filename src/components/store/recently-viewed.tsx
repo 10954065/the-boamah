@@ -92,8 +92,7 @@ export function RecentlyViewed({
             <Link
               href={`/products/${item.slug}`}
               className={cn(
-                "group block rounded-xl border border-line bg-surface p-2 transition-[border-color,box-shadow,transform] duration-200",
-                "hover:border-brand-200 hover:shadow-[var(--shadow-raised)] motion-safe:hover:-translate-y-0.5",
+                "group block rounded-xl border border-line bg-surface p-2 transition-colors duration-200 hover:border-brand-300",
               )}
             >
               <div className="relative aspect-square overflow-hidden rounded-lg bg-soft">
@@ -103,7 +102,7 @@ export function RecentlyViewed({
                     alt=""
                     fill
                     sizes="144px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="object-cover"
                   />
                 ) : null}
               </div>

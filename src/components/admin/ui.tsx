@@ -78,9 +78,9 @@ type StatTone = "neutral" | "brand" | "warning" | "danger";
 
 const STAT_TONES: Record<StatTone, { card: string; chip: string }> = {
   neutral: { card: "border-line", chip: "bg-soft text-ink-muted" },
-  brand: { card: "border-brand-200 bg-gradient-to-br from-brand-50 to-surface", chip: "bg-brand-100 text-brand-700" },
-  warning: { card: "border-gold-300 bg-gradient-to-br from-gold-50 to-surface", chip: "bg-gold-100 text-gold-700" },
-  danger: { card: "border-danger/30 bg-gradient-to-br from-danger-soft to-surface", chip: "bg-danger-soft text-danger" },
+  brand: { card: "border-brand-200 bg-brand-50", chip: "bg-brand-100 text-brand-700" },
+  warning: { card: "border-gold-300 bg-gold-50", chip: "bg-gold-100 text-gold-700" },
+  danger: { card: "border-danger/30 bg-danger-soft", chip: "bg-surface text-danger" },
 };
 
 export function StatCard({ label, value, hint, tone = "neutral", href, icon: Icon }: { label: string; value: string; hint?: string; tone?: StatTone; href?: string; icon?: LucideIcon }) {

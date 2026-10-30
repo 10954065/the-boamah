@@ -54,8 +54,8 @@ export function ProductReviews({ summary }: ProductReviewsProps) {
         <div className="min-w-0 space-y-6">
           {summary.reviews.length > 0 ? (
             <ul className="divide-y divide-line">
-              {summary.reviews.map((review, index) => (
-                <li key={review.id} className="reveal py-5 first:pt-0" style={{ "--i": index } as React.CSSProperties}>
+              {summary.reviews.map((review) => (
+                <li key={review.id} className="py-5 first:pt-0">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <Stars rating={review.rating} size="sm" />
                     {review.title ? <p className="font-semibold text-ink">{review.title}</p> : null}

@@ -209,7 +209,7 @@ function ProductCard({ item, now, onPick }: { item: PosCatalogItem; now: Date; o
     <button
       type="button"
       onClick={() => onPick(item)}
-      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-surface text-left shadow-[var(--shadow-card)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-[var(--shadow-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:translate-y-0 motion-reduce:hover:translate-y-0"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-line bg-surface text-left shadow-[var(--shadow-card)] transition-[border-color,box-shadow] hover:border-brand-300 hover:shadow-[var(--shadow-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:bg-brand-50"
     >
       <CardPhoto src={item.imageUrl} alt="" />
       <span className="flex flex-1 flex-col border-t border-line p-2">

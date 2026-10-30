@@ -41,7 +41,7 @@ export function SaleCountdown({ endsAt, variant = "badge", className }: SaleCoun
   return (
     <p
       className={cn(
-        "pop inline-flex items-center gap-1.5 rounded-full bg-sale/10 px-3 py-1 text-xs font-bold text-sale ring-1 ring-sale/20",
+        "inline-flex items-center gap-1.5 rounded-full bg-sale/10 px-3 py-1 text-xs font-bold text-sale ring-1 ring-sale/20",
         className,
       )}
     >

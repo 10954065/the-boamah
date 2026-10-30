@@ -39,14 +39,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="sticky top-0 hidden h-dvh flex-col bg-[linear-gradient(180deg,var(--color-brand-900)_0%,#0a2419_100%)] lg:flex print:hidden">
-        <div className="relative overflow-hidden px-5 pb-6 pt-6">
-          <span aria-hidden="true" className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-leaf-400/20 blur-3xl" />
-          <Link href="/admin" className="relative flex items-center gap-3">
-            <LogoMark className="h-11 w-11 rounded-xl ring-2 ring-white/10" />
+      <aside className="sticky top-0 hidden h-dvh flex-col bg-brand-900 lg:flex print:hidden">
+        <div className="px-5 pb-6 pt-6">
+          <Link href="/admin" className="flex items-center gap-3">
+            <LogoMark className="h-11 w-11 rounded-xl" />
             <span className="leading-tight">
               <span className="block font-display text-[17px] font-extrabold text-white">The Boamah&rsquo;s</span>
-              <span className="block text-[10.5px] font-bold uppercase tracking-[0.2em] text-gold-300">Admin panel</span>
+              <span className="block text-[12px] font-bold text-gold-300">Admin panel</span>
             </span>
           </Link>
         </div>
@@ -63,7 +62,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md sm:px-6 lg:px-8 print:hidden">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6 lg:px-8 print:hidden">
           <AdminMobileNav items={items} />
           <AdminWhere items={items} />
           <div className="ml-auto flex items-center gap-2">

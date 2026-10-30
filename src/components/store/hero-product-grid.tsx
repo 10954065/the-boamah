@@ -94,14 +94,12 @@ export function HeroProductGrid({ products, className }: HeroProductGridProps) {
                   alt={product.imageAlt}
                   fill
                   sizes={TILE_SIZES}
-                  className={cn("object-cover transition-transform duration-700 group-hover:scale-105", underneath && "tile-in")}
+                  className={cn("object-cover", underneath && "tile-in")}
                 />
                 {product.isNew ? (
-                  <span className="absolute left-2 top-2 rounded-full bg-gold-400 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-brand-900 shadow">
-                    New
-                  </span>
+                  <span className="absolute left-2 top-2 rounded-md bg-gold-400 px-2 py-0.5 text-[11px] font-extrabold text-brand-900">New</span>
                 ) : null}
-                <span className="absolute inset-x-0 bottom-0 translate-y-1 bg-gradient-to-t from-brand-900/90 to-transparent px-3 pb-2.5 pt-8 text-xs font-semibold leading-snug text-white opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                <span className="absolute inset-x-0 bottom-0 bg-brand-900/85 px-3 py-2 text-xs font-semibold leading-snug text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
                   {product.name}
                 </span>
               </Link>
@@ -122,7 +120,7 @@ export function HeroProductGrid({ products, className }: HeroProductGridProps) {
           type="button"
           onClick={() => setUserChoice(playing ? "pause" : "play")}
           aria-label={playing ? "Pause the product slideshow" : "Play the product slideshow"}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-brand-900/60 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-brand-900/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-brand-900/85 text-white ring-1 ring-white/25 transition-colors hover:bg-brand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400"
         >
           {playing ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
         </button>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, ShoppingBasket } from "lucide-react";
+import { ArrowRight, CircleAlert, ShieldCheck, ShoppingBasket } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { AcceptPricesButton, CartLineControls, CouponForm } from "@/components/store/cart-controls";
@@ -106,10 +106,13 @@ export default async function CartPage() {
                         ) : null}
                       </p>
                       {unavailable ? (
-                        <p className="mt-1 text-sm font-medium text-danger">⚠ No longer available. Please remove it.</p>
+                        <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-danger">
+                          <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" /> No longer available. Please remove it.
+                        </p>
                       ) : stockIssue && stockIssue.kind === "INSUFFICIENT_STOCK" ? (
-                        <p className="mt-1 text-sm font-medium text-danger">
-                          ⚠ {stockIssue.availableMilli > 0 ? `Only ${formatQuantity(stockIssue.availableMilli, line.unit)} available.` : "Out of stock."}
+                        <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-danger">
+                          <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          {stockIssue.availableMilli > 0 ? `Only ${formatQuantity(stockIssue.availableMilli, line.unit)} available.` : "Out of stock."}
                         </p>
                       ) : null}
                     </div>

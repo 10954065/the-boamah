@@ -26,21 +26,18 @@ export interface TodayFigure {
 
 export function DashboardHero({ greeting, day, today }: { greeting: string; day: string; today: readonly TodayFigure[] }) {
   return (
-    <section aria-labelledby="dashboard-title" className="relative isolate overflow-hidden rounded-3xl bg-brand-900 px-6 py-7 text-white shadow-[var(--shadow-raised)] sm:px-8 sm:py-8">
-      <span aria-hidden="true" className="absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full bg-leaf-400/25 blur-3xl" />
-      <span aria-hidden="true" className="absolute -bottom-32 left-1/3 -z-10 h-72 w-72 rounded-full bg-gold-400/20 blur-3xl" />
-      <span aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(rgb(255_255_255/0.07)_1px,transparent_1px)] [background-size:18px_18px]" />
+    <section aria-labelledby="dashboard-title" className="rounded-2xl bg-brand-900 px-6 py-7 text-white sm:px-8 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div className="min-w-0">
-          <h1 id="dashboard-title" className="text-[12px] font-bold uppercase tracking-[0.22em] text-gold-300">
+          <h1 id="dashboard-title" className="text-[13px] font-bold text-gold-300">
             Dashboard
           </h1>
           <p className="mt-2 font-display text-[28px] font-extrabold leading-tight tracking-tight sm:text-[34px]">{greeting}</p>
-          <p className="mt-1.5 text-[15px] font-medium text-brand-100">{day} · here is how the shop is doing</p>
+          <p className="mt-1.5 text-[15px] font-medium text-brand-100">{day}</p>
         </div>
         <dl className="grid w-full grid-cols-2 gap-2.5 sm:w-auto sm:grid-cols-4">
           {today.map((figure) => (
-            <div key={figure.label} className="min-w-0 rounded-2xl bg-white/[0.07] px-4 py-3 ring-1 ring-white/10 backdrop-blur-sm sm:min-w-32">
+            <div key={figure.label} className="min-w-0 rounded-xl bg-white/10 px-4 py-3 sm:min-w-32">
               <dt className="truncate text-[12px] font-semibold text-brand-200">{figure.label}</dt>
               <dd className="mt-0.5 truncate text-[17px] font-extrabold sm:text-xl">{figure.value}</dd>
             </div>
@@ -131,7 +128,7 @@ export function KpiTile({ label, value, icon: Icon, accent, change, compared, hi
   const frame =
     "relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface p-5 pt-6 shadow-[var(--shadow-card)] transition-[transform,box-shadow,border-color] duration-200";
   return href ? (
-    <Link href={href} className={cn(frame, "hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-[var(--shadow-raised)] motion-reduce:hover:translate-y-0")}>
+    <Link href={href} className={cn(frame, "hover:border-brand-300")}>
       {body}
     </Link>
   ) : (
