@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Minus, Plus, Scale, ScanBarcode, Trash2 } from "lucide-react";
+import { Minus, PauseCircle, Plus, Scale, ScanBarcode, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
@@ -17,12 +17,14 @@ interface SalePanelProps {
   onStep: (line: PricedTillLine, direction: 1 | -1) => void;
   onRemove: (variantId: string) => void;
   onClear: () => void;
+  /** Puts the sale aside to serve someone else. */
+  onHold: () => void;
   onCharge: () => void;
   /** Shown in the phone sheet, which has its own "Current sale" title. */
   inSheet?: boolean;
 }
 
-export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear, onCharge, inSheet = false }: SalePanelProps) {
+export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear, onHold, onCharge, inSheet = false }: SalePanelProps) {
   const [confirmClear, setConfirmClear] = useState(false);
   const empty = sale.lines.length === 0;
 
@@ -76,6 +78,9 @@ export function SalePanel({ sale, highlightId, onEdit, onStep, onRemove, onClear
             }}
           >
             {confirmClear ? "Tap again to clear" : "Clear"}
+          </Button>
+          <Button variant="outline" size="lg" disabled={empty} onClick={onHold} aria-label="Put this sale on hold" title="Put this sale on hold">
+            <PauseCircle /> <span className="hidden sm:inline">Hold</span>
           </Button>
           <Button size="lg" className="h-14 flex-1 text-base" disabled={empty} onClick={onCharge}>
             Charge {formatMoney(sale.totalMinor)}

@@ -94,8 +94,8 @@ interface HeaderActionProps extends ComponentProps<"button"> {
   label: string;
 }
 
-/** A header button: icon only on small screens, with its label from medium screens up. */
-export function HeaderAction({ icon: Icon, label, className, ...props }: HeaderActionProps) {
+/** A header button: icon only on small screens, with its label from medium screens up. Children (a count) show beside the icon. */
+export function HeaderAction({ icon: Icon, label, className, children, ...props }: HeaderActionProps) {
   return (
     <button
       type="button"
@@ -107,6 +107,7 @@ export function HeaderAction({ icon: Icon, label, className, ...props }: HeaderA
       {...props}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {children}
       <span className="sr-only xl:not-sr-only">{label}</span>
     </button>
   );

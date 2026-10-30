@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { OutboxEntry, ShiftRecord } from "@/lib/pos-outbox";
+import type { HeldSale } from "@/lib/pos-till";
 import { adoptRecord, drainOutbox, type EntryOutcome, type OutboxApi, type OutboxStore, type SyncFailure } from "@/lib/pos-sync";
 import { failureOf, tillApi } from "./till-api";
 import {
@@ -9,6 +10,7 @@ import {
   dismissNotice,
   issueReceiptSequence,
   keepJournals,
+  loadHeldSales,
   loadLastContact,
   loadNotices,
   loadOutbox,
@@ -34,6 +36,7 @@ export const ANSWER_WAIT_MS = 8_000;
 export const STORAGE_FULL = "This device's storage is full, so the till cannot save this. Free up space on the device, then try again.";
 const NO_ENTRIES: OutboxEntry[] = [];
 const NO_NOTICES: RenumberNotice[] = [];
+const NO_HELD: HeldSale[] = [];
 
 /** The shift an entry belongs to. */
 export function shiftOf(entry: OutboxEntry): string | null {
@@ -209,6 +212,10 @@ export function useShiftRecord(tillCode: string): ShiftRecord | null {
 
 export function useLastContact(tillCode: string): string | null {
   return useSyncExternalStore(subscribeToTill, () => loadLastContact(tillCode), () => null);
+}
+
+export function useHeldSales(tillCode: string): HeldSale[] {
+  return useSyncExternalStore(subscribeToTill, () => loadHeldSales(tillCode), () => NO_HELD);
 }
 
 /** Keeps the page's answer about the open shift if it is newer than the one stored. */

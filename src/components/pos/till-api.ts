@@ -1,4 +1,14 @@
 import type { PosSaleResult, PosSaleUpload, PosShiftClose, PosShiftOpen, ShiftCloseResult, ShiftOpenResult } from "@/lib/pos";
+import type {
+  PosRefundRecord,
+  PosRemovalInput,
+  PosRemovalResult,
+  PosReturnInput,
+  PosReturnResult,
+  PosSaleRecord,
+  PosVoidInput,
+  PosVoidResult,
+} from "@/lib/pos-returns";
 import type { OutboxApi, SyncFailure, TillFailure } from "@/lib/pos-sync";
 import type { PosCatalogItem } from "@/lib/pos-till";
 
@@ -52,6 +62,16 @@ export const tillApi = {
   closeShift: (input: PosShiftClose) => request<Stamped<ShiftCloseResult>>("/api/pos/shifts/close", input),
   sendSales: (sales: PosSaleUpload[]) => request<Stamped<{ results: PosSaleResult[] }>>("/api/pos/sales", { sales }),
 } satisfies OutboxApi & { catalog: () => Promise<TillCatalogResponse> };
+
+/** Requests that need the shop's system to answer there and then: nothing here waits on the till. */
+export const tillOnlineApi = {
+  shiftHistory: (shiftClientId: string) =>
+    request<Stamped<{ sales: PosSaleRecord[]; refunds: PosRefundRecord[] }>>(`/api/pos/history?shift=${encodeURIComponent(shiftClientId)}`),
+  findReceipt: (receiptNumber: string) => request<Stamped<{ sale: PosSaleRecord | null }>>(`/api/pos/history?receipt=${encodeURIComponent(receiptNumber)}`),
+  voidSale: (input: PosVoidInput) => request<Stamped<PosVoidResult>>("/api/pos/voids", input),
+  returnItems: (input: PosReturnInput) => request<Stamped<PosReturnResult>>("/api/pos/returns", input),
+  recordRemoval: (input: PosRemovalInput) => request<Stamped<PosRemovalResult>>("/api/pos/removals", input),
+};
 
 export function failureOf(error: unknown): SyncFailure {
   if (error instanceof TillRequestError) return { message: error.message, kind: error.kind, status: error.status };

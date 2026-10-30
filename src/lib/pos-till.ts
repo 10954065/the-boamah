@@ -1,4 +1,5 @@
-import { POS_MAX_QUANTITY_MILLI, type PosSaleUpload, type TenderLine } from "@/lib/pos";
+import { z } from "zod";
+import { POS_MAX_ITEMS, POS_MAX_QUANTITY_MILLI, type PosSaleUpload, type TenderLine } from "@/lib/pos";
 import { effectiveUnitPrice, unitPriceForQuantity, type PriceTierRule } from "@/lib/pricing";
 import { MILLI, UNIT_INFO, lineTotalMinor, parseDecimalToMilli, type SellingUnitCode } from "@/lib/quantity";
 
@@ -125,6 +126,76 @@ export function priceSale(lines: readonly TillLine[], now: Date): PricedSale {
     totalMinor: priced.reduce((sum, line) => sum + line.lineTotalMinor, 0),
     savingMinor: priced.reduce((sum, line) => sum + line.savingMinor, 0),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Sales on hold: the customer steps away, the next one is served, and the
+// sale is picked up again later. Only what was picked is kept; prices are the
+// shelf prices when it is picked up again.
+// ---------------------------------------------------------------------------
+
+export const MAX_HELD_SALES = 20;
+const MAX_HELD_NOTE = 60;
+
+export interface HeldSale {
+  id: string;
+  heldAt: string;
+  cashierName: string;
+  /** Who it is for, typed by the cashier (for example "Lady in the blue dress"). */
+  note: string | null;
+  lines: { variantId: string; productName: string; variantName: string; quantityMilli: number }[];
+  /** The total when it was held, as a guide. */
+  totalMinor: number;
+}
+
+const heldSaleSchema = z.object({
+  id: z.string().min(1).max(64),
+  heldAt: z.string(),
+  cashierName: z.string(),
+  note: z.string().max(MAX_HELD_NOTE).nullable(),
+  lines: z
+    .array(z.object({ variantId: z.string(), productName: z.string(), variantName: z.string(), quantityMilli: z.number().int().positive().max(POS_MAX_QUANTITY_MILLI) }))
+    .min(1)
+    .max(POS_MAX_ITEMS),
+  totalMinor: z.number().int().min(0),
+});
+
+/** The held sales in stored data; anything unreadable is dropped (a held sale is only a list of items). */
+export function parseHeldSales(value: unknown): HeldSale[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const parsed = heldSaleSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+export function heldSaleOf(sale: PricedSale, note: string, cashierName: string, now: Date): HeldSale {
+  return {
+    id: crypto.randomUUID(),
+    heldAt: now.toISOString(),
+    cashierName,
+    note: note.trim().slice(0, MAX_HELD_NOTE) || null,
+    lines: sale.lines.map((line) => ({
+      variantId: line.item.variantId,
+      productName: line.item.productName,
+      variantName: line.item.variantName,
+      quantityMilli: line.quantityMilli,
+    })),
+    totalMinor: sale.totalMinor,
+  };
+}
+
+/** The held sale as lines from today's catalogue, and the names of items no longer sold. */
+export function resumeHeldSale(held: HeldSale, items: readonly PosCatalogItem[]): { lines: TillLine[]; missing: string[] } {
+  const byId = new Map(items.map((item) => [item.variantId, item]));
+  const lines: TillLine[] = [];
+  const missing: string[] = [];
+  for (const line of held.lines) {
+    const item = byId.get(line.variantId);
+    if (item) lines.push({ item, quantityMilli: line.quantityMilli });
+    else missing.push(line.variantName ? `${line.productName} (${line.variantName})` : line.productName);
+  }
+  return { lines, missing };
 }
 
 // ---------------------------------------------------------------------------

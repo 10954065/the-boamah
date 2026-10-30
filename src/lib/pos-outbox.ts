@@ -89,10 +89,17 @@ const shiftViewSchema = z.object({
   notes: z.string().nullable(),
 });
 
+const noTotals = { CASH: 0, MOMO: 0, CARD: 0 };
+
+// Reports saved before returns and voids existed have none of either.
 const summarySchema = z.object({
   salesCount: z.number().int(),
   salesTotalMinor: z.number().int(),
   takenMinor: tenderTotalsSchema,
+  refundsCount: z.number().int().default(0),
+  refundedMinor: tenderTotalsSchema.default(noTotals),
+  voidsCount: z.number().int().default(0),
+  voidedTotalMinor: z.number().int().default(0),
   expectedMinor: tenderTotalsSchema,
 });
 
@@ -112,7 +119,7 @@ const entryBase = {
   refusedAt: z.string().nullable(),
 };
 
-const entrySchema = z.discriminatedUnion("kind", [
+export const outboxEntrySchema = z.discriminatedUnion("kind", [
   z.object({
     ...entryBase,
     kind: z.literal("sale"),
@@ -134,7 +141,7 @@ export function parseOutbox(value: unknown): { entries: OutboxEntry[]; unreadabl
   const entries: OutboxEntry[] = [];
   const unreadable: unknown[] = [];
   for (const item of value) {
-    const parsed = entrySchema.safeParse(item);
+    const parsed = outboxEntrySchema.safeParse(item);
     if (parsed.success) entries.push(parsed.data as OutboxEntry);
     else unreadable.push(item);
   }
@@ -214,26 +221,46 @@ export function nextStep(entries: readonly OutboxEntry[], cashierId: string): Ou
 // ---------------------------------------------------------------------------
 
 export interface JournalSale {
+  kind: "sale";
   clientId: string;
   totalMinor: number;
   changeMinor: number;
   payments: { method: PosTenderCode; amountMinor: number }[];
+  /** Voided later in the shift: its money went back. */
+  voided?: boolean;
 }
 
-const journalSaleSchema = z.object({
-  clientId: z.string(),
-  totalMinor: z.number().int(),
-  changeMinor: z.number().int(),
-  payments: z.array(z.object({ method: z.enum(POS_TENDERS), amountMinor: z.number().int() })),
-});
+/** Money given back from the drawer (or by mobile money or card) for a return. */
+export interface JournalRefund {
+  kind: "refund";
+  clientId: string;
+  method: PosTenderCode;
+  refundMinor: number;
+}
 
-export function parseJournal(value: unknown): JournalSale[] {
-  const parsed = z.array(journalSaleSchema).safeParse(value);
+export type JournalEntry = JournalSale | JournalRefund;
+
+const journalEntrySchema = z.union([
+  z.object({ kind: z.literal("refund"), clientId: z.string(), method: z.enum(POS_TENDERS), refundMinor: z.number().int() }),
+  z.object({
+    // Journals kept before returns existed hold only sales, without a kind.
+    kind: z.literal("sale").default("sale"),
+    clientId: z.string(),
+    totalMinor: z.number().int(),
+    changeMinor: z.number().int(),
+    payments: z.array(z.object({ method: z.enum(POS_TENDERS), amountMinor: z.number().int() })),
+    voided: z.boolean().optional(),
+  }),
+]);
+
+export function parseJournal(value: unknown): JournalEntry[] {
+  const parsed = z.array(journalEntrySchema).safeParse(value);
   return parsed.success ? parsed.data : [];
 }
 
 export function journalSaleOf(receipt: ReceiptData, clientId: string): JournalSale {
   return {
+    kind: "sale",
     clientId,
     totalMinor: receipt.totalMinor,
     changeMinor: receipt.changeMinor,
@@ -241,8 +268,9 @@ export function journalSaleOf(receipt: ReceiptData, clientId: string): JournalSa
   };
 }
 
-/** The report for a shift closed on the till, from the sales the till made in it. */
-export function localShiftReport(shift: PosShiftView, close: PosShiftClose, journal: readonly JournalSale[]): ShiftReport {
+/** The report for a shift closed on the till, from the sales, voids and refunds the till made in it. */
+export function localShiftReport(shift: PosShiftView, close: PosShiftClose, journal: readonly JournalEntry[]): ShiftReport {
+  const sales = journal.filter((entry): entry is JournalSale => entry.kind === "sale");
   return {
     shift: {
       ...shift,
@@ -250,6 +278,13 @@ export function localShiftReport(shift: PosShiftView, close: PosShiftClose, jour
       countedMinor: { CASH: close.countedCashMinor, MOMO: close.countedMomoMinor, CARD: close.countedCardMinor },
       notes: close.notes?.trim() || null,
     },
-    summary: summariseShift(shift.openingFloatMinor, journal),
+    summary: summariseShift(
+      shift.openingFloatMinor,
+      sales.filter((sale) => !sale.voided),
+      {
+        refunds: journal.filter((entry): entry is JournalRefund => entry.kind === "refund"),
+        voidedTotalsMinor: sales.filter((sale) => sale.voided).map((sale) => sale.totalMinor),
+      },
+    ),
   };
 }

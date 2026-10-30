@@ -15,6 +15,9 @@ const NAV: (AdminNavItem & { permission: Permission })[] = [
   { href: "/admin", label: "Dashboard", group: "Overview", permission: "dashboard:view" },
   { href: "/admin/orders", label: "Orders", group: "Sales", permission: "orders:view" },
   { href: "/admin/customers", label: "Customers", group: "Sales", permission: "customers:view" },
+  { href: "/admin/till", label: "Till sales", group: "Shop till", permission: "pos:manage" },
+  { href: "/admin/till/shifts", label: "Till shifts", group: "Shop till", permission: "pos:manage" },
+  { href: "/admin/till/review", label: "Till review", group: "Shop till", permission: "pos:manage" },
   { href: "/admin/products", label: "Products", group: "Catalogue", permission: "catalog:view" },
   { href: "/admin/categories", label: "Categories", group: "Catalogue", permission: "catalog:view" },
   { href: "/admin/inventory", label: "Inventory", group: "Catalogue", permission: "inventory:adjust" },
@@ -35,7 +38,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[248px_1fr]">
-      <aside className="sticky top-0 hidden h-dvh flex-col overflow-y-auto bg-brand-900 px-3 py-5 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col overflow-y-auto bg-brand-900 px-3 py-5 lg:flex print:hidden">
         <Link href="/admin" className="mb-6 flex items-center gap-2.5 px-2">
           <LogoMark className="h-9 w-9 ring-1 ring-brand-700" />
           <span className="leading-tight">
@@ -47,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6 print:hidden">
           <AdminMobileNav items={items} />
           <p className="text-sm text-ink-muted">
             <span className="font-semibold text-ink">{user.name}</span> · {ROLE_LABELS[user.role]}

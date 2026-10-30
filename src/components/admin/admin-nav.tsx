@@ -13,8 +13,16 @@ export interface AdminNavItem {
   group: string;
 }
 
+/** The item for this page: the one whose address it is, or the longest one it is under. */
+function activeHref(items: readonly AdminNavItem[], pathname: string): string | undefined {
+  return items
+    .filter((item) => (item.href === "/admin" ? pathname === "/admin" : pathname === item.href || pathname.startsWith(`${item.href}/`)))
+    .toSorted((a, b) => b.href.length - a.href.length)[0]?.href;
+}
+
 function NavList({ items, onNavigate }: { items: AdminNavItem[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const current = activeHref(items, pathname);
   const groups = [...new Set(items.map((i) => i.group))];
   return (
     <nav aria-label="Admin" className="space-y-5">
@@ -25,7 +33,7 @@ function NavList({ items, onNavigate }: { items: AdminNavItem[]; onNavigate?: ()
             {items
               .filter((i) => i.group === group)
               .map((item) => {
-                const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+                const active = item.href === current;
                 return (
                   <li key={item.href}>
                     <Link

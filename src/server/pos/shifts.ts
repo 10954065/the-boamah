@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { hasPermission, type RoleCode } from "@/lib/permissions";
 import {
-  summariseShift,
+  summariseShiftSales,
   type PosShiftClose,
   type PosShiftOpen,
   type PosShiftView,
@@ -140,11 +140,14 @@ export async function closePosShift(input: PosShiftClose, user: TillUser, now: D
   return { status: count === 1 ? "closed" : "duplicate", shift: toView(closed), summary: await shiftSummary(closed) };
 }
 
-/** What the shift's recorded sales took, and what should be at the till. */
+/** What the shift's recorded sales took, less the refunds paid out of it, and what should be at the till. */
 export async function shiftSummary(shift: Pick<ShiftRow, "id" | "openingFloatMinor">): Promise<ShiftSummary> {
-  const sales = await prisma.posSale.findMany({
-    where: { shiftId: shift.id, status: "COMPLETED" },
-    select: { totalMinor: true, changeMinor: true, payments: { select: { method: true, amountMinor: true } } },
-  });
-  return summariseShift(shift.openingFloatMinor, sales);
+  const [sales, refunds] = await Promise.all([
+    prisma.posSale.findMany({
+      where: { shiftId: shift.id },
+      select: { status: true, totalMinor: true, changeMinor: true, payments: { select: { method: true, amountMinor: true } } },
+    }),
+    prisma.posReturn.findMany({ where: { shiftId: shift.id }, select: { method: true, refundMinor: true } }),
+  ]);
+  return summariseShiftSales(shift.openingFloatMinor, sales, refunds);
 }

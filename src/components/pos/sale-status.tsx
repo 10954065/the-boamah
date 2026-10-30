@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/feedback";
 import { formatMoney } from "@/lib/money";
+import { POS_TENDER_LABELS } from "@/lib/pos";
+import type { PosRefundRecord } from "@/lib/pos-returns";
 import type { ReceiptData } from "@/lib/pos-till";
-import { PrintArea, ReceiptDocument, type ShopDetails } from "./receipt";
+import { PrintArea, ReceiptDocument, RefundDocument, type ShopDetails } from "./receipt";
 import type { TillPrefs } from "./till-storage";
 
 /** A sale just paid for, on its way to the shop's system while the customer is still there. */
@@ -97,7 +99,7 @@ export function ReceiptDialog({ receipt, copy, waiting, shop, prefs, onClose }: 
   return (
     <Dialog open={receipt !== null} onOpenChange={(open) => !open && onClose()}>
       {receipt ? (
-        <DialogContent title={copy ? "Last receipt" : "Sale complete"} description={`Receipt ${receipt.receiptNumber}`} className="max-w-md">
+        <DialogContent title={copy ? "Copy of a receipt" : "Sale complete"} description={`Receipt ${receipt.receiptNumber}`} className="max-w-md">
           <div className="space-y-4">
             {!copy && receipt.changeMinor > 0 ? (
               <div className="rounded-lg bg-gold-100 px-4 py-3 text-center">
@@ -125,6 +127,56 @@ export function ReceiptDialog({ receipt, copy, waiting, shop, prefs, onClose }: 
           </div>
           <PrintArea>
             <ReceiptDocument receipt={receipt} shop={shop} paper={prefs.paper} copy={copy} />
+          </PrintArea>
+        </DialogContent>
+      ) : null}
+    </Dialog>
+  );
+}
+
+interface RefundSlipDialogProps {
+  refund: PosRefundRecord | null;
+  /** A reprint of an earlier refund slip, marked as a copy. */
+  copy: boolean;
+  shop: ShopDetails;
+  prefs: TillPrefs;
+  onClose: () => void;
+}
+
+/** A refund just given, or a copy of an earlier one, with its slip to print. */
+export function RefundSlipDialog({ refund, copy, shop, prefs, onClose }: RefundSlipDialogProps) {
+  const autoPrint = refund !== null && !copy && prefs.autoPrint;
+  useEffect(() => {
+    if (!autoPrint) return;
+    const timer = window.setTimeout(() => window.print(), 150);
+    return () => window.clearTimeout(timer);
+  }, [autoPrint, refund]);
+
+  return (
+    <Dialog open={refund !== null} onOpenChange={(open) => !open && onClose()}>
+      {refund ? (
+        <DialogContent title={copy ? "Copy of a refund slip" : "Refund recorded"} description={`Refund ${refund.number} for receipt ${refund.receiptNumber}`} className="max-w-md">
+          <div className="space-y-4">
+            {copy ? null : (
+              <div className="rounded-lg bg-gold-100 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gold-700">Give back by {POS_TENDER_LABELS[refund.method].toLowerCase()}</p>
+                <p className="font-display text-4xl font-extrabold tabular-nums text-brand-900">{formatMoney(refund.refundMinor)}</p>
+              </div>
+            )}
+            <div className="max-h-[50dvh] overflow-y-auto">
+              <RefundDocument refund={refund} shop={shop} paper={prefs.paper} copy={copy} />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="lg" onClick={() => window.print()}>
+                <Printer /> Print
+              </Button>
+              <Button size="lg" className="flex-1" onClick={onClose} autoFocus>
+                Done
+              </Button>
+            </div>
+          </div>
+          <PrintArea>
+            <RefundDocument refund={refund} shop={shop} paper={prefs.paper} copy={copy} />
           </PrintArea>
         </DialogContent>
       ) : null}

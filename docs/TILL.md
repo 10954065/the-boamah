@@ -64,6 +64,66 @@ Press **Charge** (or **F4**).
 Press **Complete sale**. The receipt shows on screen with **Print** and **New
 sale**. **Last receipt** in the top bar prints a copy again (marked as a copy).
 
+## Putting a sale on hold
+
+When a customer steps away (to fetch something, or to find money), press
+**Hold** under the sale, type who it is for if you like (for example *Ama, blue
+bag*) and serve the next customer.
+
+- **On hold** in the top bar shows how many sales are waiting. Press it, then
+  **Pick up** to bring one back. Finish or clear the sale on screen first.
+- Nothing is paid or taken off stock while a sale is on hold. Prices are checked
+  again when it is picked up, and anything no longer sold is left out (the till
+  says which).
+- Any cashier on this till can pick up a held sale. The till holds 20 at most;
+  **Discard** the ones nobody is coming back for.
+- Holding works with no internet.
+
+## Sales this shift and copies of receipts
+
+**Sales** in the top bar lists this shift's sales, newest first, with the
+refunds paid out in the shift. Sales still waiting to be sent are marked.
+
+- Tap a sale to see it, then **Print a copy** (marked as a copy).
+- **Find a receipt** finds any sale by its number, even from an earlier day:
+  type *231* for T1-000231, or the full number.
+- The full list needs the internet. With no connection the till shows the sales
+  still waiting on it.
+
+## Voiding a sale
+
+A void cancels a whole sale from the shift that is open now, for example one
+rung up by mistake or one the customer changed their mind about at the counter.
+
+1. Open **Sales**, tap the sale, press **Void sale**.
+2. Choose or type the reason.
+3. A manager approves: a manager signed in on the till approves by themselves;
+   otherwise the manager types their own email and password on the till. They
+   are checked once and not kept.
+4. Press **Void the sale** and give the money back the way the customer paid. The
+   till shows how much by each method.
+
+Every item goes back into stock and the sale no longer counts in the shift. A
+sale from an earlier shift, or one that has had items returned, cannot be
+voided: return the items instead. Voids need the internet.
+
+## Returns and refunds
+
+1. Open **Sales**, find the receipt (the customer's receipt number) and press
+   **Return items**.
+2. Enter how much of each item is coming back, or press **All**. Untick **Fit to
+   sell again** for anything damaged or past its date; it is refunded but not
+   put back into stock.
+3. Choose how the money goes back: cash from the drawer, mobile money (enter the
+   transaction ID of the refund) or card (refund it on the card machine).
+4. Choose or type the reason, and a manager approves (as for a void).
+5. Press **Refund**. Give the amount shown and print the refund slip for the
+   customer.
+
+The customer gets back what they paid for those items, never more. The refund
+is paid out of the shift open now, so the shift report takes it off what is
+expected in the drawer. Returns need the internet.
+
 ## Receipt printer
 
 Any receipt printer that Windows or Android can print to works.
@@ -97,6 +157,8 @@ connection** (the device has a network but cannot reach the shop's system).
 - **Signing in and out needs the internet.** If a cashier signs out with sales
   still waiting, those sales stay on the till and are sent the next time that
   cashier signs in here.
+- **Voids, returns and the full sales list need the internet.** Holding sales
+  and printing the receipts of sales waiting on the till do not.
 - **Three days at most.** A till that has not reached the shop's system for 3
   days stops selling and asks to be connected. Nothing waiting on it is lost.
 - **One window.** The till runs in one window or tab at a time on a device. If
@@ -106,7 +168,9 @@ connection** (the device has a network but cannot reach the shop's system).
 example the till was switched off, or a manager closed the shift while the till
 was offline), it shows in red as **not accepted** with the reason. The money
 was taken, so it stays on the till for a manager: put the reason right, then
-press **Try again**. Only a manager can remove it.
+press **Try again**. Removing it for good needs the internet and a manager's
+approval, and the shop's system keeps a record of what was removed (managers
+see it under *Admin → Till review*).
 
 **Receipt number changed:** if two devices were ever used as the same till, a
 sale sent later can find its receipt number already taken. It is then saved
@@ -121,5 +185,21 @@ this.
    money received (from the mobile money statement) and the card total (from
    the card machine's end of day slip).
 3. Press **Close the shift**. The report shows what the sales should have
-   brought in against what you counted, method by method, as **Exact**,
-   **Over by** or **Short by**. Print it for the manager.
+   brought in, less any refunds, against what you counted, method by method, as
+   **Exact**, **Over by** or **Short by**. Voided sales are listed but not
+   counted. Print it for the manager.
+
+## For managers: the till in the admin
+
+*Admin → Shop till* (Store Managers and Super Admins):
+
+- **Till sales**: the end of day report for today or any days you choose:
+  takings (sales less refunds) by payment method and by cashier, voids, best
+  sellers and day by day. **Print** prints it on ordinary paper. Every sale
+  opens to its items, the price charged against the shelf price, payments,
+  returns and stock changes.
+- **Till shifts**: each shift's expected amounts against what was counted.
+- **Till review**: what a manager should look at: counts that did not balance,
+  sales that sold more than the recorded stock or were charged at another price,
+  voids, refunds, and anything removed from a till. Check each one, add a note
+  if useful, and press **Mark as looked at**.

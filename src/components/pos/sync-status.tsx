@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { CloudUpload, RefreshCw, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { formatMoney } from "@/lib/money";
 import type { PosShiftView } from "@/lib/pos";
 import { newEntryState, type OutboxEntry } from "@/lib/pos-outbox";
 import { cn } from "@/lib/utils";
+import { approvalReady, approvalToSend, ManagerApprovalFields, NO_APPROVAL, ReasonField, reasonReady, withoutPassword } from "./manager-approval";
 import type { TillCashier } from "./sell-screen";
+import { failureOf, tillOnlineApi } from "./till-api";
 import { formatTime, useOnline } from "./till-header";
-import { dismissNotice, removeFromOutbox, updateOutbox } from "./till-storage";
+import { dismissNotice, removeFromJournal, removeFromOutbox, updateOutbox } from "./till-storage";
 import { requestSync, useNotices, useOutbox, useSyncState, useUnreadableCount } from "./till-sync";
 
 /** One line describing an entry, for staff. */
@@ -46,7 +49,7 @@ export function OutboxDialog({ open, onOpenChange, tillCode, cashier }: OutboxDi
   const entries = useOutbox(tillCode);
   const online = useOnline();
   const { syncing, failure, lastAttemptAt } = useSyncState();
-  const [removing, setRemoving] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<OutboxEntry | null>(null);
   const own = entries.filter((entry) => entry.cashierId === cashier.id);
   const ownWaiting = own.filter((entry) => entry.status === "waiting").length;
   const others = othersByName(entries, cashier.id);
@@ -54,12 +57,6 @@ export function OutboxDialog({ open, onOpenChange, tillCode, cashier }: OutboxDi
   function tryAgain(entry: OutboxEntry) {
     updateOutbox(tillCode, (list) => list.map((current) => (current.id === entry.id ? { ...current, ...newEntryState } : current)));
     void requestSync(tillCode, cashier.id);
-  }
-
-  function remove(entry: OutboxEntry) {
-    if (removing !== entry.id) return setRemoving(entry.id);
-    setRemoving(null);
-    removeFromOutbox(tillCode, entry.id);
   }
 
   const status = syncing
@@ -106,11 +103,9 @@ export function OutboxDialog({ open, onOpenChange, tillCode, cashier }: OutboxDi
                           <Button size="sm" variant="outline" disabled={!online} onClick={() => tryAgain(entry)}>
                             Try again
                           </Button>
-                          {cashier.canManage ? (
-                            <Button size="sm" variant={removing === entry.id ? "danger" : "ghost"} onClick={() => remove(entry)}>
-                              {removing === entry.id ? "Remove it for good" : "Remove"}
-                            </Button>
-                          ) : null}
+                          <Button size="sm" variant="ghost" disabled={!online} onClick={() => setRemoving(entry)}>
+                            Remove
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -127,10 +122,84 @@ export function OutboxDialog({ open, onOpenChange, tillCode, cashier }: OutboxDi
 
             {own.some((entry) => entry.status === "refused") ? (
               <p className="text-xs leading-5 text-ink-muted">
-                Items the shop&apos;s system did not accept stay here for a manager. Put the reason right (for example switch the till back on), then press Try again.
+                Items the shop&apos;s system did not accept stay here for a manager. Put the reason right (for example switch the till back on), then press Try
+                again. Removing one for good needs a manager and the internet; the shop keeps a record of it.
               </p>
             ) : null}
           </div>
+          <RemoveEntryDialog entry={removing} tillCode={tillCode} canManage={cashier.canManage} onClose={() => setRemoving(null)} />
+        </DialogContent>
+      ) : null}
+    </Dialog>
+  );
+}
+
+const REMOVAL_REASONS = ["The customer got their money back", "Entered twice by mistake", "Recorded by hand instead"] as const;
+
+interface RemoveEntryDialogProps {
+  entry: OutboxEntry | null;
+  tillCode: string;
+  canManage: boolean;
+  onClose: () => void;
+}
+
+/** Removes a refused entry from the till for good, once the shop's system has kept a record of it. */
+function RemoveEntryDialog({ entry, tillCode, canManage, onClose }: RemoveEntryDialogProps) {
+  const [reason, setReason] = useState("");
+  const [approval, setApproval] = useState(NO_APPROVAL);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = reasonReady(reason) && approvalReady(canManage, approval);
+
+  function close() {
+    setReason("");
+    setApproval(NO_APPROVAL);
+    setError(null);
+    onClose();
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!entry || !ready || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await tillOnlineApi.recordRemoval({ tillCode, entry, reason: reason.trim(), approval: approvalToSend(canManage, approval) });
+      if (result.status === "rejected") return setError(result.error);
+      removeFromOutbox(tillCode, entry.id);
+      // The shop's system never had the sale, so this till's own shift report leaves it out too.
+      if (entry.kind === "sale" && entry.upload.shiftClientId) removeFromJournal(tillCode, entry.upload.shiftClientId, entry.upload.clientId);
+      toast.success("Removed from the till. The shop's system keeps a record of it.");
+      close();
+    } catch (failure) {
+      setError(failureOf(failure).message);
+    } finally {
+      setApproval(withoutPassword);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={entry !== null} onOpenChange={(open) => !open && close()}>
+      {entry ? (
+        <DialogContent title="Remove it for good?" description={describe(entry)} className="max-w-md">
+          <form onSubmit={submit} className="space-y-4">
+            <p className="text-sm text-ink-muted">
+              {entry.kind === "sale"
+                ? "The money for this sale was taken, but the shop's system never accepted the sale. Removing it keeps a record of what it was."
+                : "The shop's system did not accept this. Removing it keeps a record of what it was."}
+            </p>
+            <ReasonField reasons={REMOVAL_REASONS} value={reason} onChange={setReason} />
+            <ManagerApprovalFields canManage={canManage} value={approval} onChange={setApproval} />
+            {error ? (
+              <p role="alert" className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            ) : null}
+            <Button type="submit" variant="danger" size="lg" className="w-full" disabled={!ready || busy}>
+              {busy ? "Removing" : "Remove it for good"}
+            </Button>
+          </form>
         </DialogContent>
       ) : null}
     </Dialog>

@@ -9,7 +9,7 @@ import { formatMoney, parseDecimalToMinor } from "@/lib/money";
 import { countDifferences, POS_TENDER_LABELS, POS_TENDERS, type PosShiftView, type PosTenderCode } from "@/lib/pos";
 import type { ShiftReport } from "@/lib/pos-outbox";
 import { cn } from "@/lib/utils";
-import { differenceLabel, PrintArea, ShiftReportDocument, type ShopDetails } from "./receipt";
+import { differenceLabel, PrintArea, ShiftReportDocument, totalOf, type ShopDetails } from "./receipt";
 import type { PaperWidth } from "./till-storage";
 
 const COUNT_FIELDS: { method: PosTenderCode; label: string; hint: string }[] = [
@@ -164,6 +164,10 @@ function ShiftReportView({ report, confirmed, shop, paper, onDone }: ShiftReport
       <p className="text-sm text-ink-muted">
         {summary.salesCount} {summary.salesCount === 1 ? "sale" : "sales"} for <strong className="text-ink">{formatMoney(summary.salesTotalMinor)}</strong>. Opening float{" "}
         {formatMoney(shift.openingFloatMinor)}.
+        {summary.refundsCount > 0
+          ? ` ${summary.refundsCount} ${summary.refundsCount === 1 ? "refund" : "refunds"} for ${formatMoney(totalOf(summary.refundedMinor))}, taken off what is expected.`
+          : ""}
+        {summary.voidsCount > 0 ? ` ${summary.voidsCount} voided ${summary.voidsCount === 1 ? "sale" : "sales"} (${formatMoney(summary.voidedTotalMinor)}), not counted.` : ""}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

@@ -4,6 +4,9 @@ import { formatMoney } from "@/lib/money";
 import { formatQuantity, type SellingUnitCode } from "@/lib/quantity";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { getDashboardMetrics } from "@/server/admin-metrics";
+import { hasPermission } from "@/lib/permissions";
+import { dayString } from "@/lib/pos-report";
+import { tillTakingsSince } from "@/server/pos/reports";
 import { requireStaffPage } from "@/server/session";
 
 export const metadata = { title: "Dashboard" };
@@ -11,10 +14,14 @@ export const metadata = { title: "Dashboard" };
 const RANGES = [7, 30, 90] as const;
 
 export default async function AdminDashboard({ searchParams }: PageProps<"/admin">) {
-  await requireStaffPage("dashboard:view");
+  const user = await requireStaffPage("dashboard:view");
   const params = await searchParams;
   const days = RANGES.find((r) => String(r) === params.days) ?? 30;
-  const m = await getDashboardMetrics(days);
+  const showTill = hasPermission(user.role, "pos:manage");
+  const now = new Date();
+  const since = new Date(now.getTime() - days * 86_400_000);
+  const [m, till] = await Promise.all([getDashboardMetrics(days), showTill ? tillTakingsSince(since) : null]);
+  const tillPeriod = new URLSearchParams({ from: dayString(since), to: dayString(now) });
   const maxDaily = Math.max(1, ...m.daily.map((d) => d.paidMinor));
 
   return (
@@ -46,6 +53,14 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         <StatCard label="Awaiting online payment" value={formatMoney(m.pendingOnline.amountMinor)} hint={`${m.pendingOnline.count} order(s), not counted as revenue`} href="/admin/orders?status=PENDING_PAYMENT" />
         <StatCard label="Cash on delivery outstanding" value={formatMoney(m.codOutstanding.amountMinor)} hint={`${m.codOutstanding.count} order(s) to collect`} tone={m.codOutstanding.count ? "warning" : "neutral"} href="/admin/orders?payment=UNPAID" />
         <StatCard label="Low stock options" value={String(m.lowStock.length)} hint="At or below their alert level" tone={m.lowStock.length ? "danger" : "neutral"} href="/admin/inventory?low=1" />
+        {till ? (
+          <StatCard
+            label="Till takings"
+            value={formatMoney(till.salesTotalMinor - till.refundedMinor)}
+            hint={`${till.salesCount} sale${till.salesCount === 1 ? "" : "s"} in the shop, less refunds`}
+            href={`/admin/till?${tillPeriod}`}
+          />
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">

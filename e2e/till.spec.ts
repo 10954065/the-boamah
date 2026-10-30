@@ -2,16 +2,18 @@ import { expect, test, type Page } from "@playwright/test";
 import { formatMoney, minorToDecimalString } from "../src/lib/money";
 import { db } from "./db";
 
-/** Registers a shop account and gives it the Cashier role. */
-async function signUpCashier(page: Page, name: string, email: string): Promise<string> {
+const PASSWORD = "e2e-password-123";
+
+/** Registers a shop account and gives it a staff role (Cashier unless said otherwise). */
+async function signUpCashier(page: Page, name: string, email: string, role: "CASHIER" | "STORE_MANAGER" = "CASHIER"): Promise<string> {
   await page.goto("/register");
   await page.getByLabel("Full name").fill(name);
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
-  await page.locator("#password").fill("e2e-password-123");
-  await page.locator("#confirmPassword").fill("e2e-password-123");
+  await page.locator("#password").fill(PASSWORD);
+  await page.locator("#confirmPassword").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL(/\/account$/);
-  const user = await db.user.update({ where: { email }, data: { role: "CASHIER" } });
+  const user = await db.user.update({ where: { email }, data: { role } });
   return user.id;
 }
 
@@ -48,6 +50,8 @@ test.describe("in-shop till", () => {
   const stamp = Date.now();
   const email = `till.e2e.${stamp}@example.com`;
   const offlineEmail = `till.offline.e2e.${stamp}@example.com`;
+  const returnsEmail = `till.returns.e2e.${stamp}@example.com`;
+  const managerEmail = `till.manager.e2e.${stamp}@example.com`;
   const barcode = `E2E${stamp}`;
   let product = { variantId: "", name: "", priceMinor: 0, stockMilli: 0, barcode: null as string | null };
 
@@ -63,11 +67,16 @@ test.describe("in-shop till", () => {
   });
 
   test.afterAll(async () => {
-    for (const address of [email, offlineEmail]) {
+    for (const address of [email, offlineEmail, returnsEmail, managerEmail]) {
       const user = await db.user.findUnique({ where: { email: address } });
       if (!user) continue;
       const sales = await db.posSale.findMany({ where: { cashierId: user.id }, select: { id: true } });
-      await db.inventoryMovement.deleteMany({ where: { posSaleId: { in: sales.map((s) => s.id) } } });
+      const saleIds = sales.map((s) => s.id);
+      const returns = await db.posReturn.findMany({ where: { OR: [{ saleId: { in: saleIds } }, { cashierId: user.id }, { approvedById: user.id }] }, select: { id: true } });
+      await db.inventoryMovement.deleteMany({ where: { OR: [{ posSaleId: { in: saleIds } }, { posReturnId: { in: returns.map((r) => r.id) } }] } });
+      await db.posReturn.deleteMany({ where: { id: { in: returns.map((r) => r.id) } } });
+      await db.auditLog.deleteMany({ where: { actorId: user.id } });
+      await db.rateLimit.deleteMany({ where: { key: { startsWith: "app:pos-approval" }, OR: [{ key: { endsWith: user.id } }, { key: { endsWith: address } }] } });
       await db.posSale.deleteMany({ where: { cashierId: user.id } });
       await db.posShift.deleteMany({ where: { cashierId: user.id } });
       await db.user.delete({ where: { id: user.id } });
@@ -213,5 +222,102 @@ test.describe("in-shop till", () => {
     expect(recorded.map((sale) => sale.receiptNumber)).toEqual(numbers);
     expect(recorded.every((sale) => sale.shift?.closedAt !== null && sale.shift?.openingFloatMinor === 10_000)).toBe(true);
     expect(recorded[0]?.shift?.countedCashMinor).toBe(10_000 + product.priceMinor * numbers.length);
+  });
+
+  test("a sale is held and picked up again, and a manager approves a return and a void", async ({ page, browser }) => {
+    // A manager with their own account, who will approve on the cashier's till.
+    const managerContext = await browser.newContext();
+    await signUpCashier(await managerContext.newPage(), "Kwame Manager", managerEmail, "STORE_MANAGER");
+    await managerContext.close();
+
+    const cashierId = await signUpCashier(page, "Efua Returns", returnsEmail);
+    await page.goto("/pos");
+    await page.getByLabel("Cash in the drawer").fill("100");
+    await page.getByRole("button", { name: `Open the till with ${formatMoney(10_000)}` }).click();
+    const search = page.getByRole("searchbox", { name: "Search products or scan a barcode" });
+    await expect(page.getByRole("main").getByRole("listitem").first()).toBeVisible();
+    const stockBefore = (await db.productVariant.findUniqueOrThrow({ where: { id: product.variantId } })).stockMilli;
+    const sale = page.getByRole("region", { name: "Current sale" });
+
+    // Two on hold while someone else is served, then picked up again.
+    await search.fill(barcode);
+    await search.press("Enter");
+    await sale.getByRole("button", { name: `One more ${product.name}` }).click();
+    await sale.getByRole("button", { name: "Put this sale on hold" }).click();
+    const hold = page.getByRole("dialog", { name: "Put this sale on hold" });
+    await hold.getByLabel(/Who is it for/).fill("Blue bag");
+    await hold.getByRole("button", { name: "Put on hold" }).click();
+    await expect(sale.getByText("Scan a barcode or tap a product to start a sale.")).toBeVisible();
+    await page.getByRole("button", { name: "On hold (1)" }).click();
+    const held = page.getByRole("dialog", { name: "Sales on hold" });
+    await expect(held.getByText("Blue bag")).toBeVisible();
+    await held.getByRole("button", { name: "Pick up" }).click();
+    await expect(sale.getByRole("button", { name: /^Charge/ })).toContainText(formatMoney(product.priceMinor * 2));
+
+    async function sellForCash(totalMinor: number): Promise<string> {
+      await sale.getByRole("button", { name: /^Charge/ }).click();
+      const pay = page.getByRole("dialog", { name: "Take payment" });
+      await pay.getByLabel("Cash received").fill(minorToDecimalString(totalMinor));
+      await pay.getByRole("button", { name: "Complete sale" }).click();
+      const done = page.getByRole("dialog", { name: "Sale complete" });
+      const number = (await done.getByText(/^Receipt T1-\d{6}$/).first().textContent())!.replace("Receipt ", "");
+      await done.getByRole("button", { name: "New sale" }).click();
+      return number;
+    }
+    const kept = await sellForCash(product.priceMinor * 2);
+    await search.fill(barcode);
+    await search.press("Enter");
+    const mistaken = await sellForCash(product.priceMinor);
+
+    // One of the two comes back. A wrong manager password is refused; the right one approves.
+    await page.getByRole("button", { name: "Sales" }).click();
+    const sheet = page.getByRole("dialog", { name: "Sales this shift" });
+    await sheet.getByRole("button", { name: new RegExp(kept) }).click();
+    await sheet.getByRole("button", { name: "Return items" }).click();
+    const returning = page.getByRole("dialog", { name: `Return items from ${kept}` });
+    await returning.getByLabel(/comes back/).fill("1");
+    await returning.getByRole("button", { name: "Wrong item" }).click();
+    await returning.getByLabel("Manager's email").fill(managerEmail);
+    await returning.getByLabel("Manager's password").fill("not-the-password");
+    await returning.getByRole("button", { name: /^Refund GH/ }).click();
+    await expect(returning.getByRole("alert")).toContainText("not right");
+    await returning.getByLabel("Manager's password").fill(PASSWORD);
+    await returning.getByRole("button", { name: /^Refund GH/ }).click();
+    const slip = page.getByRole("dialog", { name: "Refund recorded" });
+    await expect(slip.getByText(formatMoney(product.priceMinor)).first()).toBeVisible();
+    await page.emulateMedia({ media: "print" });
+    await expect(page.locator(".pos-print")).toContainText("Refund total");
+    await expect(page.locator(".pos-print")).toContainText("System built by Sunleon Router Enterprise");
+    await page.emulateMedia({ media: "screen" });
+    await slip.getByRole("button", { name: "Done" }).click();
+
+    // The other sale was a mistake: voided.
+    await sheet.getByRole("button", { name: "All sales" }).click();
+    await sheet.getByRole("button", { name: new RegExp(mistaken) }).click();
+    await sheet.getByRole("button", { name: "Void sale" }).click();
+    const voiding = page.getByRole("dialog", { name: `Void receipt ${mistaken}` });
+    await voiding.getByRole("button", { name: "Rung up by mistake" }).click();
+    await voiding.getByLabel("Manager's email").fill(managerEmail);
+    await voiding.getByLabel("Manager's password").fill(PASSWORD);
+    await voiding.getByRole("button", { name: /^Void the sale/ }).click();
+    await expect(sheet.getByText(/^Voided at/)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    const sales = await db.posSale.findMany({ where: { cashierId }, include: { returns: true } });
+    expect(sales.find((s) => s.receiptNumber === mistaken)?.status).toBe("VOIDED");
+    expect(sales.find((s) => s.receiptNumber === kept)?.returns).toMatchObject([{ refundMinor: product.priceMinor, method: "CASH" }]);
+    // Three sold, one back from the return and one from the void.
+    expect((await db.productVariant.findUniqueOrThrow({ where: { id: product.variantId } })).stockMilli).toBe(stockBefore - 1000);
+
+    // The count balances once the refund is taken off and the void is left out.
+    await page.getByRole("button", { name: "Close shift" }).click();
+    const close = page.getByRole("dialog", { name: "Close the shift" });
+    await close.getByLabel("Cash in the drawer").fill(minorToDecimalString(10_000 + product.priceMinor));
+    await close.getByRole("button", { name: "Close the shift" }).click();
+    const report = page.getByRole("dialog", { name: "Shift closed" });
+    await expect(report.getByText(/1 refund for/)).toBeVisible();
+    await expect(report.getByText(/1 voided sale/)).toBeVisible();
+    await expect(report.getByRole("row", { name: /^Cash/ })).toContainText("Exact");
+    await report.getByRole("button", { name: "Done" }).click();
   });
 });

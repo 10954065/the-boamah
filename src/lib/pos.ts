@@ -171,12 +171,24 @@ export interface ShiftSaleTotals {
   payments: readonly { method: PosTenderCode; amountMinor: number }[];
 }
 
+/** Money given back for goods returned during the shift, by how it was given back. */
+export interface ShiftRefundTotals {
+  method: PosTenderCode;
+  refundMinor: number;
+}
+
 export interface ShiftSummary {
   salesCount: number;
   salesTotalMinor: number;
   /** Money taken per method. Cash is net of the change given back. */
   takenMinor: TenderTotals;
-  /** What should be at the till at close: cash includes the opening float. */
+  /** Returns paid out of the shift, per method. */
+  refundsCount: number;
+  refundedMinor: TenderTotals;
+  /** Sales cancelled during the shift; their money went straight back, so they count nowhere else. */
+  voidsCount: number;
+  voidedTotalMinor: number;
+  /** What should be at the till at close: taken less refunded, and cash includes the opening float. */
   expectedMinor: TenderTotals;
 }
 
@@ -188,17 +200,47 @@ export type ShiftCloseResult =
   | { status: "closed" | "duplicate"; shift: PosShiftView; summary: ShiftSummary }
   | { status: "rejected"; error: string };
 
-export function summariseShift(openingFloatMinor: number, sales: readonly ShiftSaleTotals[]): ShiftSummary {
+interface ShiftAdjustments {
+  refunds?: readonly ShiftRefundTotals[];
+  /** Totals of the sales voided in the shift. */
+  voidedTotalsMinor?: readonly number[];
+}
+
+/** The shift's completed sales, less what returns gave back. Voided sales are only counted. */
+export function summariseShift(openingFloatMinor: number, sales: readonly ShiftSaleTotals[], { refunds = [], voidedTotalsMinor = [] }: ShiftAdjustments = {}): ShiftSummary {
   const payments = sales.flatMap((sale) => sale.payments);
   const paidBy = (method: PosTenderCode) => payments.filter((p) => p.method === method).reduce((sum, p) => sum + p.amountMinor, 0);
+  const refundedBy = (method: PosTenderCode) => refunds.filter((r) => r.method === method).reduce((sum, r) => sum + r.refundMinor, 0);
   const changeMinor = sales.reduce((sum, sale) => sum + sale.changeMinor, 0);
   const takenMinor: TenderTotals = { CASH: paidBy("CASH") - changeMinor, MOMO: paidBy("MOMO"), CARD: paidBy("CARD") };
+  const refundedMinor: TenderTotals = { CASH: refundedBy("CASH"), MOMO: refundedBy("MOMO"), CARD: refundedBy("CARD") };
   return {
     salesCount: sales.length,
     salesTotalMinor: sales.reduce((sum, sale) => sum + sale.totalMinor, 0),
     takenMinor,
-    expectedMinor: { ...takenMinor, CASH: openingFloatMinor + takenMinor.CASH },
+    refundsCount: refunds.length,
+    refundedMinor,
+    voidsCount: voidedTotalsMinor.length,
+    voidedTotalMinor: voidedTotalsMinor.reduce((sum, total) => sum + total, 0),
+    expectedMinor: {
+      CASH: openingFloatMinor + takenMinor.CASH - refundedMinor.CASH,
+      MOMO: takenMinor.MOMO - refundedMinor.MOMO,
+      CARD: takenMinor.CARD - refundedMinor.CARD,
+    },
   };
+}
+
+/** A shift's summary from all its recorded sales, voided or not, and its refunds. */
+export function summariseShiftSales(
+  openingFloatMinor: number,
+  sales: readonly (ShiftSaleTotals & { status: "COMPLETED" | "VOIDED" })[],
+  refunds: readonly ShiftRefundTotals[],
+): ShiftSummary {
+  return summariseShift(
+    openingFloatMinor,
+    sales.filter((sale) => sale.status === "COMPLETED"),
+    { refunds, voidedTotalsMinor: sales.filter((sale) => sale.status === "VOIDED").map((sale) => sale.totalMinor) },
+  );
 }
 
 /** Counted minus expected for each method: below zero is money missing. */

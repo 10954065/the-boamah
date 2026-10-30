@@ -1,11 +1,11 @@
 import type { PosShiftView } from "@/lib/pos";
-import { parseJournal, parseOutbox, type JournalSale, type OutboxEntry, type ShiftRecord } from "@/lib/pos-outbox";
-import type { ReceiptData } from "@/lib/pos-till";
+import { parseJournal, parseOutbox, type JournalEntry, type OutboxEntry, type ShiftRecord } from "@/lib/pos-outbox";
+import { MAX_HELD_SALES, parseHeldSales, type HeldSale, type ReceiptData } from "@/lib/pos-till";
 
 /**
  * What the till keeps on the device itself: its receipt counter, the outbox
- * of things the server has not confirmed yet, the open shift, the last
- * receipt (for a reprint) and the printer settings. Storage can be
+ * of things the server has not confirmed yet, the open shift, sales on hold,
+ * the last receipt (for a reprint) and the printer settings. Storage can be
  * unavailable (private windows), so every read falls back; writes that matter
  * report whether they were saved.
  */
@@ -167,31 +167,38 @@ export function saveShiftRecord(tillCode: string, record: ShiftRecord): void {
 
 const journalKey = (tillCode: string) => `${tillCode}.journal`;
 
-function parseJournals(value: unknown): Record<string, JournalSale[]> {
+function parseJournals(value: unknown): Record<string, JournalEntry[]> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value).map(([shiftId, sales]) => [shiftId, parseJournal(sales)]));
+  return Object.fromEntries(Object.entries(value).map(([shiftId, entries]) => [shiftId, parseJournal(entries)]));
 }
 
-function loadJournals(tillCode: string): Record<string, JournalSale[]> {
+function loadJournals(tillCode: string): Record<string, JournalEntry[]> {
   return readParsed(journalKey(tillCode), parseJournals);
 }
 
-/** The sales this till made in a shift, for a report worked out offline. */
-export function journalFor(tillCode: string, shiftClientId: string): JournalSale[] {
+/** The sales, voids and refunds this till made in a shift, for a report worked out offline. */
+export function journalFor(tillCode: string, shiftClientId: string): JournalEntry[] {
   return loadJournals(tillCode)[shiftClientId] ?? [];
 }
 
-export function addToJournal(tillCode: string, shiftClientId: string, sale: JournalSale): void {
+function changeJournal(tillCode: string, shiftClientId: string, change: (entries: JournalEntry[]) => JournalEntry[]): void {
   const journals = loadJournals(tillCode);
-  const sales = (journals[shiftClientId] ?? []).filter((s) => s.clientId !== sale.clientId);
-  writeChecked(journalKey(tillCode), { ...journals, [shiftClientId]: [...sales, sale] });
+  writeChecked(journalKey(tillCode), { ...journals, [shiftClientId]: change(journals[shiftClientId] ?? []) });
 }
 
-export function removeFromJournal(tillCode: string, shiftClientId: string, saleClientId: string): void {
-  const journals = loadJournals(tillCode);
-  const sales = journals[shiftClientId];
-  if (!sales) return;
-  writeChecked(journalKey(tillCode), { ...journals, [shiftClientId]: sales.filter((s) => s.clientId !== saleClientId) });
+export function addToJournal(tillCode: string, shiftClientId: string, entry: JournalEntry): void {
+  changeJournal(tillCode, shiftClientId, (entries) => [...entries.filter((e) => e.clientId !== entry.clientId), entry]);
+}
+
+export function removeFromJournal(tillCode: string, shiftClientId: string, clientId: string): void {
+  if (!loadJournals(tillCode)[shiftClientId]) return;
+  changeJournal(tillCode, shiftClientId, (entries) => entries.filter((e) => e.clientId !== clientId));
+}
+
+/** A sale of the shift was voided: its money went back. */
+export function markVoidedInJournal(tillCode: string, shiftClientId: string, saleClientId: string): void {
+  if (!loadJournals(tillCode)[shiftClientId]) return;
+  changeJournal(tillCode, shiftClientId, (entries) => entries.map((e) => (e.kind === "sale" && e.clientId === saleClientId ? { ...e, voided: true } : e)));
 }
 
 /** Keeps only the given shifts' lists. */
@@ -249,6 +256,28 @@ export function loadLastContact(tillCode: string): string | null {
 export function noteContact(tillCode: string, serverTime: string): void {
   const last = loadLastContact(tillCode);
   if (parseTime(serverTime) && (!last || Date.parse(serverTime) > Date.parse(last))) writeChecked(contactKey(tillCode), serverTime);
+}
+
+// ---------------------------------------------------------------------------
+// Sales put on hold, for any cashier on this till to pick up again.
+// ---------------------------------------------------------------------------
+
+const heldKey = (tillCode: string) => `${tillCode}.held`;
+
+export function loadHeldSales(tillCode: string): HeldSale[] {
+  return readParsed(heldKey(tillCode), parseHeldSales);
+}
+
+/** False when the till already holds as many as it can, or the device's storage is full. */
+export function holdSale(tillCode: string, held: HeldSale): boolean {
+  const current = loadHeldSales(tillCode);
+  if (current.length >= MAX_HELD_SALES) return false;
+  return writeChecked(heldKey(tillCode), [...current, held]);
+}
+
+export function removeHeldSale(tillCode: string, id: string): void {
+  const kept = loadHeldSales(tillCode).filter((held) => held.id !== id);
+  writeChecked(heldKey(tillCode), kept.length > 0 ? kept : null);
 }
 
 // ---------------------------------------------------------------------------

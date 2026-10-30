@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DoorClosed, Printer, ReceiptText, RefreshCw } from "lucide-react";
+import { DoorClosed, History, PauseCircle, Printer, ReceiptText, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
@@ -13,21 +13,27 @@ import {
   buildSaleUpload,
   catalogCategories,
   findByCode,
+  heldSaleOf,
   isWeighed,
+  MAX_HELD_SALES,
   priceSale,
   receiptFor,
+  resumeHeldSale,
   searchCatalog,
   setLineQuantity,
+  type HeldSale,
   type PosCatalogItem,
   type PricedTillLine,
   type ReceiptData,
   type TillLine,
 } from "@/lib/pos-till";
 import { MILLI } from "@/lib/quantity";
+import { HeldSalesDialog, HoldSaleDialog } from "./held-sales";
 import { ProductGrid } from "./product-grid";
 import { QuantityDialog, type QuantityTarget } from "./quantity-dialog";
 import type { ShopDetails } from "./receipt";
 import { SalePanel } from "./sale-panel";
+import { SalesHistorySheet } from "./sales-history";
 import { ReceiptDialog, SendingDialog, type SendState } from "./sale-status";
 import { SyncStatus, TillBanner } from "./sync-status";
 import { TenderDialog } from "./tender-dialog";
@@ -36,16 +42,18 @@ import { TillSettingsDialog } from "./till-settings-dialog";
 import {
   addToJournal,
   addToOutbox,
+  holdSale,
   issueReceiptSequence,
   loadLastReceipt,
   loadOutbox,
   releaseReceiptSequence,
   removeFromJournal,
   removeFromOutbox,
+  removeHeldSale,
   saveLastReceipt,
   type TillPrefs,
 } from "./till-storage";
-import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL } from "./till-sync";
+import { ANSWER_WAIT_MS, sendNow, STORAGE_FULL, useHeldSales } from "./till-sync";
 import { useTillCatalog } from "./use-till-catalog";
 
 export interface TillInfo {
@@ -88,7 +96,8 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
   const [tendering, setTendering] = useState(false);
   const [sending, setSending] = useState<SendState | null>(null);
   const [receipt, setReceipt] = useState<{ data: ReceiptData; copy: boolean; waiting: boolean } | null>(null);
-  const [panel, setPanel] = useState<"sale" | "settings" | null>(null);
+  const [panel, setPanel] = useState<"sale" | "settings" | "hold" | "held" | "history" | null>(null);
+  const heldCount = useHeldSales(till.code).length;
 
   const sale = useMemo(() => priceSale(lines, now), [lines, now]);
   const results = useMemo(() => searchCatalog(catalog.items, query, categoryId), [catalog.items, query, categoryId]);
@@ -211,6 +220,31 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     setSending(null);
   }
 
+  /** Puts the sale aside for later; nothing is paid or taken off stock. */
+  function holdCurrent(note: string) {
+    if (!holdSale(till.code, heldSaleOf(sale, note, cashier.name, new Date()))) {
+      toast.error(`The sale could not be put on hold. The till holds ${MAX_HELD_SALES} at most: pick one up or discard one first.`);
+      return;
+    }
+    setPanel(null);
+    setLines([]);
+    setHighlightId(null);
+    toast.success("Sale put on hold.");
+  }
+
+  function pickUp(held: HeldSale) {
+    if (catalog.status === "loading") {
+      toast.info("The products are still loading. Try again in a moment.");
+      return;
+    }
+    const { lines: resumed, missing } = resumeHeldSale(held, catalog.items);
+    removeHeldSale(till.code, held.id);
+    setLines(resumed);
+    setHighlightId(null);
+    setPanel(null);
+    if (missing.length > 0) toast.warning(`Left out because ${missing.length === 1 ? "it is" : "they are"} no longer sold: ${missing.join(", ")}.`);
+  }
+
   function showLastReceipt() {
     const last = loadLastReceipt(till.code);
     if (last) setReceipt({ data: last, copy: true, waiting: false });
@@ -245,6 +279,7 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     onStep: step,
     onRemove: removeLine,
     onClear: () => setLines([]),
+    onHold: () => setPanel("hold"),
     onCharge: charge,
   };
 
@@ -252,6 +287,10 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
     <div className="flex h-dvh flex-col">
       <TillHeader till={till} cashierName={cashier.name} shiftOpenedAt={shift.openedAt} status={<SyncStatus tillCode={till.code} cashier={cashier} />}>
         <HeaderAction icon={RefreshCw} label="Refresh products" className="hidden sm:inline-flex" onClick={() => void refreshCatalog()} />
+        <HeaderAction icon={History} label="Sales" onClick={() => setPanel("history")} />
+        <HeaderAction icon={PauseCircle} label={heldCount > 0 ? `On hold (${heldCount})` : "On hold"} onClick={() => setPanel("held")}>
+          {heldCount > 0 ? <span aria-hidden="true" className="rounded-full bg-gold-400 px-1.5 text-[11px] font-bold leading-4 text-brand-900 xl:hidden">{heldCount}</span> : null}
+        </HeaderAction>
         <HeaderAction icon={ReceiptText} label="Last receipt" onClick={showLastReceipt} />
         <HeaderAction icon={Printer} label="Printer" onClick={() => setPanel("settings")} />
         <HeaderAction icon={DoorClosed} label="Close shift" title={busy ? "Finish or clear the sale first" : "Close shift"} disabled={busy} onClick={onCloseShift} />
@@ -310,6 +349,18 @@ export function SellScreen({ till, cashier, shift, shop, prefs, onPrefsChange, o
         </SheetContent>
       </Dialog>
 
+      <HoldSaleDialog open={panel === "hold"} onOpenChange={(open) => setPanel(open ? "hold" : null)} itemCount={lines.length} totalMinor={sale.totalMinor} onHold={holdCurrent} />
+      <HeldSalesDialog open={panel === "held"} onOpenChange={(open) => setPanel(open ? "held" : null)} tillCode={till.code} canPickUp={lines.length === 0 && sending === null} onPickUp={pickUp} />
+      <SalesHistorySheet
+        open={panel === "history"}
+        onOpenChange={(open) => setPanel(open ? "history" : null)}
+        till={till}
+        cashier={cashier}
+        shift={shift}
+        shop={shop}
+        prefs={prefs}
+        onStockChanged={() => void refreshCatalog()}
+      />
       <QuantityDialog target={quantityTarget} onClose={() => setQuantityTarget(null)} onConfirm={confirmQuantity} onRemove={removeLine} />
       <TenderDialog open={tendering} totalMinor={sale.totalMinor} onOpenChange={setTendering} onComplete={(tenders) => void complete(tenders)} />
       <SendingDialog

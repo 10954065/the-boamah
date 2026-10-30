@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import type { StoreSettings } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { DEFAULT_SETTINGS } from "@/server/settings";
 
 const TABLES = [
-  "PosPayment", "PosSaleItem", "PosSale", "PosShift", "PosTill",
+  "PosReturnItem", "PosReturn", "PosPayment", "PosSaleItem", "PosSale", "PosShift", "PosTill",
   "Review", "StockAlert", "PriceTier", "PaymentEvent", "Notification", "AuditLog", "InventoryMovement", "Payment", "CouponRedemption", "OrderNote",
   "OrderStatusHistory", "OrderItem", "Order", "CartItem", "Cart", "WishlistItem", "Address", "ProductImage",
   "ProductVariant", "_CouponProducts", "_CouponCategories", "Coupon", "Product", "Category", "DeliveryZone",
@@ -89,4 +90,11 @@ export async function createTill(code = "T1", isActive = true) {
 export async function createStaff(role: "CASHIER" | "STORE_MANAGER" | "CUSTOMER" = "CASHIER") {
   const id = randomUUID();
   return prisma.user.create({ data: { id, name: `Staff ${id.slice(0, 6)}`, email: `${id.slice(0, 8)}@example.com`, role } });
+}
+
+/** Staff who can sign in with a password, as a manager approving at the till does. */
+export async function createStaffWithPassword(password: string, role: "CASHIER" | "STORE_MANAGER" = "STORE_MANAGER") {
+  const user = await createStaff(role);
+  await prisma.account.create({ data: { id: randomUUID(), accountId: user.id, providerId: "credential", userId: user.id, password: await hashPassword(password) } });
+  return user;
 }

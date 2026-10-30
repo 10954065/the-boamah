@@ -18,6 +18,9 @@ const MOVEMENT_LABELS: Record<string, string> = {
   CORRECTION: "Correction",
   ORDER_RESERVED: "Order",
   ORDER_RELEASED: "Order cancelled",
+  POS_SALE: "Till sale",
+  POS_VOID: "Till sale voided",
+  POS_RETURN: "Returned at the till",
 };
 
 export default async function InventoryPage({ searchParams }: PageProps<"/admin/inventory">) {

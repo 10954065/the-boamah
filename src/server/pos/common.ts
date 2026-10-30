@@ -1,6 +1,14 @@
 import "server-only";
 import type { Tx } from "@/lib/db";
+import type { RoleCode } from "@/lib/permissions";
 import type { PosRejectReason } from "@/lib/pos";
+
+/** The signed-in person at the till. */
+export interface TillUser {
+  id: string;
+  name: string;
+  role: RoleCode;
+}
 
 /** Something the till sent that the server will not record; the till shows the reason. */
 export class PosRejected extends Error {

@@ -263,6 +263,18 @@ sent in order when the connection is back. Nothing needs setting up on the
 server for this; clearing the browser's data for the till address deletes
 anything still waiting, so staff are told not to.
 
+**Voids, returns and review:** voids, returns (refunds) and removing something
+the server refused need the internet and a manager. A cashier's till accepts a
+manager's own email and password for the approval; it is checked by the server
+and never stored. After 5 wrong tries by a cashier or for a manager's email in
+15 minutes (or 20 for an email in a day) approvals stop for a while; each wrong
+try is in the audit log (*pos.approval.failed*). Approvals that go through do
+not count. Managers with weak passwords should change them, as a cashier can
+try a manager's password this way. Refunds are taken off the expected amounts of the shift they are paid
+from. Managers see the end of day report, every shift's count and everything
+to look at under *Admin → Shop till*; each void, return, removal and review is
+also in the audit log.
+
 ## What production needs
 
 | Piece | Used for | Without it |

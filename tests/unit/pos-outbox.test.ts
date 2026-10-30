@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PosSaleResult, PosSaleUpload, PosShiftClose, PosShiftView, ShiftCloseResult, ShiftOpenResult } from "@/lib/pos";
+import { summariseShift, type PosSaleResult, type PosSaleUpload, type PosShiftClose, type PosShiftView, type ShiftCloseResult, type ShiftOpenResult } from "@/lib/pos";
 import {
   effectiveShift,
   journalSaleOf,
@@ -7,6 +7,7 @@ import {
   newEntryState,
   newerRecord,
   nextStep,
+  parseJournal,
   parseOutbox,
   type OutboxEntry,
   type SaleEntry,
@@ -174,6 +175,37 @@ describe("a shift closed on the till", () => {
     expect(report.shift).toMatchObject({ closedAt: close.closedAt, countedMinor: { CASH: 21_500, MOMO: 0, CARD: 0 }, notes: null });
     expect(report.summary).toMatchObject({ salesCount: 1, salesTotalMinor: 1500, expectedMinor: { CASH: 21_500, MOMO: 0, CARD: 0 } });
   });
+
+  it("leaves voided sales out of the takings and takes refunds off what is expected", () => {
+    const shift = shiftView(SHIFT_A, AMA, 20_000);
+    const kept = saleEntry({ totalMinor: 5000, paidMinor: 5000 });
+    const voided = saleEntry({ totalMinor: 1200, paidMinor: 1200 });
+    const close: PosShiftClose = { clientId: SHIFT_A, closedAt: "2026-10-29T17:00:00.000Z", countedCashMinor: 0, countedMomoMinor: 0, countedCardMinor: 0 };
+    const report = localShiftReport(shift, close, [
+      journalSaleOf(kept.receipt, kept.id),
+      { ...journalSaleOf(voided.receipt, voided.id), voided: true },
+      { kind: "refund", clientId: uuid(), method: "CASH", refundMinor: 800 },
+    ]);
+    expect(report.summary).toMatchObject({
+      salesCount: 1,
+      salesTotalMinor: 5000,
+      voidsCount: 1,
+      voidedTotalMinor: 1200,
+      refundsCount: 1,
+      refundedMinor: { CASH: 800, MOMO: 0, CARD: 0 },
+      expectedMinor: { CASH: 24_200, MOMO: 0, CARD: 0 },
+    });
+  });
+
+  it("reads journals and reports kept before returns existed", () => {
+    const old = { clientId: "sale-1", totalMinor: 900, changeMinor: 100, payments: [{ method: "CASH", amountMinor: 1000 }] };
+    expect(parseJournal([old])).toEqual([{ kind: "sale", ...old }]);
+
+    const closing = closeEntry(SHIFT_A);
+    const stored = JSON.parse(JSON.stringify(closing)) as { report: { summary: Record<string, unknown> } };
+    for (const key of ["refundsCount", "refundedMinor", "voidsCount", "voidedTotalMinor"]) delete stored.report.summary[key];
+    expect(parseOutbox([stored]).entries).toEqual([closing]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -243,7 +275,7 @@ function fakeApi(server: FakeServer) {
       calls.push("close");
       if (server.offline) throw new Error("offline");
       const shift = { ...shiftView(input.clientId), closedAt: input.closedAt };
-      const summary = { salesCount: 0, salesTotalMinor: 0, takenMinor: { CASH: 0, MOMO: 0, CARD: 0 }, expectedMinor: { CASH: 0, MOMO: 0, CARD: 0 } };
+      const summary = summariseShift(0, []);
       return { ...(server.close?.() ?? { status: "closed", shift, summary }), serverTime: SERVER_TIME };
     },
   };

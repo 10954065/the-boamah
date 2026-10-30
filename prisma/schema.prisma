@@ -60,6 +60,12 @@ model User {
   stockAlerts        StockAlert[]
   posSales           PosSale[]            @relation("PosSaleCashier")
   posShifts          PosShift[]           @relation("PosShiftCashier")
+  posSalesVoided     PosSale[]            @relation("PosSaleVoidedBy")
+  posSalesReviewed   PosSale[]            @relation("PosSaleReviewedBy")
+  posShiftsReviewed  PosShift[]           @relation("PosShiftReviewedBy")
+  posReturns         PosReturn[]          @relation("PosReturnCashier")
+  posReturnsApproved PosReturn[]          @relation("PosReturnApprovedBy")
+  posReturnsReviewed PosReturn[]          @relation("PosReturnReviewedBy")
 
   @@index([role])
   @@index([createdAt])
@@ -327,6 +333,8 @@ enum InventoryMovementType {
   ORDER_RESERVED
   ORDER_RELEASED
   POS_SALE
+  POS_VOID
+  POS_RETURN
 }
 
 model InventoryMovement {
@@ -341,6 +349,8 @@ model InventoryMovement {
   order             Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
   posSaleId         String?
   posSale           PosSale?              @relation(fields: [posSaleId], references: [id], onDelete: SetNull)
+  posReturnId       String?
+  posReturn         PosReturn?            @relation(fields: [posReturnId], references: [id], onDelete: SetNull)
   actorId           String?
   actor             User?                 @relation(fields: [actorId], references: [id], onDelete: SetNull)
   createdAt         DateTime              @default(now())
@@ -349,9 +359,11 @@ model InventoryMovement {
   // being deducted or restored twice on retries / duplicate webhooks.
   @@unique([orderId, variantId, type])
   @@unique([posSaleId, variantId, type])
+  @@unique([posReturnId, variantId, type])
   @@index([variantId, createdAt])
   @@index([orderId])
   @@index([posSaleId])
+  @@index([posReturnId])
 }
 
 // ---------------------------------------------------------------------------
@@ -803,8 +815,9 @@ model PosTill {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  shifts PosShift[]
-  sales  PosSale[]
+  shifts  PosShift[]
+  sales   PosSale[]
+  returns PosReturn[]
 }
 
 model PosShift {
@@ -825,8 +838,14 @@ model PosShift {
   notes             String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  /// A manager looked at the shift's count.
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewedBy        User?     @relation("PosShiftReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote        String?
 
-  sales PosSale[]
+  sales   PosSale[]
+  returns PosReturn[]
 
   @@index([tillId, openedAt])
   @@index([cashierId, openedAt])
@@ -854,10 +873,22 @@ model PosSale {
   /// The till's clock when the sale was made.
   soldAt             DateTime
   syncedAt           DateTime      @default(now())
+  /// Cancelled at the till during its own shift; the money went back and the stock was put back.
+  voidedAt           DateTime?
+  /// The manager who approved the void.
+  voidedById         String?
+  voidedBy           User?         @relation("PosSaleVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  voidReason         String?
+  /// A manager looked at a flagged or voided sale.
+  reviewedAt         DateTime?
+  reviewedById       String?
+  reviewedBy         User?         @relation("PosSaleReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote         String?
 
   items     PosSaleItem[]
   payments  PosPayment[]
   movements InventoryMovement[]
+  returns   PosReturn[]
 
   @@index([soldAt])
   @@index([shiftId])
@@ -883,6 +914,11 @@ model PosSaleItem {
   lineTotalMinor     Int
   /// Part of quantityMilli that was not in recorded stock.
   shortfallMilli     Int             @default(0)
+  /// Brought back so far, and the money given back for it.
+  returnedMilli      Int             @default(0)
+  refundedMinor      Int             @default(0)
+
+  returnItems PosReturnItem[]
 
   @@index([saleId])
   @@index([variantId])
@@ -898,4 +934,57 @@ model PosPayment {
   reference   String?
 
   @@index([saleId])
+}
+
+/// Goods brought back from an earlier till sale, and the money given back for
+/// them. Recorded online only, with a manager's approval, in the shift the
+/// money was paid out of.
+model PosReturn {
+  id           String    @id @default(cuid())
+  /// Issued on the till, so a retried request records the return once.
+  clientId     String    @unique
+  /// Printed on the refund slip, e.g. RF-000012.
+  number       Int       @unique @default(autoincrement())
+  saleId       String
+  sale         PosSale   @relation(fields: [saleId], references: [id])
+  tillId       String
+  till         PosTill   @relation(fields: [tillId], references: [id])
+  shiftId      String
+  shift        PosShift  @relation(fields: [shiftId], references: [id])
+  cashierId    String
+  cashier      User      @relation("PosReturnCashier", fields: [cashierId], references: [id])
+  approvedById String
+  approvedBy   User      @relation("PosReturnApprovedBy", fields: [approvedById], references: [id])
+  reason       String
+  method       PosTender
+  /// MoMo transaction ID or card approval code of the refund.
+  reference    String?
+  refundMinor  Int
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?     @relation("PosReturnReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?
+
+  items     PosReturnItem[]
+  movements InventoryMovement[]
+
+  @@index([saleId])
+  @@index([shiftId])
+  @@index([createdAt])
+}
+
+model PosReturnItem {
+  id            String      @id @default(cuid())
+  returnId      String
+  posReturn     PosReturn   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  saleItemId    String
+  saleItem      PosSaleItem @relation(fields: [saleItemId], references: [id])
+  quantityMilli Int
+  refundMinor   Int
+  /// Put back into sellable stock; damaged or expired goods are not.
+  restocked     Boolean
+
+  @@index([returnId])
+  @@index([saleItemId])
 }

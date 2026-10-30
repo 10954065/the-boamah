@@ -91,6 +91,10 @@ describe("shift totals", () => {
       salesCount: 3,
       salesTotalMinor: 19_500,
       takenMinor: { CASH: 11_500, MOMO: 5000, CARD: 3000 },
+      refundsCount: 0,
+      refundedMinor: { CASH: 0, MOMO: 0, CARD: 0 },
+      voidsCount: 0,
+      voidedTotalMinor: 0,
       expectedMinor: { CASH: 31_500, MOMO: 5000, CARD: 3000 },
     });
   });
