@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-GH" className={`${inter.variable} ${manrope.variable}`}>
+    <html lang="en-GH" data-scroll-behavior="smooth" className={`${inter.variable} ${manrope.variable}`}>
       <body>
         {children}
         <Toaster position="top-center" richColors closeButton toastOptions={{ duration: 4000 }} />

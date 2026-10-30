@@ -21,14 +21,14 @@ export default async function CategoriesPage() {
         {categories.length === 0 ? (
           <EmptyState icon={<LayoutGrid />} title="No categories yet" description="Please check back soon." />
         ) : (
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {categories.map((category) => (
               <li key={category.id}>
                 <Link
                   href={`/categories/${category.slug}`}
                   className="group block overflow-hidden rounded-lg border border-line bg-surface transition-[border-color,box-shadow] hover:border-brand-200 hover:shadow-[var(--shadow-raised)]"
                 >
-                  <div className="relative aspect-[4/3] bg-soft">
+                  <div className="relative aspect-[2/1] bg-soft sm:aspect-[4/3]">
                     {category.imageUrl ? (
                       <Image
                         src={category.imageUrl}
@@ -39,10 +39,10 @@ export default async function CategoriesPage() {
                       />
                     ) : null}
                   </div>
-                  <div className="p-4">
-                    <h2 className="text-base font-bold">{category.name}</h2>
-                    {category.description ? <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{category.description}</p> : null}
-                    <p className="mt-2 text-xs font-semibold text-leaf-600">
+                  <div className="p-2.5 sm:p-4">
+                    <h2 className="truncate text-sm font-bold sm:text-base">{category.name}</h2>
+                    {category.description ? <p className="mt-1 line-clamp-2 hidden text-sm text-ink-muted sm:block">{category.description}</p> : null}
+                    <p className="text-xs font-semibold text-leaf-600 sm:mt-2">
                       {category.productCount} {category.productCount === 1 ? "product" : "products"}
                     </p>
                   </div>

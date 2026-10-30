@@ -42,7 +42,6 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
     const onFocusRequest = () => {
       const input = inputRef.current;
       if (!input || input.offsetParent === null) return;
-      window.scrollTo({ top: 0 });
       input.focus();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -128,7 +127,7 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
           aria-autocomplete="list"
           aria-activedescendant={active >= 0 ? `${listId}-opt-${active}` : undefined}
           autoComplete="off"
-          placeholder="Search for rice, oil, juice, soap…"
+          placeholder="Search rice, oil, soap…"
           value={query}
           maxLength={100}
           onChange={(event) => setQuery(event.target.value)}
@@ -167,7 +166,7 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
           id={listId}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute inset-x-0 top-full z-50 mt-1.5 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-[var(--shadow-overlay)]"
+          className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-[45dvh] overflow-y-auto overscroll-contain rounded-md border border-line bg-surface py-1 shadow-[var(--shadow-overlay)] lg:max-h-[70dvh]"
         >
           {results.length === 0 ? (
             <li className="px-4 py-3 text-sm text-ink-muted" role="option" aria-selected="false" aria-disabled="true">
@@ -181,8 +180,7 @@ export function SearchBox({ className, initialQuery = "" }: { className?: string
                 role="option"
                 aria-selected={index === active}
                 className={cn("cursor-pointer", index === active && "bg-brand-50")}
-                onPointerDown={(event) => {
-                  event.preventDefault();
+                onClick={() => {
                   setOpen(false);
                   router.push(`/products/${item.slug}`);
                 }}

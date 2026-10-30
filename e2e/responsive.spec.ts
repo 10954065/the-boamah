@@ -72,3 +72,69 @@ test.describe("responsive layout", () => {
     await expect(page.getByRole("dialog", { name: /Your cart/ })).toBeVisible();
   });
 });
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+
+  test("no text field is small enough to make the phone zoom in", async ({ page }) => {
+    for (const path of ["/", "/track-order", "/contact", "/categories/juices-drinks"]) {
+      await page.goto(path);
+      const small = await page
+        .locator("input:not([type=hidden], [type=checkbox], [type=radio]), select, textarea")
+        .evaluateAll((fields) => fields.filter((field) => parseFloat(getComputedStyle(field).fontSize) < 16).map((field) => field.getAttribute("name") ?? field.id));
+      expect(small, `fields under 16px on ${path}`).toEqual([]);
+    }
+  });
+
+  test("the bottom menu's search leaves the page where it was", async ({ page }) => {
+    await page.goto("/shop", { waitUntil: "networkidle" });
+    await page.evaluate(() => window.scrollTo({ top: 700, behavior: "instant" }));
+    await page.getByRole("navigation", { name: "Shortcuts" }).getByRole("button", { name: "Search" }).click();
+    await expect(page.getByRole("combobox", { name: "Search groceries" }).last()).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY)).toBe(700);
+  });
+
+  test("search suggestions can be scrolled without opening one", async ({ page }) => {
+    await page.goto("/");
+    const search = page.getByRole("combobox", { name: "Search groceries" }).last();
+    await search.fill("ju");
+    const list = page.getByRole("listbox", { name: "Search suggestions" });
+    await expect(list.getByRole("option").first()).toBeVisible();
+    const box = (await list.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(844);
+    // A finger going down to scroll the list must not open a product.
+    await list.getByRole("option").first().dispatchEvent("pointerdown");
+    await page.waitForTimeout(800);
+    await expect(page).toHaveURL(/\/$/);
+    await list.getByRole("option").first().click();
+    await expect(page).toHaveURL(/\/products\//);
+  });
+
+  test("a category page starts with its products", async ({ page }) => {
+    await page.goto("/categories/juices-drinks", { waitUntil: "networkidle" });
+    const top = await page.locator("main article").first().evaluate((card) => card.getBoundingClientRect().top);
+    expect(top).toBeLessThan(420);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+
+  test("the open category's chip is brought into view", async ({ page }) => {
+    await page.goto("/categories/pet-food", { waitUntil: "networkidle" });
+    await expect(page.getByRole("main").getByRole("navigation", { name: "Categories" }).getByRole("link", { name: "Pet Food" })).toBeInViewport({ ratio: 1 });
+  });
+
+  test("the category list fits most categories on the first screen", async ({ page }) => {
+    await page.goto("/categories", { waitUntil: "networkidle" });
+    const inView = await page.locator("main ul li a").evaluateAll((cards) => cards.filter((card) => card.getBoundingClientRect().bottom <= window.innerHeight - 60).length);
+    expect(inView).toBeGreaterThanOrEqual(6);
+  });
+
+  test("filters open in their own panel and apply", async ({ page }) => {
+    await page.goto("/categories/juices-drinks");
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters.getByLabel("In stock only").check();
+    await filters.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page).toHaveURL(/stock=1/);
+    await expect(page.getByRole("button", { name: "Filters, 1 on" })).toBeVisible();
+  });
+});

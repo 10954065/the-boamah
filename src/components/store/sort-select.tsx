@@ -21,11 +21,11 @@ export function SortSelect({ value }: { value: string }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={id} className="whitespace-nowrap text-sm text-ink-muted">
+    <div className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none">
+      <label htmlFor={id} className="sr-only whitespace-nowrap text-sm text-ink-muted sm:not-sr-only">
         Sort by
       </label>
-      <Select id={id} value={value} onChange={onChange} className="h-9 w-auto min-w-44">
+      <Select id={id} value={value} onChange={onChange} className="h-10 min-w-0 flex-1 lg:h-9 lg:w-auto lg:min-w-44 lg:flex-none">
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

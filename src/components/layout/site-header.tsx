@@ -52,7 +52,7 @@ export async function SiteHeader() {
     <>
       <AnnouncementBar />
       <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/90">
-        <div className="container-page flex h-[68px] items-center gap-3 lg:gap-8">
+        <div className="container-page flex h-14 items-center gap-3 lg:h-[68px] lg:gap-8">
           <MobileNav
             links={PRIMARY_LINKS}
             categories={categories.map((c) => ({ href: `/categories/${c.slug}`, label: c.name }))}
@@ -81,7 +81,7 @@ export async function SiteHeader() {
             </CartLink>
           </nav>
         </div>
-        <div className="container-page pb-3 lg:hidden">
+        <div className="container-page pb-2 lg:hidden">
           <SearchBox />
         </div>
         <nav aria-label="Main" className="hidden border-t border-line lg:block">

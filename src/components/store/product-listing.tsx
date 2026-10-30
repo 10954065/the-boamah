@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutGrid, SearchX, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, SearchX } from "lucide-react";
 import { Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -9,6 +9,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { listingQuery, type ListingParams } from "@/lib/listing-params";
 import { cn } from "@/lib/utils";
 import { getActiveCategories, listProducts, PAGE_SIZE, type CategoryView } from "@/server/catalog";
+import { CategoryRail } from "./category-rail";
+import { FiltersSheet } from "./filters-sheet";
 import { ProductGrid } from "./product-card";
 import { SortSelect } from "./sort-select";
 
@@ -107,8 +109,8 @@ function CategoryNav(props: CategoryNavProps) {
 function CategoryChips(props: CategoryNavProps) {
   const active = props.fixedCategory ?? props.params.category;
   return (
-    <nav aria-label="Categories" className="-mx-4 mb-4 lg:hidden">
-      <ul className="flex snap-x gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+    <nav aria-label="Categories" className="-mx-4 mb-2.5 sm:-mx-6 lg:hidden">
+      <CategoryRail activeKey={active}>
         {categoryItems(props).map((item) => {
           const isActive = item.slug === active;
           return (
@@ -129,12 +131,12 @@ function CategoryChips(props: CategoryNavProps) {
             </li>
           );
         })}
-      </ul>
+      </CategoryRail>
     </nav>
   );
 }
 
-function FiltersForm({ basePath, params, fixedCategory, fixedOnSale }: ProductListingProps) {
+function FiltersForm({ basePath, params, fixedCategory, fixedOnSale, idPrefix }: ProductListingProps & { idPrefix: string }) {
   return (
     <form action={basePath} method="get" className="space-y-7">
       {params.q ? <input type="hidden" name="q" value={params.q} /> : null}
@@ -145,17 +147,17 @@ function FiltersForm({ basePath, params, fixedCategory, fixedOnSale }: ProductLi
       <fieldset>
         <legend className="text-sm font-bold text-ink">Price (GH₵)</legend>
         <div className="mt-3 flex items-center gap-2">
-          <label className="sr-only" htmlFor="filter-min">
+          <label className="sr-only" htmlFor={`${idPrefix}-min`}>
             Minimum price in Ghana cedis
           </label>
-          <Input id="filter-min" name="min" inputMode="decimal" placeholder="Min" defaultValue={params.minPrice} className="h-9" />
+          <Input id={`${idPrefix}-min`} name="min" inputMode="decimal" placeholder="Min" defaultValue={params.minPrice} className="h-9" />
           <span className="text-sm text-ink-subtle" aria-hidden="true">
             to
           </span>
-          <label className="sr-only" htmlFor="filter-max">
+          <label className="sr-only" htmlFor={`${idPrefix}-max`}>
             Maximum price in Ghana cedis
           </label>
-          <Input id="filter-max" name="max" inputMode="decimal" placeholder="Max" defaultValue={params.maxPrice} className="h-9" />
+          <Input id={`${idPrefix}-max`} name="max" inputMode="decimal" placeholder="Max" defaultValue={params.maxPrice} className="h-9" />
         </div>
       </fieldset>
 
@@ -203,6 +205,7 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
   const filterProps = { basePath, params, fixedCategory, fixedOnSale };
   const from = page.total === 0 ? 0 : (page.page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page.page * PAGE_SIZE, page.total);
+  const activeFilters = [params.minPrice, params.maxPrice, params.inStock, params.onSale && !fixedOnSale].filter(Boolean).length;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[264px_1fr]">
@@ -211,23 +214,17 @@ export async function ProductListing({ basePath, params, fixedCategory, fixedOnS
           <CategoryNav {...filterProps} categories={categories} />
         </div>
         <div className="rounded-xl border border-line bg-surface p-5">
-          <FiltersForm {...filterProps} />
+          <FiltersForm {...filterProps} idPrefix="filter" />
         </div>
       </aside>
 
       <div className="min-w-0">
         <CategoryChips {...filterProps} categories={categories} />
-        <details className="mb-4 rounded-lg border border-line bg-surface lg:hidden">
-          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold">
-            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Filters
-          </summary>
-          <div className="border-t border-line p-4">
-            <FiltersForm {...filterProps} />
-          </div>
-        </details>
-
-        <div className="mb-5 flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-ink-muted" aria-live="polite">
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 lg:mb-5 lg:justify-between lg:rounded-lg lg:border lg:border-line lg:bg-surface lg:px-4 lg:py-3">
+          <FiltersSheet activeCount={activeFilters}>
+            <FiltersForm {...filterProps} idPrefix="sheet" />
+          </FiltersSheet>
+          <p className="order-last w-full text-[13px] text-ink-muted lg:order-none lg:w-auto lg:text-sm" aria-live="polite">
             {page.total === 0 ? (
               "No products found"
             ) : (

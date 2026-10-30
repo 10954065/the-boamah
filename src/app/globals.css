@@ -209,6 +209,19 @@
     letter-spacing: -0.015em;
   }
 
+  /*
+   * Phones zoom the whole page into a field with text under 16px. Only the
+   * small sizes change here, so large fields such as the till's amount stay large.
+   */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      --text-xs: 1rem;
+      --text-sm: 1rem;
+    }
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-brand-500);
     outline-offset: 2px;
