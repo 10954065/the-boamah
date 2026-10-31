@@ -26,6 +26,23 @@ till's sign in page.
    product list and the product photos on the device, so it keeps working when
    the internet drops.
 
+4. On a touch screen with no keyboard, turn on **Keyboard** in the till's menu
+   (or **On-screen keyboard** at the top of the sign in page). Keys then come
+   up whenever you tap a field, and go away when you tap a product or press
+   the hide key. Fields with the till's own number keys (the opening float,
+   quantities and payment amounts) keep using those. A barcode scanner works
+   as before.
+5. Press **Full screen** in the menu (or at the top of the sign in page) to
+   hide the browser's bars. The device remembers it: after signing out or a
+   restart, the till goes back to full screen at the first tap. Press it again,
+   or Esc, to leave.
+
+For a PC that does nothing but run the till, start Chrome or Edge in kiosk
+mode so the till is all the screen ever shows: make a shortcut to
+`chrome.exe --kiosk "<your till link>"` (Edge: `msedge.exe --kiosk "<your till
+link>" --edge-kiosk-type=fullscreen`) and put it in the Windows Startup folder.
+Close a kiosk window with Alt+F4.
+
 Do not clear the browser's data for the till's address: sales waiting to be
 sent are kept there.
 
@@ -49,8 +66,8 @@ screen.
 
 The menu runs down the left of the screen (across the top on a phone): **Sell**,
 **Website orders**, **Sales**, **On hold**, **Last receipt**, **Printer**,
-**Refresh products** and **Close shift**, with who is signed in, the connection
-and **Sign out** at the bottom. On narrower screens it shows icons only; hold the
+**Refresh products** and **Close shift**, with who is signed in, the connection,
+**Full screen**, **Keyboard** and **Sign out** at the bottom. On narrower screens it shows icons only; hold the
 pointer over one to see its name.
 
 ## Selling

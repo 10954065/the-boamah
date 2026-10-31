@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TillDeviceHost } from "@/components/pos/onscreen-keyboard";
 import { TillServiceWorker } from "@/components/pos/till-offline";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-soft text-ink">
       {children}
       <TillServiceWorker />
+      <TillDeviceHost />
     </div>
   );
 }

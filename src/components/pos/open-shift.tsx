@@ -43,6 +43,7 @@ export function OpenShiftForm({ cashierName, onOpen }: { cashierName: string; on
         </p>
         <Input
           id="opening-float"
+          data-keyboard="none"
           autoFocus
           autoComplete="off"
           inputMode="decimal"

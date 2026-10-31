@@ -153,6 +153,7 @@ function TenderForm({ initialMethod, totalMinor, credit, onComplete }: Pick<Tend
             </label>
             <Input
               id="till-amount"
+              data-keyboard="none"
               autoFocus={method !== "CREDIT"}
               autoComplete="off"
               inputMode="decimal"

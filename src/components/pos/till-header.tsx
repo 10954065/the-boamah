@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition, type ComponentProps, type ReactNode } from "react";
-import { CloudOff, LogOut, Wifi, WifiOff } from "lucide-react";
+import { CloudOff, Keyboard, LogOut, Maximize, Minimize, Wifi, WifiOff } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { clearTillCaches } from "./till-offline";
+import { setDeviceSetting, toggleFullScreen, useDeviceSetting, useFullScreen } from "./till-device";
 import { saveLastReceipt } from "./till-storage";
 import { useOutbox, useSyncState } from "./till-sync";
 
@@ -117,7 +118,10 @@ export function TillHeader({ till, cashierName, shiftOpenedAt, status, children,
         </div>
       </div>
 
-      {footer ? <div className="order-4 flex shrink-0 items-center md:order-none md:flex-col md:items-stretch">{footer}</div> : null}
+      <div className="order-4 flex shrink-0 items-center md:order-none md:flex-col md:items-stretch">
+        <DeviceActions />
+        {footer}
+      </div>
     </header>
   );
 }
@@ -154,20 +158,23 @@ interface HeaderActionProps extends ComponentProps<"button"> {
   count?: number;
   /** The screen this button shows is the one open. */
   active?: boolean;
+  /** For a switch, whether it is on. Shown the same way as the open screen. */
+  pressed?: boolean;
 }
 
 /** A menu button: an icon on phones and tablets, an icon with words on wide screens. */
-export function HeaderAction({ icon: Icon, label, text, count = 0, active = false, className, ...props }: HeaderActionProps) {
+export function HeaderAction({ icon: Icon, label, text, count = 0, active = false, pressed, className, ...props }: HeaderActionProps) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
       aria-current={active ? "page" : undefined}
+      aria-pressed={pressed}
       className={cn(
         "relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-40",
         "md:h-10 md:w-full md:justify-center md:px-0 xl:justify-start xl:gap-3 xl:px-3 xl:text-sm",
-        active && "bg-white/15 text-white before:absolute before:inset-y-2 before:left-0 before:hidden before:w-1 before:rounded-full before:bg-gold-400 md:before:block",
+        (active || pressed) && "bg-white/15 text-white before:absolute before:inset-y-2 before:left-0 before:hidden before:w-1 before:rounded-full before:bg-gold-400 md:before:block",
         className,
       )}
       {...props}
@@ -183,6 +190,33 @@ export function HeaderAction({ icon: Icon, label, text, count = 0, active = fals
         </span>
       ) : null}
     </button>
+  );
+}
+
+/** Full screen and the on-screen keyboard, for the counter device. Phones have their own keyboard and bars. */
+function DeviceActions() {
+  const fullScreen = useFullScreen();
+  const keyboard = useDeviceSetting("keyboard");
+  return (
+    <>
+      {fullScreen === null ? null : (
+        <HeaderAction
+          icon={fullScreen ? Minimize : Maximize}
+          label="Full screen"
+          pressed={fullScreen}
+          className="hidden md:inline-flex"
+          onClick={toggleFullScreen}
+        />
+      )}
+      <HeaderAction
+        icon={Keyboard}
+        label="On-screen keyboard"
+        text="Keyboard"
+        pressed={keyboard}
+        className="hidden md:inline-flex"
+        onClick={() => setDeviceSetting("keyboard", !keyboard)}
+      />
+    </>
   );
 }
 

@@ -9,6 +9,17 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
+type InteractOutside = NonNullable<ComponentProps<typeof DialogPrimitive.Content>["onInteractOutside"]>;
+
+/** Taps on the till's on-screen keyboard (components/pos/onscreen-keyboard.tsx) are typing, not a tap outside. */
+function keepForKeyboard(handler?: InteractOutside): InteractOutside {
+  return (event) => {
+    const target = event.detail.originalEvent.target;
+    if (target instanceof Element && target.closest("[data-onscreen-keyboard]")) return event.preventDefault();
+    handler?.(event);
+  };
+}
+
 function Overlay() {
   return (
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-brand-900/40 backdrop-blur-[2px] data-[state=open]:animate-[fade-in_150ms_ease-out]" />
@@ -23,11 +34,13 @@ interface DialogContentProps extends ComponentProps<typeof DialogPrimitive.Conte
   hideClose?: boolean;
 }
 
-export function DialogContent({ className, children, title, description, hideTitle, hideClose, ...props }: DialogContentProps) {
+export function DialogContent({ className, children, title, description, hideTitle, hideClose, onInteractOutside, ...props }: DialogContentProps) {
   return (
     <DialogPrimitive.Portal>
       <Overlay />
       <DialogPrimitive.Content
+        data-dialog="center"
+        onInteractOutside={keepForKeyboard(onInteractOutside)}
         className={cn(
           "fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-line bg-surface p-6 shadow-[var(--shadow-overlay)] focus:outline-none",
           className,
@@ -65,11 +78,13 @@ interface SheetContentProps extends ComponentProps<typeof DialogPrimitive.Conten
 }
 
 /** Side drawer built on the accessible dialog primitive (focus trap, Esc, aria). */
-export function SheetContent({ className, children, title, side = "left", closeLabel = "Close menu", footer, ...props }: SheetContentProps) {
+export function SheetContent({ className, children, title, side = "left", closeLabel = "Close menu", footer, onInteractOutside, ...props }: SheetContentProps) {
   return (
     <DialogPrimitive.Portal>
       <Overlay />
       <DialogPrimitive.Content
+        data-dialog="sheet"
+        onInteractOutside={keepForKeyboard(onInteractOutside)}
         className={cn(
           "fixed inset-y-0 z-50 flex w-[86vw] max-w-sm flex-col bg-surface shadow-[var(--shadow-overlay)] focus:outline-none",
           side === "left"

@@ -62,6 +62,7 @@ function QuantityForm({ target, onConfirm, onRemove }: { target: QuantityTarget 
         <div className="relative">
           <Input
             id="till-quantity"
+            data-keyboard="none"
             autoFocus
             autoComplete="off"
             inputMode="decimal"

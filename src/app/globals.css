@@ -241,3 +241,25 @@
     display: block;
   }
 }
+
+/*
+ * The till's on-screen keyboard (components/pos/onscreen-keyboard.tsx). While
+ * it is open, centred dialogs sit in the space above it, side panels end at
+ * it, and pages can scroll the field the cursor is in clear of it.
+ */
+html[data-keyboard="open"] body {
+  padding-bottom: var(--keyboard-height);
+}
+
+html[data-keyboard="open"] :focus {
+  scroll-margin-bottom: calc(var(--keyboard-height) + 1rem);
+}
+
+html[data-keyboard="open"] [data-dialog="center"] {
+  top: calc((100dvh - var(--keyboard-height)) / 2);
+  max-height: calc(100dvh - var(--keyboard-height) - 1rem);
+}
+
+html[data-keyboard="open"] [data-dialog="sheet"] {
+  bottom: var(--keyboard-height);
+}
