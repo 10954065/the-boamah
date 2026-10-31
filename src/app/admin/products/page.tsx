@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import { AdminHeader, EmptyRow, FilterBar, TableWrap, td, th } from "@/components/admin/ui";
 import { Badge } from "@/components/ui/badge";
@@ -52,9 +52,14 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         description={`${total} product${total === 1 ? "" : "s"}`}
         actions={
           canEdit ? (
-            <Link href="/admin/products/new" className={buttonVariants()}>
-              <Plus /> New product
-            </Link>
+            <>
+              <Link href="/admin/products/import" className={buttonVariants({ variant: "outline" })}>
+                <FileSpreadsheet /> Import from Excel
+              </Link>
+              <Link href="/admin/products/new" className={buttonVariants()}>
+                <Plus /> New product
+              </Link>
+            </>
           ) : null
         }
       />

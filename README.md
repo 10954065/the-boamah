@@ -59,7 +59,9 @@ checkout details.
 
 **Admin dashboard** (behind a private link): sales metrics that keep paid revenue, pending
 payments and cash-on-delivery outstanding apart. Products and variants with image
-upload and bulk prices, categories, inventory with an audited movement history,
+upload and bulk prices, an Excel import that adds products as drafts and updates
+prices, stock and details from one sheet (checked in a preview first, all or
+nothing), categories, inventory with an audited movement history,
 low-stock list and how many shoppers are waiting for each item, review
 moderation, orders (filters, status changes, notes, cash collection, cancellation),
 customers (history, suspension), coupons, promotional banners, delivery zones,
