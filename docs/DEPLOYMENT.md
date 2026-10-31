@@ -520,7 +520,9 @@ entered, so some Search Console notes stay until the shop supplies the fact:
 | No global identifier (gtin, brand) | **Brand** on the product form, or a real EAN/UPC barcode on a size (codes the shop made up are left out) |
 | Missing `hasMerchantReturnPolicy` | *Settings → Policies → Days customers have to return an item* (0 means no returns; blank leaves it out) |
 | Missing `shippingDetails` | The cheapest active delivery zone's fee, sent for Ghana |
+| Missing `deliveryTime` (in `shippingDetails`) | *Settings → Policies → Days to get an order out of the shop*, plus *Fewest* and *Most days on the road* on the cheapest active delivery zone. Sent only when all three are filled in |
 | Missing `validFrom` | The time the size was last changed, so its current price applies from then |
+| Missing `priceValidUntil` | The day a sale ends; otherwise 30 days ahead, moving on each day. A changed price shows at once |
 | Missing `aggregateRating` / `review` | Approved reviews only. Once an order is delivered or collected, the customer can rate its products from the order page or from tracking (reference plus email or phone); the "delivered" email asks them to. Each review waits in *Admin → Reviews* until approved. Products without reviews keep this note; it is not an error |
 
 A pasted shop link shows a picture in WhatsApp, Facebook, X and the like:
