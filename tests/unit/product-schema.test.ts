@@ -22,7 +22,9 @@ const input = (over: Partial<ProductSchemaInput> = {}): ProductSchemaInput => ({
   brand: "Quaker",
   offers: [offer()],
   reviews: { average: 0, count: 0, items: [] },
-  deliveryFeeMinor: 2000,
+  delivery: { feeMinor: 2000, transitMinDays: null, transitMaxDays: null },
+  handlingDays: null,
+  priceHeldUntil: "2026-11-30",
   returnDays: null,
   currency: "GHS",
   ...over,
@@ -73,6 +75,7 @@ describe("productJsonLd", () => {
       price: "185.00",
       priceCurrency: "GHS",
       validFrom: "2026-10-20T08:00:00.000Z",
+      priceValidUntil: "2026-11-30",
       itemCondition: "https://schema.org/NewCondition",
       availability: "https://schema.org/InStock",
     });
@@ -100,7 +103,25 @@ describe("productJsonLd", () => {
       shippingRate: { "@type": "MonetaryAmount", value: "20.00", currency: "GHS" },
       shippingDestination: { "@type": "DefinedRegion", addressCountry: "GH" },
     });
-    expect(offersOf(productJsonLd(input({ deliveryFeeMinor: null })))[0]).not.toHaveProperty("shippingDetails");
+    expect(offersOf(productJsonLd(input({ delivery: null })))[0]).not.toHaveProperty("shippingDetails");
+  });
+
+  test("delivery times come from the shop's packing days and the cheapest zone's days on the road", () => {
+    const timed = input({ delivery: { feeMinor: 2000, transitMinDays: 0, transitMaxDays: 1 }, handlingDays: 1 });
+    expect((offersOf(productJsonLd(timed))[0]!.shippingDetails as Json).deliveryTime).toEqual({
+      "@type": "ShippingDeliveryTime",
+      handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+      transitTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+    });
+    // Half the answer is not given.
+    expect(offersOf(productJsonLd(input({ ...timed, handlingDays: null })))[0]!.shippingDetails).not.toHaveProperty("deliveryTime");
+    expect(offersOf(productJsonLd(input({ handlingDays: 1 })))[0]!.shippingDetails).not.toHaveProperty("deliveryTime");
+  });
+
+  test("a shelf price is quoted to the rolling date, and a sale ending sooner wins", () => {
+    expect(offersOf(productJsonLd(input()))[0]!.priceValidUntil).toBe("2026-11-30");
+    // A sale date left on an offer that is not on sale any more says nothing.
+    expect(offersOf(productJsonLd(input({ offers: [offer({ saleEndsAt: "2026-11-15T23:59:00.000Z" })] })))[0]!.priceValidUntil).toBe("2026-11-30");
   });
 
   test("the returns window comes from the settings: days, no returns, or not said", () => {

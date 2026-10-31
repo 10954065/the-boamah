@@ -22,7 +22,7 @@ import { productJsonLd } from "@/lib/product-schema";
 import { siteUrl } from "@/lib/utils";
 import { whatsappLink } from "@/lib/whatsapp";
 import { getBoughtTogether, getProductBySlug, getRelatedProducts } from "@/server/catalog";
-import { getLowestDeliveryFee } from "@/server/delivery";
+import { getCheapestDelivery } from "@/server/delivery";
 import { getReviewSummary } from "@/server/reviews";
 import { getStoreSettings } from "@/server/settings";
 
@@ -39,17 +39,24 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
   };
 }
 
+/** How far ahead a shelf price is quoted to Google. The date moves on each day, and a price change shows at once. */
+const PRICE_HELD_DAYS = 30;
+
+function priceHeldUntil(now: Date): string {
+  return new Date(now.getTime() + PRICE_HELD_DAYS * 86_400_000).toISOString().slice(0, 10);
+}
+
 export default async function ProductPage({ params }: PageProps<"/products/[slug]">) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, reviews, settings, together, lowestDeliveryFee] = await Promise.all([
+  const [related, reviews, settings, together, cheapestDelivery] = await Promise.all([
     getRelatedProducts(product),
     getReviewSummary(product.id),
     getStoreSettings(),
     getBoughtTogether(product.id),
-    getLowestDeliveryFee(),
+    getCheapestDelivery(),
   ]);
   const thisItem = {
     id: product.id,
@@ -92,7 +99,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       count: reviews.count,
       items: reviews.reviews.slice(0, 5).map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
     },
-    deliveryFeeMinor: lowestDeliveryFee,
+    delivery: cheapestDelivery,
+    handlingDays: settings.handlingDays,
+    priceHeldUntil: priceHeldUntil(new Date()),
     returnDays: settings.returnDays,
     currency: settings.currency,
   });

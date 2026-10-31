@@ -21,11 +21,13 @@ export interface ZoneRow {
   minOrder: string;
   freeFrom: string;
   estimatedDelivery: string;
+  transitMinDays: number | null;
+  transitMaxDays: number | null;
   sortOrder: number;
   isActive: boolean;
 }
 
-const emptyZone: ZoneRow = { name: "", region: "", areas: "", fee: "", minOrder: "", freeFrom: "", estimatedDelivery: "", sortOrder: 0, isActive: true };
+const emptyZone: ZoneRow = { name: "", region: "", areas: "", fee: "", minOrder: "", freeFrom: "", estimatedDelivery: "", transitMinDays: null, transitMaxDays: null, sortOrder: 0, isActive: true };
 
 function ZoneForm({ initial, onDone }: { initial: ZoneRow; onDone: () => void }) {
   const [z, setZ] = useState(initial);
@@ -69,6 +71,12 @@ function ZoneForm({ initial, onDone }: { initial: ZoneRow; onDone: () => void })
       </Field>
       <Field id="z-eta" label="Delivery estimate shown to customers" hint="For example: Usually next working day.">
         <Input id="z-eta" aria-describedby="z-eta-hint" value={z.estimatedDelivery} onChange={(e) => set("estimatedDelivery", e.target.value)} />
+      </Field>
+      <Field id="z-tmin" label="Fewest days on the road" hint="Once the order leaves the shop. 0 means the same day." error={errors.transitMinDays}>
+        <Input {...fieldAria("z-tmin", errors.transitMinDays, "hint")} type="number" inputMode="numeric" min={0} max={60} value={z.transitMinDays ?? ""} onChange={(e) => set("transitMinDays", e.target.value === "" ? null : Number(e.target.value))} />
+      </Field>
+      <Field id="z-tmax" label="Most days on the road" hint="Google shows these days with your products." error={errors.transitMaxDays}>
+        <Input {...fieldAria("z-tmax", errors.transitMaxDays, "hint")} type="number" inputMode="numeric" min={0} max={60} value={z.transitMaxDays ?? ""} onChange={(e) => set("transitMaxDays", e.target.value === "" ? null : Number(e.target.value))} />
       </Field>
       <Field id="z-order" label="Display order">
         <Input id="z-order" type="number" min={0} value={z.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value) || 0)} />
@@ -258,6 +266,23 @@ export function SettingsForm({ initial, onlineConfigured }: { initial: SettingsD
       <section className={section}>
         <h2 className="text-[15px] font-bold">Policies</h2>
         <p className="text-xs text-ink-subtle">These are published as written. Have them reviewed for your business before going live.</p>
+        <Field
+          id="st-handlingdays"
+          label="Days to get an order out of the shop"
+          hint="Packing time before delivery. Enter 0 if orders usually leave the day they are placed. Google shows this with delivery times."
+          error={errors.handlingDays}
+          className="max-w-md"
+        >
+          <Input
+            {...fieldAria("st-handlingdays", errors.handlingDays, "hint")}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={30}
+            value={s.handlingDays ?? ""}
+            onChange={(e) => setS({ ...s, handlingDays: e.target.value === "" ? null : Number(e.target.value) })}
+          />
+        </Field>
         <Field
           id="st-returndays"
           label="Days customers have to return an item"

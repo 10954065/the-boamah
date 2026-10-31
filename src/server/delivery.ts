@@ -21,12 +21,15 @@ export async function getFreeDeliveryTarget(): Promise<FreeDeliveryTarget | null
   return zone?.freeDeliveryThresholdMinor ? { thresholdMinor: zone.freeDeliveryThresholdMinor, zoneName: zone.name } : null;
 }
 
-/** The cheapest active zone's fee, for the delivery cost in product data. Null when no zone is active. */
-export function getLowestDeliveryFee(): Promise<number | null> {
-  return storefrontCached("delivery:lowest-fee", async () => {
-    const zone = await prisma.deliveryZone.findFirst({ where: { isActive: true }, orderBy: { feeMinor: "asc" }, select: { feeMinor: true } });
-    return zone?.feeMinor ?? null;
-  });
+/** The cheapest active zone, for the delivery cost and times in product data. Null when no zone is active. */
+export function getCheapestDelivery(): Promise<{ feeMinor: number; transitMinDays: number | null; transitMaxDays: number | null } | null> {
+  return storefrontCached("delivery:cheapest", () =>
+    prisma.deliveryZone.findFirst({
+      where: { isActive: true },
+      orderBy: [{ feeMinor: "asc" }, { sortOrder: "asc" }],
+      select: { feeMinor: true, transitMinDays: true, transitMaxDays: true },
+    }),
+  );
 }
 
 export async function getActiveZones(): Promise<DeliveryZone[]> {

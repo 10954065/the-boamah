@@ -38,6 +38,7 @@ export default async function SettingsPage() {
           deliveryPolicy: s.deliveryPolicy ?? "",
           returnsPolicy: s.returnsPolicy ?? "",
           returnDays: s.returnDays,
+          handlingDays: s.handlingDays,
           privacyPolicy: s.privacyPolicy ?? "",
           termsPolicy: s.termsPolicy ?? "",
           notifyAdminEmails: s.notifyAdminEmails ?? "",

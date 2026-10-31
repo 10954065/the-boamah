@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   deliveryPolicy: null,
   returnsPolicy: null,
   returnDays: null,
+  handlingDays: null,
   privacyPolicy: null,
   termsPolicy: null,
   notifyAdminEmails: null,

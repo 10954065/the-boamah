@@ -22,6 +22,8 @@ export default async function DeliveryZonesPage() {
           minOrder: z.minOrderMinor ? minorToDecimalString(z.minOrderMinor) : "",
           freeFrom: z.freeDeliveryThresholdMinor !== null ? minorToDecimalString(z.freeDeliveryThresholdMinor) : "",
           estimatedDelivery: z.estimatedDelivery ?? "",
+          transitMinDays: z.transitMinDays,
+          transitMaxDays: z.transitMaxDays,
           sortOrder: z.sortOrder,
           isActive: z.isActive,
           summary: `Fee ${formatMoney(z.feeMinor)}${z.minOrderMinor ? ` · min order ${formatMoney(z.minOrderMinor)}` : ""}${z.freeDeliveryThresholdMinor !== null ? ` · free from ${formatMoney(z.freeDeliveryThresholdMinor)}` : ""}`,

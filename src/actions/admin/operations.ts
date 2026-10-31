@@ -346,6 +346,8 @@ const zoneSchema = z.object({
   minOrder: z.string().trim().optional(),
   freeFrom: z.string().trim().optional(),
   estimatedDelivery: z.string().trim().max(120).optional(),
+  transitMinDays: z.number().int("Enter whole days.").min(0, "Enter 0 or more days.").max(60, "Enter at most 60 days.").nullable(),
+  transitMaxDays: z.number().int("Enter whole days.").min(0, "Enter 0 or more days.").max(60, "Enter at most 60 days.").nullable(),
   sortOrder: z.number().int().min(0).max(1000),
   isActive: z.boolean(),
 });
@@ -363,6 +365,8 @@ export async function saveZone(input: z.input<typeof zoneSchema>): Promise<Actio
     if (fee === null) errors.fee = "Enter the delivery fee, e.g. 20.00.";
     if (minOrder === null) errors.minOrder = "Enter an amount like 50.00.";
     if (d.freeFrom && freeFrom === null) errors.freeFrom = "Enter an amount like 400.00.";
+    if ((d.transitMinDays === null) !== (d.transitMaxDays === null)) errors.transitMaxDays = "Fill in both, or leave both blank.";
+    else if (d.transitMinDays !== null && d.transitMaxDays !== null && d.transitMaxDays < d.transitMinDays) errors.transitMaxDays = "Enter at least the fewest days.";
     if (Object.keys(errors).length) return fail("Please check the highlighted fields.", errors);
     const data = {
       name: d.name,
@@ -372,13 +376,15 @@ export async function saveZone(input: z.input<typeof zoneSchema>): Promise<Actio
       minOrderMinor: minOrder!,
       freeDeliveryThresholdMinor: freeFrom,
       estimatedDelivery: d.estimatedDelivery || null,
+      transitMinDays: d.transitMinDays,
+      transitMaxDays: d.transitMaxDays,
       sortOrder: d.sortOrder,
       isActive: d.isActive,
     };
     const zone = d.id ? await prisma.deliveryZone.update({ where: { id: d.id }, data }) : await prisma.deliveryZone.create({ data });
     await recordAudit({ actorId: user.id, action: d.id ? "zone.update" : "zone.create", entityType: "DeliveryZone", entityId: zone.id, details: { name: data.name, feeMinor: data.feeMinor, isActive: data.isActive } });
     revalidatePath("/admin/delivery");
-    // Product pages show the lowest delivery fee to search engines.
+    // Product pages give search engines the cheapest zone's fee and days.
     refreshStorefront();
     return ok(undefined, "Delivery zone saved.");
   });
@@ -424,6 +430,7 @@ const settingsSchema = z.object({
   deliveryPolicy: z.string().trim().max(20000).optional(),
   returnsPolicy: z.string().trim().max(20000).optional(),
   returnDays: z.number().int("Enter whole days.").min(0, "Enter 0 or more days.").max(365, "Enter at most 365 days.").nullable(),
+  handlingDays: z.number().int("Enter whole days.").min(0, "Enter 0 or more days.").max(30, "Enter at most 30 days.").nullable(),
   privacyPolicy: z.string().trim().max(20000).optional(),
   termsPolicy: z.string().trim().max(20000).optional(),
   notifyAdminEmails: z.string().trim().max(500).optional(),

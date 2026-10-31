@@ -40,6 +40,13 @@ export interface SchemaReview {
   rating: number;
 }
 
+/** The cheapest active delivery zone: its fee, and its days on the road when the shop has set them. */
+export interface SchemaDelivery {
+  feeMinor: number;
+  transitMinDays: number | null;
+  transitMaxDays: number | null;
+}
+
 export interface ProductSchemaInput {
   name: string;
   description: string;
@@ -49,8 +56,12 @@ export interface ProductSchemaInput {
   brand: string | null;
   offers: SchemaOffer[];
   reviews: { average: number; count: number; items: SchemaReview[] };
-  /** The lowest delivery fee of the active zones; null when the shop has no zones. */
-  deliveryFeeMinor: number | null;
+  /** The cheapest active delivery zone; null when the shop has no zones. */
+  delivery: SchemaDelivery | null;
+  /** From the store settings: most days to get an order out of the shop, null when not set. */
+  handlingDays: number | null;
+  /** The day a shelf price is quoted until when no sale ends sooner, as YYYY-MM-DD. */
+  priceHeldUntil: string;
   /** From the store settings: days to return an item, 0 for no returns, null when not set. */
   returnDays: number | null;
   currency: string;
@@ -66,12 +77,26 @@ function returnPolicy(days: number | null): JsonLd | null {
     : { ...base, returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow", merchantReturnDays: days };
 }
 
-function shipping(feeMinor: number | null, currency: string): JsonLd | null {
-  if (feeMinor === null) return null;
+const days = (min: number, max: number): JsonLd => ({ "@type": "QuantitativeValue", minValue: min, maxValue: max, unitCode: "DAY" });
+
+/** Delivery times only when the shop has given both parts: packing and the road. */
+function deliveryTime(delivery: SchemaDelivery, handlingDays: number | null): JsonLd | null {
+  if (handlingDays === null || delivery.transitMinDays === null || delivery.transitMaxDays === null) return null;
+  return {
+    "@type": "ShippingDeliveryTime",
+    handlingTime: days(0, handlingDays),
+    transitTime: days(delivery.transitMinDays, Math.max(delivery.transitMinDays, delivery.transitMaxDays)),
+  };
+}
+
+function shipping(delivery: SchemaDelivery | null, handlingDays: number | null, currency: string): JsonLd | null {
+  if (delivery === null) return null;
+  const time = deliveryTime(delivery, handlingDays);
   return {
     "@type": "OfferShippingDetails",
-    shippingRate: { "@type": "MonetaryAmount", value: minorToDecimalString(feeMinor), currency },
+    shippingRate: { "@type": "MonetaryAmount", value: minorToDecimalString(delivery.feeMinor), currency },
     shippingDestination: { "@type": "DefinedRegion", addressCountry: COUNTRY },
+    ...(time ? { deliveryTime: time } : {}),
   };
 }
 
@@ -87,7 +112,8 @@ function toOffer(offer: SchemaOffer, product: ProductSchemaInput, extras: JsonLd
     price: minorToDecimalString(offer.effectivePriceMinor),
     priceCurrency: product.currency,
     validFrom: offer.priceSince,
-    ...(offer.saleEndsAt ? { priceValidUntil: offer.saleEndsAt.slice(0, 10) } : {}),
+    // A sale is quoted until it ends; a shelf price until the rolling date the page gives.
+    priceValidUntil: offer.saleEndsAt && onSale ? offer.saleEndsAt.slice(0, 10) : product.priceHeldUntil,
     ...(onSale
       ? {
           priceSpecification: {
@@ -107,7 +133,7 @@ function toOffer(offer: SchemaOffer, product: ProductSchemaInput, extras: JsonLd
 export function productJsonLd(product: ProductSchemaInput): JsonLd {
   const [first] = product.offers;
   const gtin = gtinFromBarcode(first?.barcode);
-  const delivery = shipping(product.deliveryFeeMinor, product.currency);
+  const delivery = shipping(product.delivery, product.handlingDays, product.currency);
   const returns = returnPolicy(product.returnDays);
   const extras: JsonLd = { ...(delivery ? { shippingDetails: delivery } : {}), ...(returns ? { hasMerchantReturnPolicy: returns } : {}) };
   const { reviews } = product;

@@ -431,6 +431,9 @@ model DeliveryZone {
   minOrderMinor              Int       @default(0)
   freeDeliveryThresholdMinor Int?
   estimatedDelivery          String?
+  /// Days on the road once an order leaves the shop, fewest and most, for Google's delivery times. Null when not set.
+  transitMinDays             Int?
+  transitMaxDays             Int?
   isActive                   Boolean   @default(true)
   sortOrder                  Int       @default(0)
   createdAt                  DateTime  @default(now())
@@ -737,6 +740,8 @@ model StoreSettings {
   returnsPolicy            String?
   /// Days a customer has to return an item, for Google's product listings. 0 means no returns; null means not set.
   returnDays               Int?
+  /// Most days between an order and it leaving the shop, for Google's delivery times. 0 means the same day; null means not set.
+  handlingDays             Int?
   privacyPolicy            String?
   termsPolicy              String?
   notifyAdminEmails        String?
